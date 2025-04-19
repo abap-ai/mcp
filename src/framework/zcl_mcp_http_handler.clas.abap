@@ -153,7 +153,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
 
   METHOD handle_delete.
     DATA session_id TYPE string.
-            DATA temp1 TYPE undefined.
+            DATA temp1 TYPE sysuuid_c32.
             DATA session_error TYPE REF TO zcx_mcp_server.
     " Check if sessions are enabled
     IF mcp_server->server-session_mode = zcl_mcp_session=>session_mode_off.
@@ -499,7 +499,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       DATA first_char TYPE string.
       DATA temp10 TYPE xsdboolean.
       DATA session_id TYPE string.
-              DATA temp7 TYPE undefined.
+              DATA temp7 TYPE sysuuid_c32.
               DATA session_error TYPE REF TO zcx_mcp_server.
     FIELD-SYMBOLS <request> LIKE LINE OF requests.
               DATA initialize TYPE zif_mcp_server=>initialize_response.
