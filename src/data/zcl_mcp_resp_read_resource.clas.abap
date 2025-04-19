@@ -24,7 +24,7 @@ CLASS zcl_mcp_resp_read_resource DEFINITION
              resource TYPE REF TO data,
            END OF resource_content_wrapper.
 
-    TYPES resource_contents TYPE STANDARD TABLE OF resource_content_wrapper WITH EMPTY KEY.
+    TYPES resource_contents TYPE STANDARD TABLE OF resource_content_wrapper WITH DEFAULT KEY.
 
     "! <p class="shorttext synchronized">Add Text Resource</p>
     "!
@@ -66,15 +66,25 @@ ENDCLASS.
 
 CLASS zcl_mcp_resp_read_resource IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
+    FIELD-SYMBOLS <content> LIKE LINE OF int_contents.
+      DATA content_index LIKE sy-tabix.
+      DATA content_path TYPE string.
+              DATA temp1 TYPE REF TO text_resource_contents.
+              DATA text_resource LIKE temp1.
+              DATA temp2 TYPE REF TO blob_resource_contents.
+              DATA blob_resource LIKE temp2.
     result = zcl_mcp_ajson=>create_empty( ).
 
     " Create contents array
     result->touch_array( '/contents' ).
 
     " Add all resource contents
-    LOOP AT int_contents ASSIGNING FIELD-SYMBOL(<content>).
-      DATA(content_index) = sy-tabix.
-      DATA(content_path) = |/contents/{ content_index }|.
+    
+    LOOP AT int_contents ASSIGNING <content>.
+      
+      content_index = sy-tabix.
+      
+      content_path = |/contents/{ content_index }|.
 
       " Skip if resource is not bound
       IF <content>-resource IS NOT BOUND.
@@ -86,7 +96,10 @@ CLASS zcl_mcp_resp_read_resource IMPLEMENTATION.
         WHEN 'text'.
           " Handle text resource
           TRY.
-              DATA(text_resource) = CAST text_resource_contents( <content>-resource ).
+              
+              temp1 ?= <content>-resource.
+              
+              text_resource = temp1.
 
               " Set URI (required)
               result->set( iv_path         = |{ content_path }/uri|
@@ -112,7 +125,10 @@ CLASS zcl_mcp_resp_read_resource IMPLEMENTATION.
         WHEN 'blob'.
           " Handle blob resource
           TRY.
-              DATA(blob_resource) = CAST blob_resource_contents( <content>-resource ).
+              
+              temp2 ?= <content>-resource.
+              
+              blob_resource = temp2.
 
               " Set URI (required)
               result->set( iv_path         = |{ content_path }/uri|
@@ -149,19 +165,29 @@ CLASS zcl_mcp_resp_read_resource IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_text_resource.
-    DATA(resource_content) = VALUE resource_content_wrapper( type = 'text' ).
-    DATA(text_resource) = NEW text_resource_contents( uri      = uri
-                                                      text     = text
-                                                      mime_type = mime_type ).
+    DATA temp3 TYPE resource_content_wrapper.
+    DATA resource_content LIKE temp3.
+    DATA text_resource TYPE REF TO zcl_mcp_resp_read_resource=>text_resource_contents.
+    CLEAR temp3.
+    temp3-type = 'text'.
+    
+    resource_content = temp3.
+    
+    CREATE OBJECT text_resource TYPE text_resource_contents EXPORTING uri = uri text = text mime_type = mime_type.
     resource_content-resource = text_resource.
     APPEND resource_content TO int_contents.
   ENDMETHOD.
 
   METHOD add_blob_resource.
-    DATA(resource_content) = VALUE resource_content_wrapper( type = 'blob' ).
-    DATA(blob_resource) = NEW blob_resource_contents( uri      = uri
-                                                      blob     = blob
-                                                      mime_type = mime_type ).
+    DATA temp4 TYPE resource_content_wrapper.
+    DATA resource_content LIKE temp4.
+    DATA blob_resource TYPE REF TO zcl_mcp_resp_read_resource=>blob_resource_contents.
+    CLEAR temp4.
+    temp4-type = 'blob'.
+    
+    resource_content = temp4.
+    
+    CREATE OBJECT blob_resource TYPE blob_resource_contents EXPORTING uri = uri blob = blob mime_type = mime_type.
     resource_content-resource = blob_resource.
     APPEND resource_content TO int_contents.
   ENDMETHOD.

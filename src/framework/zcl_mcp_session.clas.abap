@@ -68,7 +68,10 @@ ENDCLASS.
 
 CLASS zcl_mcp_session IMPLEMENTATION.
   METHOD add.
-    IF line_exists( session_data[ key = entry-key ] ).
+    DATA temp1 LIKE sy-subrc.
+    READ TABLE session_data WITH KEY key = entry-key TRANSPORTING NO FIELDS.
+    temp1 = sy-subrc.
+    IF temp1 = 0.
       MODIFY TABLE session_data FROM entry.
     ELSE.
       INSERT entry INTO TABLE session_data.
@@ -80,6 +83,14 @@ CLASS zcl_mcp_session IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD constructor.
+    DATA session TYPE zmcp_sessions.
+      DATA temp2 TYPE symsgv.
+      DATA temp1 TYPE REF TO zcx_mcp_server.
+    DATA current_timestamp TYPE timestamp.
+    DATA timestamp_diff TYPE i.
+      DATA temp3 TYPE symsgv.
+      DATA temp5 TYPE REF TO zcx_mcp_server.
+        DATA temp4 TYPE REF TO zcx_mcp_server.
     me->session_id   = session_id.
     me->session_mode = session_mode.
 
@@ -88,20 +99,28 @@ CLASS zcl_mcp_session IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    SELECT SINGLE * FROM zmcp_sessions WHERE session_id = @session_id INTO @DATA(session).
+    
+    SELECT SINGLE * FROM zmcp_sessions INTO session WHERE session_id = session_id .
     IF sy-subrc <> 0.
-      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown
-                                          msgv1  = CONV #( session_id ) ).
+      
+      temp2 = session_id.
+      
+      CREATE OBJECT temp1 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>session_unknown msgv1 = temp2.
+      RAISE EXCEPTION temp1.
     ENDIF.
 
     " Verify if the session is still valid
-    DATA current_timestamp TYPE timestamp.
+    
     GET TIME STAMP FIELD current_timestamp.
-    DATA(timestamp_diff) = cl_abap_tstmp=>subtract( tstmp1 = current_timestamp
+    
+    timestamp_diff = cl_abap_tstmp=>subtract( tstmp1 = current_timestamp
                                                     tstmp2 = session-updated ).
     IF timestamp_diff > session_validity.
-      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_expired
-                                          msgv1  = CONV #( session_id ) ).
+      
+      temp3 = session_id.
+      
+      CREATE OBJECT temp5 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>session_expired msgv1 = temp3.
+      RAISE EXCEPTION temp5.
     ENDIF.
 
     " Load the session data
@@ -109,8 +128,9 @@ CLASS zcl_mcp_session IMPLEMENTATION.
         ajson = zcl_mcp_ajson=>parse( session-data ).
         ajson->to_abap( IMPORTING ev_container = session_data ).
       CATCH zcx_mcp_ajson_error.
-        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_load_error
-                                            msgv1  = `Could not parse JSON` ) ##NO_TEXT.
+        
+        CREATE OBJECT temp4 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>session_load_error msgv1 = `Could not parse JSON`.
+        RAISE EXCEPTION temp4 ##NO_TEXT.
     ENDTRY.
   ENDMETHOD.
 
@@ -134,6 +154,10 @@ CLASS zcl_mcp_session IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD save.
+        DATA value TYPE string.
+        DATA temp5 TYPE REF TO zcx_mcp_server.
+    DATA db_session TYPE zmcp_sessions.
+      DATA temp6 TYPE REF TO zcx_mcp_server.
     IF session_mode <> session_mode_mcp.
       RETURN.
     ENDIF.
@@ -142,28 +166,31 @@ CLASS zcl_mcp_session IMPLEMENTATION.
         ajson = zcl_mcp_ajson=>create_empty( ).
         ajson->set( iv_path = '/'
                     iv_val  = session_data ).
-        DATA(value) = ajson->stringify( ).
+        
+        value = ajson->stringify( ).
       CATCH zcx_mcp_ajson_error.
-        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_save_error
-                                            msgv1  = `Could not convert to JSON` ) ##NO_TEXT.
+        
+        CREATE OBJECT temp5 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>session_save_error msgv1 = `Could not convert to JSON`.
+        RAISE EXCEPTION temp5 ##NO_TEXT.
     ENDTRY.
 
-    DATA db_session TYPE zmcp_sessions.
+    
     db_session-session_id = session_id.
     db_session-data       = value.
     GET TIME STAMP FIELD db_session-updated.
 
-    MODIFY zmcp_sessions FROM @db_session.
+    MODIFY zmcp_sessions FROM db_session.
     IF sy-subrc <> 0.
-      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_save_error
-                                          msgv1  = `DB update failed.` ) ##NO_TEXT.
+      
+      CREATE OBJECT temp6 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>session_save_error msgv1 = `DB update failed.`.
+      RAISE EXCEPTION temp6 ##NO_TEXT.
     ENDIF.
     COMMIT WORK AND WAIT.
   ENDMETHOD.
 
   METHOD delete.
     IF session_id IS NOT INITIAL.
-      DELETE FROM zmcp_sessions WHERE session_id = @session_id.
+      DELETE FROM zmcp_sessions WHERE session_id = session_id.
       IF sy-subrc <> 0.
         " Ignored, we don't want to raise an exception if the session does not exist.
         RETURN.

@@ -34,7 +34,7 @@ ENDCLASS.
 CLASS zcl_mcp_req_list_resources IMPLEMENTATION.
   METHOD constructor.
     " Check if cursor exists in the request
-    IF json->exists( 'cursor' ).
+    IF json->exists( 'cursor' ) IS NOT INITIAL.
       int_has_cursor = abap_true.
       int_cursor = json->get_string( 'cursor' ).
     ELSE.

@@ -21,11 +21,18 @@ ENDCLASS.
 
 CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
   METHOD handle_initialize.
-    response-result->set_capabilities( VALUE #( prompts   = abap_true
-                                                resources = abap_true
-                                                tools     = abap_true ) ).
-    response-result->set_implementation( VALUE #( name    = `Demo MCP Server - using MCP session logic. Tools only.`
-                                                  version = `1.0.0` ) ) ##NO_TEXT.
+    DATA temp1 TYPE zcl_mcp_resp_initialize=>capabilities.
+    DATA temp2 TYPE zcl_mcp_resp_initialize=>implementation.
+    CLEAR temp1.
+    temp1-prompts = abap_true.
+    temp1-resources = abap_true.
+    temp1-tools = abap_true.
+    response-result->set_capabilities( temp1 ).
+    
+    CLEAR temp2.
+    temp2-name = `Demo MCP Server - using MCP session logic. Tools only.`.
+    temp2-version = `1.0.0`.
+    response-result->set_implementation( temp2 ) ##NO_TEXT.
     response-result->set_instructions(
         `Use the features provided by this server only if explicitly requested. If not sure ask the user!` ) ##NO_TEXT.
   ENDMETHOD.
@@ -33,22 +40,32 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
   METHOD handle_list_tools.
     DATA tools TYPE zcl_mcp_resp_list_tools=>tools.
 
-    APPEND VALUE #( name        = `get_session_details`
-                    description = `Get details about the current session.`  ) TO tools ##NO_TEXT.
+    DATA temp3 TYPE zcl_mcp_resp_list_tools=>tool.
+        DATA schema TYPE REF TO zcl_mcp_schema_builder.
+        DATA temp4 TYPE zcl_mcp_resp_list_tools=>tool.
+        DATA error TYPE REF TO zcx_mcp_ajson_error.
+    CLEAR temp3.
+    temp3-name = `get_session_details`.
+    temp3-description = `Get details about the current session.`.
+    APPEND temp3 TO tools ##NO_TEXT.
 
     " Demo tool with input parameters
     TRY.
-        DATA(schema) = NEW zcl_mcp_schema_builder( ).
+        
+        CREATE OBJECT schema TYPE zcl_mcp_schema_builder.
         schema->add_integer( name        = `increment`
                              description = `Increment value`
                              required    = abap_true ) ##NO_TEXT.
 
-        APPEND VALUE #(
-            name         = `increment_example`
-            description  = `Every time increments the result by the given number. This is to demonstrate the session logic.`
-            input_schema = schema->to_json( ) )
+        
+        CLEAR temp4.
+        temp4-name = `increment_example`.
+        temp4-description = `Every time increments the result by the given number. This is to demonstrate the session logic.`.
+        temp4-input_schema = schema->to_json( ).
+        APPEND temp4
                TO tools ##NO_TEXT.
-      CATCH zcx_mcp_ajson_error INTO DATA(error).
+        
+      CATCH zcx_mcp_ajson_error INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
     ENDTRY.
@@ -73,8 +90,14 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD increment_example.
-    DATA(input) = request->get_arguments( ).
-    DATA(increment) = input->get_integer( `increment` ).
+    DATA input TYPE REF TO zif_mcp_ajson.
+    DATA increment TYPE i.
+    DATA session_increment TYPE zcl_mcp_session=>session_entry.
+    DATA current_increment TYPE i.
+    DATA temp5 TYPE zcl_mcp_session=>session_entry.
+    input = request->get_arguments( ).
+    
+    increment = input->get_integer( `increment` ).
     IF increment IS INITIAL.
       response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
       response-error-message = |Increment value is required.| ##NO_TEXT.
@@ -82,8 +105,9 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
     ENDIF.
 
     " Get the last increment value from the session
-    DATA(session_increment) = session->get( `increment` ).
-    DATA current_increment TYPE i.
+    
+    session_increment = session->get( `increment` ).
+    
     IF session_increment IS INITIAL.
       " No value in the session, set it to 0
       current_increment = 0.
@@ -94,8 +118,11 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
     response-result->add_text_content( |Incremented value: { current_increment }| ) ##NO_TEXT.
 
     " Store the new value in the session
-    session->add( VALUE #( key   = `increment`
-                                          value = current_increment ) ).
+    
+    CLEAR temp5.
+    temp5-key = `increment`.
+    temp5-value = current_increment.
+    session->add( temp5 ).
   ENDMETHOD.
 
 ENDCLASS.

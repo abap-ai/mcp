@@ -315,6 +315,7 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
     data lv_normalized_path type string.
     data lr_node type ref to zif_mcp_ajson_types=>ty_node.
     field-symbols <item> like line of mt_json_tree.
+          data lv_tmp type string.
 
     lv_normalized_path = lcl_utils=>normalize_path( iv_path ).
     lr_node = get_item( iv_path ).
@@ -333,7 +334,7 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
         when zif_mcp_ajson_types=>node_type-null.
           append '' to rt_string_table.
         when zif_mcp_ajson_types=>node_type-boolean.
-          data lv_tmp type string.
+          
           if <item>-value = 'true'.
             lv_tmp = abap_true.
           else.
@@ -363,10 +364,11 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
 
 
   method zif_mcp_ajson~delete.
+    data ls_split_path type zif_mcp_ajson_types=>ty_path_name.
 
     read_only_watchdog( ).
 
-    data ls_split_path type zif_mcp_ajson_types=>ty_path_name.
+    
     ls_split_path = lcl_utils=>split_path( iv_path ).
 
     delete_subtree(
@@ -553,6 +555,9 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
 
     data lr_parent type ref to zif_mcp_ajson_types=>ty_node.
     data lr_new_node type ref to zif_mcp_ajson_types=>ty_node.
+    data lt_new_nodes type zif_mcp_ajson_types=>ty_nodes_tt.
+    data ls_new_path type zif_mcp_ajson_types=>ty_path_name.
+    data lv_new_index type i.
 
     read_only_watchdog( ).
 
@@ -566,9 +571,9 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
       zcx_mcp_ajson_error=>raise( |Path [{ iv_path }] is not array| ) ##NO_TEXT.
     endif.
 
-    data lt_new_nodes type zif_mcp_ajson_types=>ty_nodes_tt.
-    data ls_new_path type zif_mcp_ajson_types=>ty_path_name.
-    data lv_new_index type i.
+    
+    
+    
 
     lv_new_index     = lr_parent->children + 1.
     ls_new_path-path = lcl_utils=>normalize_path( iv_path ).
@@ -597,6 +602,8 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
     data lr_parent type ref to zif_mcp_ajson_types=>ty_node.
     data ls_deleted_node type zif_mcp_ajson_types=>ty_node.
     data lv_item_order type zif_mcp_ajson_types=>ty_node-order.
+    data lt_new_nodes type zif_mcp_ajson_types=>ty_nodes_tt.
+    data lv_array_index type i.
 
     read_only_watchdog( ).
 
@@ -643,8 +650,8 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
     lv_item_order = ls_deleted_node-order.
 
     " convert to json
-    data lt_new_nodes type zif_mcp_ajson_types=>ty_nodes_tt.
-    data lv_array_index type i.
+    
+    
 
     if lr_parent->type = zif_mcp_ajson_types=>node_type-array.
       lv_array_index = lcl_utils=>validate_array_index(
@@ -756,10 +763,11 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
 
 
   method zif_mcp_ajson~set_boolean.
+    data lv_bool type abap_bool.
 
     ri_json = me.
 
-    data lv_bool type abap_bool.
+    
     lv_bool = boolc( iv_val is not initial ).
     zif_mcp_ajson~set(
       iv_ignore_empty = abap_false
@@ -770,10 +778,11 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
 
 
   method zif_mcp_ajson~set_date.
+    data lv_val type string.
 
     ri_json = me.
 
-    data lv_val type string.
+    
     lv_val = lcl_abap_to_json=>format_date( iv_val ).
 
     zif_mcp_ajson~set(
@@ -797,10 +806,11 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
 
 
   method zif_mcp_ajson~set_null.
+    data lv_null_ref type ref to data.
 
     ri_json = me.
 
-    data lv_null_ref type ref to data.
+    
     zif_mcp_ajson~set(
       iv_ignore_empty = abap_false
       iv_path = iv_path
@@ -810,10 +820,11 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
 
 
   method zif_mcp_ajson~set_string.
+    data lv_val type string.
 
     ri_json = me.
 
-    data lv_val type string.
+    
     lv_val = iv_val.
     zif_mcp_ajson~set(
       iv_ignore_empty = abap_false
@@ -824,10 +835,11 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
 
 
   method zif_mcp_ajson~set_timestamp.
+    data lv_timestamp_iso type string.
 
     ri_json = me.
 
-    data lv_timestamp_iso type string.
+    
     lv_timestamp_iso = lcl_abap_to_json=>format_timestamp( iv_val ).
 
     zif_mcp_ajson~set(
@@ -893,6 +905,7 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
     data ls_deleted_node type zif_mcp_ajson_types=>ty_node.
     data ls_new_node like line of mt_json_tree.
     data ls_split_path type zif_mcp_ajson_types=>ty_path_name.
+      data lr_parent type ref to zif_mcp_ajson_types=>ty_node.
 
     read_only_watchdog( ).
 
@@ -915,7 +928,7 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
 
     if lr_node is initial. " Or node was cleared
 
-      data lr_parent type ref to zif_mcp_ajson_types=>ty_node.
+      
       lr_parent = prove_path_exists( ls_split_path-path ).
       assert lr_parent is not initial.
 

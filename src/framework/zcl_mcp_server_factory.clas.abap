@@ -19,7 +19,8 @@ ENDCLASS.
 
 CLASS zcl_mcp_server_factory IMPLEMENTATION.
   METHOD get_server.
-    SELECT SINGLE * FROM zmcp_servers WHERE area = @area AND server = @server INTO @DATA(server_def).
+    DATA server_def TYPE zmcp_servers.
+    SELECT SINGLE * FROM zmcp_servers INTO server_def WHERE area = area AND server = server .
     IF sy-subrc <> 0.
       " No further error processing, the caller will check the instance
       RETURN.
@@ -31,8 +32,7 @@ CLASS zcl_mcp_server_factory IMPLEMENTATION.
         RETURN.
     ENDTRY.
 
-    result->config = NEW zcl_mcp_configuration( area   = area
-                                                server = server ).
+    CREATE OBJECT result->config TYPE zcl_mcp_configuration EXPORTING area = area server = server.
     result->server-session_mode = server_def-session_mode.
     result->server-cors_mode    = result->config->get_cors_mode( ).
   ENDMETHOD.

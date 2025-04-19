@@ -26,18 +26,22 @@ ENDCLASS.
 
 CLASS zcl_mcp_req_read_resource IMPLEMENTATION.
   METHOD constructor.
+        DATA temp1 TYPE REF TO zcx_mcp_server.
+      DATA temp2 TYPE REF TO zcx_mcp_server.
     " Check if URI exists - it's a mandatory parameter
-    IF json->exists( 'uri' ).
+    IF json->exists( 'uri' ) IS NOT INITIAL.
       int_uri = json->get_string( 'uri' ).
 
       " Additional validation: URI should not be empty
       IF int_uri IS INITIAL.
-        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
-                                            msgv1  = 'uri' ).
+        
+        CREATE OBJECT temp1 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>required_params msgv1 = 'uri'.
+        RAISE EXCEPTION temp1.
       ENDIF.
     ELSE.
-      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
-                                          msgv1  = 'uri' ).
+      
+      CREATE OBJECT temp2 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>required_params msgv1 = 'uri'.
+      RAISE EXCEPTION temp2.
     ENDIF.
   ENDMETHOD.
 

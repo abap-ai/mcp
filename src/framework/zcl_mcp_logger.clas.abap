@@ -122,7 +122,9 @@ CLASS zcl_mcp_logger IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD is_log_level_enabled.
-    result = xsdbool( level >= log_level AND log_level > log_levels-off ).
+    DATA temp1 TYPE xsdboolean.
+    temp1 = boolc( level >= log_level AND log_level > log_levels-off ).
+    result = temp1.
   ENDMETHOD.
 
   METHOD add_message.
@@ -188,14 +190,14 @@ CLASS zcl_mcp_logger IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD info.
-    IF is_log_level_enabled( log_levels-info ).
+    IF is_log_level_enabled( log_levels-info ) IS NOT INITIAL.
       add_message( message   = message
                    msg_type  = 'I' ).
     ENDIF.
   ENDMETHOD.
 
   METHOD warning.
-    IF is_log_level_enabled( log_levels-warning ).
+    IF is_log_level_enabled( log_levels-warning ) IS NOT INITIAL.
       add_message(
         message   = message
         msg_type  = 'W'
@@ -204,7 +206,7 @@ CLASS zcl_mcp_logger IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD error.
-    IF is_log_level_enabled( log_levels-error ).
+    IF is_log_level_enabled( log_levels-error ) IS NOT INITIAL.
       add_message( message   = message
                    msg_type  = 'E' ).
     ENDIF.
@@ -213,6 +215,8 @@ CLASS zcl_mcp_logger IMPLEMENTATION.
   METHOD save.
     DATA log_handles TYPE bal_t_logh.
     DATA log_numbers TYPE bal_t_lgnm.
+      DATA temp1 LIKE LINE OF log_numbers.
+      DATA temp2 LIKE sy-tabix.
 
     IF is_initialized = abap_false.
       result = ''.
@@ -230,7 +234,15 @@ CLASS zcl_mcp_logger IMPLEMENTATION.
         OTHERS           = 1.
 
     IF sy-subrc = 0 AND lines( log_numbers ) > 0.
-      result = log_numbers[ 1 ]-lognumber.
+      
+      
+      temp2 = sy-tabix.
+      READ TABLE log_numbers INDEX 1 INTO temp1.
+      sy-tabix = temp2.
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE cx_sy_itab_line_not_found.
+      ENDIF.
+      result = temp1-lognumber.
       COMMIT WORK.
     ENDIF.
   ENDMETHOD.

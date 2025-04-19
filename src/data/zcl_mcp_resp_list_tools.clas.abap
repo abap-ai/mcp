@@ -54,14 +54,18 @@ ENDCLASS.
 
 CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
+    FIELD-SYMBOLS <tool> LIKE LINE OF int_tools.
+      DATA tool_index LIKE sy-tabix.
     result = zcl_mcp_ajson=>create_empty( ).
 
     " Create tools array
     result->touch_array( '/tools' ).
 
     " Add all tools
-    LOOP AT int_tools ASSIGNING FIELD-SYMBOL(<tool>).
-      DATA(tool_index) = sy-tabix.
+    
+    LOOP AT int_tools ASSIGNING <tool>.
+      
+      tool_index = sy-tabix.
 
       " Add name (required)
       result->set( iv_path         = |/tools/{ tool_index }/name|

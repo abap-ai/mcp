@@ -8,7 +8,7 @@ CLASS zcl_mcp_resp_list_resources DEFINITION
     INTERFACES zif_mcp_internal.
 
     TYPES: BEGIN OF annotations,
-             audience TYPE STANDARD TABLE OF string WITH EMPTY KEY,
+             audience TYPE STANDARD TABLE OF string WITH DEFAULT KEY,
              priority TYPE decfloat16,
            END OF annotations.
 
@@ -52,13 +52,18 @@ ENDCLASS.
 
 CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
+    FIELD-SYMBOLS <resource> LIKE LINE OF int_resources.
+      DATA resource_index LIKE sy-tabix.
+          FIELD-SYMBOLS <audience> LIKE LINE OF <resource>-annotations-audience.
     result = zcl_mcp_ajson=>create_empty( ).
     " Create resources array
     result->touch_array( '/resources' ).
 
     " Add all resources
-    LOOP AT int_resources ASSIGNING FIELD-SYMBOL(<resource>).
-      DATA(resource_index) = sy-tabix.
+    
+    LOOP AT int_resources ASSIGNING <resource>.
+      
+      resource_index = sy-tabix.
 
       " Add uri (required)
       result->set( iv_path         = |/resources/{ resource_index }/uri|
@@ -94,7 +99,8 @@ CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
         IF <resource>-annotations-audience IS NOT INITIAL.
           result->touch_array( |/resources/{ resource_index }/annotations/audience| ).
 
-          LOOP AT <resource>-annotations-audience ASSIGNING FIELD-SYMBOL(<audience>).
+          
+          LOOP AT <resource>-annotations-audience ASSIGNING <audience>.
             result->set( iv_path = |/resources/{ resource_index }/annotations/audience/{ sy-tabix }|
                          iv_val  = <audience> ).
           ENDLOOP.

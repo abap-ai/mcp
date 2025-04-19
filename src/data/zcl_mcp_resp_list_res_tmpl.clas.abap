@@ -8,7 +8,7 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
     INTERFACES zif_mcp_internal.
 
     TYPES: BEGIN OF annotations,
-             audience TYPE STANDARD TABLE OF string WITH EMPTY KEY,
+             audience TYPE STANDARD TABLE OF string WITH DEFAULT KEY,
              priority TYPE decfloat16,
            END OF annotations.
 
@@ -51,14 +51,19 @@ ENDCLASS.
 
 CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
+    FIELD-SYMBOLS <template> LIKE LINE OF int_resource_templates.
+      DATA template_index LIKE sy-tabix.
+          FIELD-SYMBOLS <audience> LIKE LINE OF <template>-annotations-audience.
     result = zcl_mcp_ajson=>create_empty( ).
     " Create resourceTemplates array
 
     result->touch_array( '/resourceTemplates' ).
 
     " Add all resource templates
-    LOOP AT int_resource_templates ASSIGNING FIELD-SYMBOL(<template>).
-      DATA(template_index) = sy-tabix.
+    
+    LOOP AT int_resource_templates ASSIGNING <template>.
+      
+      template_index = sy-tabix.
 
       " Add uriTemplate (required)
       result->set( iv_path         = |/resourceTemplates/{ template_index }/uriTemplate|
@@ -88,7 +93,8 @@ CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
         IF <template>-annotations-audience IS NOT INITIAL.
           result->touch_array( |/resourceTemplates/{ template_index }/annotations/audience| ).
 
-          LOOP AT <template>-annotations-audience ASSIGNING FIELD-SYMBOL(<audience>).
+          
+          LOOP AT <template>-annotations-audience ASSIGNING <audience>.
             result->set( iv_path = |/resourceTemplates/{ template_index }/annotations/audience/{ sy-tabix }|
                          iv_val  = <audience> ).
           ENDLOOP.

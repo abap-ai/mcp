@@ -26,30 +26,67 @@ ENDCLASS.
 
 CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
   METHOD handle_initialize.
-    response-result->set_capabilities( VALUE #( prompts = abap_true resources = abap_true tools  = abap_true ) ).
-    response-result->set_implementation( VALUE #( name = `Demo MCP Server` version = `1.0.0` ) ) ##NO_TEXT.
+    DATA temp1 TYPE zcl_mcp_resp_initialize=>capabilities.
+    DATA temp2 TYPE zcl_mcp_resp_initialize=>implementation.
+    CLEAR temp1.
+    temp1-prompts = abap_true.
+    temp1-resources = abap_true.
+    temp1-tools = abap_true.
+    response-result->set_capabilities( temp1 ).
+    
+    CLEAR temp2.
+    temp2-name = `Demo MCP Server`.
+    temp2-version = `1.0.0`.
+    response-result->set_implementation( temp2 ) ##NO_TEXT.
     response-result->set_instructions( `Use the features provided by this server only if explicitely requested. If not sure ask the user!` ) ##NO_TEXT.
   ENDMETHOD.
 
   METHOD handle_list_prompts.
     " In this demo instance we only have two prompts, therefore
     " we do not consider cursor and max_list_results.
+    DATA temp3 TYPE zcl_mcp_resp_list_prompts=>prompts.
+    DATA temp4 LIKE LINE OF temp3.
+    DATA temp1 TYPE zcl_mcp_resp_list_prompts=>prompt_arguments.
+    DATA temp2 LIKE LINE OF temp1.
+    DATA temp5 TYPE zcl_mcp_resp_list_prompts=>prompt_arguments.
+    DATA temp6 LIKE LINE OF temp5.
+    CLEAR temp3.
+    
+    temp4-name = `greet`.
+    temp4-description = `Asks the LLM to greet someone.`.
+    
+    CLEAR temp1.
+    
+    temp2-name = `name`.
+    temp2-description = `Name of the person to greet`.
+    temp2-required = abap_true.
+    INSERT temp2 INTO TABLE temp1.
+    temp4-arguments = temp1.
+    INSERT temp4 INTO TABLE temp3.
+    temp4-name = `joke`.
+    temp4-description = `Asks the LLM to tell a joke about a specific topic`.
+    
+    CLEAR temp5.
+    
+    temp6-name = `topic`.
+    temp6-description = `Topic to joke about`.
+    temp6-required = abap_true.
+    INSERT temp6 INTO TABLE temp5.
+    temp4-arguments = temp5.
+    INSERT temp4 INTO TABLE temp3.
     response-result->set_prompts(
-        VALUE #(
-            ( name        = `greet`
-              description = `Asks the LLM to greet someone.`
-              arguments   = VALUE #( ( name = `name` description = `Name of the person to greet` required = abap_true ) ) )
-            ( name        = `joke`
-              description = `Asks the LLM to tell a joke about a specific topic`
-              arguments   = VALUE #( ( name = `topic` description = `Topic to joke about` required = abap_true ) ) ) ) ) ##NO_TEXT.
+        temp3 ) ##NO_TEXT.
   ENDMETHOD.
 
   METHOD handle_get_prompt.
     " In this example we always return a text prompt only.
-    DATA(arguments) = request->get_arguments( ).
+    DATA arguments TYPE zcl_mcp_req_get_prompt=>prompt_arguments.
+        DATA argument TYPE zcl_mcp_req_get_prompt=>prompt_argument.
+    arguments = request->get_arguments( ).
     CASE request->get_name( ).
       WHEN `greet`.
-        READ TABLE arguments INTO DATA(argument) WITH KEY key = `name`.
+        
+        READ TABLE arguments INTO argument WITH KEY key = `name`.
         IF sy-subrc <> 0.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
           response-error-message = |Prompt { request->get_name( ) } requires parameter 'name'| ##NO_TEXT.
@@ -80,32 +117,44 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     " In this demo instance we only have one static resource, therefore
     " we do not consider cursor and max_list_results.
 
+    DATA temp5 TYPE zcl_mcp_resp_list_resources=>resources.
+    DATA temp6 LIKE LINE OF temp5.
+    CLEAR temp5.
+    
+    temp6-uri = `abap://classes/zcl_demo`.
+    temp6-name = `zcl_demo.class`.
+    temp6-description = `Demo Class`.
+    temp6-mime_type = `text/x-abap`.
+    INSERT temp6 INTO TABLE temp5.
     response-result->set_resources(
-        VALUE #(
-            ( uri         = `abap://classes/zcl_demo`
-              name        = `zcl_demo.class`
-              description = `Demo Class`
-              mime_type   = `text/x-abap` ) ) ) ##NO_TEXT.
+        temp5 ) ##NO_TEXT.
   ENDMETHOD.
 
   METHOD handle_list_res_tmpls.
     " In this demo instance we only have one templated resource, therefore
     " we do not consider cursor and max_list_results.
 
+    DATA temp7 TYPE zcl_mcp_resp_list_res_tmpl=>resource_templates.
+    DATA temp8 LIKE LINE OF temp7.
+    CLEAR temp7.
+    
+    temp8-uritemplate = `file://sales_reciept/{sales_order}`.
+    temp8-name = `Sales Reciepts`.
+    temp8-description = `Reciepts for Sales Order`.
+    temp8-mime_type = `application/pdf`.
+    INSERT temp8 INTO TABLE temp7.
     response-result->set_resource_templates(
-        VALUE #(
-          ( uritemplate = `file://sales_reciept/{sales_order}`
-            name         = `Sales Reciepts`
-            description  = `Reciepts for Sales Order`
-            mime_type    = `application/pdf` ) ) ) ##NO_TEXT.
+        temp7 ) ##NO_TEXT.
   ENDMETHOD.
 
   METHOD handle_resources_read.
+      DATA text TYPE string.
     " For now just one example supported.
     " No example for the dynamic resource for now.
 
     IF request->get_uri( ) = `abap://classes/zcl_demo`.
-      DATA(text) = |CLASS zcl_demo DEFINITION PUBLIC FINAL CREATE PUBLIC.\n|
+      
+      text = |CLASS zcl_demo DEFINITION PUBLIC FINAL CREATE PUBLIC.\n|
                       && |  PUBLIC SECTION.\n|
                       && |    METHODS: get_text RETURNING VALUE(rv_text) TYPE string.\n|
                       && |ENDCLASS.\n\n|
@@ -128,25 +177,42 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     DATA tools TYPE zcl_mcp_resp_list_tools=>tools.
 
     " Demo Tool without any input parameter
-    APPEND VALUE #( name        = `get_server_time`
-                    description = `Get the current server date and time in internal format.`  ) TO tools ##NO_TEXT.
+    DATA temp9 TYPE zcl_mcp_resp_list_tools=>tool.
+        DATA schema TYPE REF TO zcl_mcp_schema_builder.
+        DATA temp10 TYPE string_table.
+        DATA temp12 TYPE zcl_mcp_resp_list_tools=>tool.
+        DATA error TYPE REF TO zcx_mcp_ajson_error.
+    CLEAR temp9.
+    temp9-name = `get_server_time`.
+    temp9-description = `Get the current server date and time in internal format.`.
+    APPEND temp9 TO tools ##NO_TEXT.
 
     " Demo tool with input parameters
     TRY.
-        DATA(schema) = NEW zcl_mcp_schema_builder( ).
+        
+        CREATE OBJECT schema TYPE zcl_mcp_schema_builder.
+        
+        CLEAR temp10.
+        INSERT `AA` INTO TABLE temp10.
+        INSERT `AB` INTO TABLE temp10.
+        INSERT `AC` INTO TABLE temp10.
         schema->add_string( name        = `airline_code`
                             description = `Airline Code`
                             required    = abap_true
-                            enum        = VALUE #( ( `AA` ) ( `AB` ) ( `AC` ) ) ) ##NO_TEXT.
+                            enum        = temp10 ) ##NO_TEXT.
         schema->add_integer( name        = `flight_number`
                              description = `Flight Number`
                              required    = abap_true ) ##NO_TEXT.
 
-        APPEND VALUE #( name         = `get_flight_conn_details`
-                        description  = `Get details of one specific flight connection`
-                        input_schema = schema->to_json( ) )
+        
+        CLEAR temp12.
+        temp12-name = `get_flight_conn_details`.
+        temp12-description = `Get details of one specific flight connection`.
+        temp12-input_schema = schema->to_json( ).
+        APPEND temp12
                TO tools ##NO_TEXT.
-      CATCH zcx_mcp_ajson_error INTO DATA(error).
+        
+      CATCH zcx_mcp_ajson_error INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
     ENDTRY.
@@ -167,9 +233,26 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_flight_conn_details.
-    DATA(input) = request->get_arguments( ).
-    DATA(airline_code) = input->get_string( `airline_code` ).
-    DATA(flight_number) = input->get_integer( `flight_number` ).
+    DATA input TYPE REF TO zif_mcp_ajson.
+    DATA airline_code TYPE string.
+    DATA flight_number TYPE i.
+    DATA connid TYPE s_conn_id.
+TYPES BEGIN OF temp13.
+TYPES carrid TYPE sflight-carrid.
+TYPES connid TYPE sflight-connid.
+TYPES fldate TYPE sflight-fldate.
+TYPES price TYPE sflight-price.
+TYPES currency TYPE sflight-currency.
+TYPES planetype TYPE sflight-planetype.
+TYPES END OF temp13.
+    DATA flights TYPE STANDARD TABLE OF temp13 WITH DEFAULT KEY.
+    DATA markdown TYPE string.
+    FIELD-SYMBOLS <flight> LIKE LINE OF flights.
+    input = request->get_arguments( ).
+    
+    airline_code = input->get_string( `airline_code` ).
+    
+    flight_number = input->get_integer( `flight_number` ).
 
     " Validate input parameter
 
@@ -185,15 +268,17 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    DATA connid TYPE s_conn_id.
+    
     connid = flight_number.
 
     " Select only the required fields
-    SELECT carrid, connid, fldate, price, currency, planetype
-      FROM sflight
-      WHERE carrid = @airline_code AND connid = @connid
+    
+    
+    SELECT carrid connid fldate price currency planetype
+      FROM sflight INTO TABLE flights
+      WHERE carrid = airline_code AND connid = connid
       ORDER BY fldate
-      INTO TABLE @DATA(flights).
+      .
 
     IF sy-subrc <> 0.
       response-result->add_text_content( |No flights found for airline { airline_code } and connection { connid }| ) ##NO_TEXT.
@@ -201,14 +286,16 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     ENDIF.
 
     " Create markdown table
-    DATA(markdown) = |## Flight Connection Details\n\n|.
+    
+    markdown = |## Flight Connection Details\n\n|.
 
     " Add table headers
     markdown = |{ markdown }\| Airline \| Connection \| Flight Date \| Price \| Currency \| Plane Type \|\n| ##NO_TEXT.
     markdown = |{ markdown }\|---------\|------------\|-------------\|-------\|----------\|------------\|\n| ##NO_TEXT.
 
     " Add table rows
-    LOOP AT flights ASSIGNING FIELD-SYMBOL(<flight>).
+    
+    LOOP AT flights ASSIGNING <flight>.
       markdown = markdown &&
         |\| { <flight>-carrid } \| { <flight>-connid } \| { <flight>-fldate DATE = USER } \| { <flight>-price } \| { <flight>-currency } \| { <flight>-planetype } \|\n|.
     ENDLOOP.
