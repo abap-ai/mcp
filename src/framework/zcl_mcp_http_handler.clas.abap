@@ -172,7 +172,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
         ENDIF.
       WHEN zcl_mcp_session=>session_mode_mcp.
         TRY.
-            mcp_server->session = NEW zcl_mcp_session( session_id   = CONV #( session_id )
+            mcp_server->session = NEW zcl_mcp_session( session_id   = CONV sysuuid_c32( session_id )
                                                        session_mode = mcp_server->server-session_mode
                                                        create_new   = abap_false ).
             mcp_server->server-session_id = session_id.
@@ -516,7 +516,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
           ENDIF.
         WHEN zcl_mcp_session=>session_mode_mcp.
           TRY.
-              mcp_server->session = NEW zcl_mcp_session( session_id   = CONV #( session_id )
+              mcp_server->session = NEW zcl_mcp_session( session_id   = CONV sysuuid_c32( session_id )
                                                          session_mode = mcp_server->server-session_mode
                                                          create_new   = abap_false ).
               mcp_server->server-session_id = session_id.

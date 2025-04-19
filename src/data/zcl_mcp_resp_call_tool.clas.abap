@@ -116,9 +116,31 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
       IMPORTING meta TYPE REF TO zif_mcp_ajson.
 
   PRIVATE SECTION.
-    DATA int_content  TYPE content_list.
-    DATA int_meta     TYPE REF TO zif_mcp_ajson.
-    DATA int_has_error TYPE abap_bool.
+    " Content type identifiers
+    CONSTANTS: BEGIN OF content_type,
+                 text     TYPE string VALUE 'text',
+                 image    TYPE string VALUE 'image',
+                 resource TYPE string VALUE 'resource',
+               END OF content_type.
+
+    " Simple content structures that don't use references
+    TYPES: BEGIN OF content_item,
+             type        TYPE string,
+             text        TYPE string,            " For text content
+             image_data  TYPE string,            " For image content
+             image_mime  TYPE string,            " For image content
+             res_uri     TYPE string,            " For resource content
+             res_text    TYPE string,            " For text resource content
+             res_mime    TYPE string,            " For resource content
+             res_blob    TYPE string,            " For blob resource content
+             res_is_blob TYPE abap_bool,         " Flag for blob vs text
+             annotations TYPE annotations,       " For any content
+           END OF content_item.
+
+    " Table for all content, maintaining original order
+    DATA content_items TYPE STANDARD TABLE OF content_item WITH EMPTY KEY.
+    DATA meta         TYPE REF TO zif_mcp_ajson.
+    DATA has_error    TYPE abap_bool.
 
     METHODS add_annotations_to_json
       IMPORTING !path       TYPE string
@@ -130,126 +152,79 @@ ENDCLASS.
 CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
     result = zcl_mcp_ajson=>create_empty( ).
+
     " Create content array
     result->touch_array( '/content' ).
 
-    " Add all content items
-    LOOP AT int_content ASSIGNING FIELD-SYMBOL(<content>).
+    " Add all content items in original order
+    LOOP AT content_items ASSIGNING FIELD-SYMBOL(<item>) WHERE type IS NOT INITIAL.
       DATA(content_index) = sy-tabix.
       DATA(content_path) = |/content/{ content_index }|.
 
-      " Skip if content is not bound
-      IF <content>-content IS NOT BOUND.
-        CONTINUE.
-      ENDIF.
-
       " Set common type field
       result->set( iv_path         = |{ content_path }/type|
-                   iv_val          = <content>-type
+                   iv_val          = <item>-type
                    iv_ignore_empty = abap_false ).
 
       " Handle content based on its type
-      CASE <content>-type.
-        WHEN 'text'.
-          " Text content with direct access
-          DATA(text_item) = CAST text_content( <content>-content ).
-
+      CASE <item>-type.
+        WHEN content_type-text.
+          " Text content
           result->set( iv_path         = |{ content_path }/text|
-                       iv_val          = text_item->text
+                       iv_val          = <item>-text
                        iv_ignore_empty = abap_false ).
 
-          " Add annotations if present
-          add_annotations_to_json( path        = content_path
-                                   annotations = text_item->annotations
-                                   ajson       = result ).
-
-        WHEN 'image'.
-          " Image content with direct access
-          DATA(image_item) = CAST image_content( <content>-content ).
-
+        WHEN content_type-image.
+          " Image content
           result->set( iv_path         = |{ content_path }/data|
-                       iv_val          = image_item->data
+                       iv_val          = <item>-image_data
                        iv_ignore_empty = abap_false ).
 
           result->set( iv_path         = |{ content_path }/mimeType|
-                       iv_val          = image_item->mime_type
+                       iv_val          = <item>-image_mime
                        iv_ignore_empty = abap_false ).
 
-          " Add annotations
-          add_annotations_to_json( path        = content_path
-                                   annotations = image_item->annotations
-                                   ajson       = result ).
+        WHEN content_type-resource.
+          " Resource content
+          result->set( iv_path         = |{ content_path }/resource/uri|
+                       iv_val          = <item>-res_uri
+                       iv_ignore_empty = abap_false ).
 
-        WHEN 'resource'.
-          " Resource content with direct access
-          DATA(resource_item) = CAST embedded_resource( <content>-content ).
+          IF <item>-res_mime IS NOT INITIAL.
+            result->set( iv_path = |{ content_path }/resource/mimeType|
+                         iv_val  = <item>-res_mime ).
+          ENDIF.
 
-          IF resource_item->resource IS BOUND.
-            " Try to determine if it's a text or blob resource
-            TRY.
-                " Try as text resource first
-                DATA(text_resource) = CAST text_resource_contents( resource_item->resource ).
-
-                " Set resource fields
-                result->set( iv_path         = |{ content_path }/resource/uri|
-                             iv_val          = text_resource->uri
-                             iv_ignore_empty = abap_false ).
-
-                IF text_resource->mime_type IS NOT INITIAL.
-                  result->set( iv_path = |{ content_path }/resource/mimeType|
-                               iv_val  = text_resource->mime_type ).
-                ENDIF.
-
-                result->set( iv_path         = |{ content_path }/resource/text|
-                             iv_val          = text_resource->text
-                             iv_ignore_empty = abap_false ).
-
-              CATCH cx_sy_move_cast_error.
-                " Must be a blob resource
-                TRY.
-                    DATA(blob_resource) = CAST blob_resource_contents( resource_item->resource ).
-
-                    " Set resource fields
-                    result->set( iv_path         = |{ content_path }/resource/uri|
-                                 iv_val          = blob_resource->uri
-                                 iv_ignore_empty = abap_false ).
-
-                    IF blob_resource->mime_type IS NOT INITIAL.
-                      result->set( iv_path = |{ content_path }/resource/mimeType|
-                                   iv_val  = blob_resource->mime_type ).
-                    ENDIF.
-
-                    result->set( iv_path         = |{ content_path }/resource/blob|
-                                 iv_val          = blob_resource->blob
-                                 iv_ignore_empty = abap_false ).
-
-                  CATCH cx_sy_move_cast_error.
-                    " Unknown resource type - skip
-                    CONTINUE.
-                ENDTRY.
-            ENDTRY.
-
-            " Add annotations
-            add_annotations_to_json( path        = content_path
-                                     annotations = resource_item->annotations
-                                     ajson       = result ).
+          " Either blob or text resource
+          IF <item>-res_is_blob = abap_true.
+            result->set( iv_path         = |{ content_path }/resource/blob|
+                         iv_val          = <item>-res_blob
+                         iv_ignore_empty = abap_false ).
+          ELSE.
+            result->set( iv_path         = |{ content_path }/resource/text|
+                         iv_val          = <item>-res_text
+                         iv_ignore_empty = abap_false ).
           ENDIF.
       ENDCASE.
+
+      " Add annotations for any content type
+      add_annotations_to_json( path        = content_path
+                               annotations = <item>-annotations
+                               ajson       = result ).
     ENDLOOP.
 
     " Add isError flag if true (only if set)
-    IF int_has_error = abap_true.
+    IF has_error = abap_true.
       result->set( iv_path = '/isError'
                    iv_val  = abap_true ).
     ENDIF.
 
     " Add metadata (optional)
-    IF int_meta IS BOUND.
+    IF meta IS BOUND.
       result->set( iv_path = '/_meta'
-                   iv_val  = int_meta ).
+                   iv_val  = meta ).
     ENDIF.
   ENDMETHOD.
-
 
   METHOD add_annotations_to_json.
     " Add annotations if not empty
@@ -275,57 +250,115 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD set_error.
-    int_has_error = has_error.
+    me->has_error = has_error.
   ENDMETHOD.
 
   METHOD add_text_content.
-    DATA(content_item) = VALUE content_wrapper( type = 'text' ).
-    DATA(text_item) = NEW text_content( type        = 'text'
-                                        text        = text
-                                        annotations = annotations ).
-    content_item-content = text_item.
-    APPEND content_item TO int_content.
+    APPEND VALUE content_item(
+      type        = content_type-text
+      text        = text
+      annotations = annotations
+    ) TO content_items.
   ENDMETHOD.
 
   METHOD add_image_content.
-    DATA(content_item) = VALUE content_wrapper( type = 'image' ).
-    DATA(image_item) = NEW image_content( type        = 'image'
-                                          data        = data
-                                          mime_type    = mime_type
-                                          annotations = annotations ).
-    content_item-content = image_item.
-    APPEND content_item TO int_content.
+    APPEND VALUE content_item(
+      type        = content_type-image
+      image_data  = data
+      image_mime  = mime_type
+      annotations = annotations
+    ) TO content_items.
   ENDMETHOD.
 
   METHOD add_text_resource.
-    DATA(content_item) = VALUE content_wrapper( type = 'resource' ).
-    DATA(resource_item) = NEW text_resource_contents( uri      = uri
-                                                      text     = text
-                                                      mime_type = mime_type ).
-    DATA(embedded_resource_item) = NEW embedded_resource( type        = 'resource'
-                                                          resource    = resource_item
-                                                          annotations = annotations ).
-    content_item-content = embedded_resource_item.
-    APPEND content_item TO int_content.
+    APPEND VALUE content_item(
+      type        = content_type-resource
+      res_uri     = uri
+      res_text    = text
+      res_mime    = mime_type
+      res_is_blob = abap_false
+      annotations = annotations
+    ) TO content_items.
   ENDMETHOD.
 
   METHOD add_blob_resource.
-    DATA(content_item) = VALUE content_wrapper( type = 'resource' ).
-    DATA(resource_item) = NEW blob_resource_contents( uri      = uri
-                                                    blob     = blob
-                                                    mime_type = mime_type ).
-    DATA(embedded_resource_item) = NEW embedded_resource( type        = 'resource'
-                                                        resource    = resource_item
-                                                        annotations = annotations ).
-    content_item-content = embedded_resource_item.
-    APPEND content_item TO int_content.
+    APPEND VALUE content_item(
+      type        = content_type-resource
+      res_uri     = uri
+      res_blob    = blob
+      res_mime    = mime_type
+      res_is_blob = abap_true
+      annotations = annotations
+    ) TO content_items.
   ENDMETHOD.
 
   METHOD set_content.
-    int_content = content.
+    " Clear existing content
+    CLEAR content_items.
+
+    " Translate complex structure to simpler internal structure
+    LOOP AT content ASSIGNING FIELD-SYMBOL(<content_wrapper>).
+      CASE <content_wrapper>-type.
+        WHEN content_type-text.
+          DATA(text_item) = CAST text_content( <content_wrapper>-content ).
+
+          APPEND VALUE content_item(
+            type        = content_type-text
+            text        = text_item->text
+            annotations = text_item->annotations
+          ) TO content_items.
+
+        WHEN content_type-image.
+          DATA(image_item) = CAST image_content( <content_wrapper>-content ).
+
+          APPEND VALUE content_item(
+            type        = content_type-image
+            image_data  = image_item->data
+            image_mime  = image_item->mime_type
+            annotations = image_item->annotations
+          ) TO content_items.
+
+        WHEN content_type-resource.
+          DATA(resource_item) = CAST embedded_resource( <content_wrapper>-content ).
+
+          " Try to determine if it's a text or blob resource
+          TRY.
+              " Try as text resource first
+              DATA(text_resource) = CAST text_resource_contents( resource_item->resource ).
+
+              APPEND VALUE content_item(
+                type        = content_type-resource
+                res_uri     = text_resource->uri
+                res_text    = text_resource->text
+                res_mime    = text_resource->mime_type
+                res_is_blob = abap_false
+                annotations = resource_item->annotations
+              ) TO content_items.
+
+            CATCH cx_sy_move_cast_error.
+              " Must be a blob resource
+              TRY.
+                  DATA(blob_resource) = CAST blob_resource_contents( resource_item->resource ).
+
+                  APPEND VALUE content_item(
+                    type        = content_type-resource
+                    res_uri     = blob_resource->uri
+                    res_blob    = blob_resource->blob
+                    res_mime    = blob_resource->mime_type
+                    res_is_blob = abap_true
+                    annotations = resource_item->annotations
+                  ) TO content_items.
+
+                CATCH cx_sy_move_cast_error.
+                  " Unknown resource type - skip
+                  CONTINUE.
+              ENDTRY.
+          ENDTRY.
+      ENDCASE.
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD set_meta.
-    int_meta = meta.
+    me->meta = meta.
   ENDMETHOD.
 ENDCLASS.
