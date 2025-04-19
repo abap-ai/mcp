@@ -1,0 +1,14 @@
+{
+    "scripts": {
+      "prepare_downport": "git clone https://github.com/abap-ai/mcp.git && rm -rf src/* && cp -r mcp/src/* src/ && rm -rf mcp",
+      "downport": "abaplint --fix ./abaplint-downport.jsonc || true",
+      "delete_testclasses": "find src -type f -name '*.clas.testclasses.abap' -delete ",
+      "update_xml_files": "find src -type f -name '*.clas.xml' -exec sed -i '/^[[:space:]]*<WITH_UNIT_TESTS>X<\\/WITH_UNIT_TESTS>[[:space:]]*$/d' {} \\;"
+    },
+    "dependencies": {
+      "@abaplint/cli": "^2.113.101",
+      "@abaplint/database-sqlite": "^2.10.24",
+      "@abaplint/runtime": "^2.10.24",
+      "@abaplint/transpiler-cli": "^2.10.24"
+    }
+  }

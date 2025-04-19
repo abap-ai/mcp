@@ -1,4 +1,10 @@
-# ABAP Model Context Protocol Server SDK
+# MCP ABAP Server SDK Downport
+
+This is an automated donwport of ABAP MCP SDK. This is a best effort donwport using the awesome downport features of abaplint. Unfortunately I have no system with a release below 7.50 available, therefore bugs and syntax issues are expected. Downport target is 7.02 which I assume should work.
+
+If you face issues feel free to open an issue.
+
+## ABAP Model Context Protocol Server SDK
 
 [Discord](https://discord.gg/jf2FhnFvSn) - for all ABAP-AI repos.
 
