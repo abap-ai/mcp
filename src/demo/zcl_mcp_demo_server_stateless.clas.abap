@@ -16,8 +16,7 @@ CLASS zcl_mcp_demo_server_stateless DEFINITION
     METHODS handle_call_tool REDEFINITION.
   PRIVATE SECTION.
 
-    METHODS get_server_time IMPORTING !request TYPE REF TO zcl_mcp_req_call_tool
-                            CHANGING  response TYPE zif_mcp_server=>call_tool_response.
+    METHODS get_server_time CHANGING  response TYPE zif_mcp_server=>call_tool_response.
     METHODS get_flight_conn_details IMPORTING !request TYPE REF TO zcl_mcp_req_call_tool
                                     CHANGING  response TYPE zif_mcp_server=>call_tool_response.
 ENDCLASS.
@@ -157,7 +156,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
   METHOD handle_call_tool.
     CASE request->get_name( ).
       WHEN `get_server_time`.
-        get_server_time( EXPORTING request = request CHANGING response = response ).
+        get_server_time( CHANGING response = response ).
       WHEN `get_flight_conn_details`.
         get_flight_conn_details( EXPORTING request = request CHANGING response = response ).
       WHEN OTHERS.
