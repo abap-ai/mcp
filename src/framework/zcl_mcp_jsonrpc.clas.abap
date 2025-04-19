@@ -39,8 +39,8 @@ CLASS zcl_mcp_jsonrpc DEFINITION
            END OF response.
 
     " Table types for batch operations
-    TYPES requests  TYPE TABLE OF request WITH EMPTY KEY.
-    TYPES responses TYPE TABLE OF response WITH EMPTY KEY.
+    TYPES requests  TYPE TABLE OF request WITH DEFAULT KEY.
+    TYPES responses TYPE TABLE OF response WITH DEFAULT KEY.
 
     " Core JSON-RPC functionality
     METHODS create_request
@@ -143,7 +143,7 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
 
   METHOD extract_id.
     " Return empty if ID doesn't exist
-    IF NOT json_obj->exists( '/id' ).
+    IF NOT json_obj->exists( '/id' ) IS NOT INITIAL.
       RETURN.
     ENDIF.
 
@@ -163,31 +163,38 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
 
 
   METHOD is_batch.
-    DATA(length) = strlen( json ).
-    result = xsdbool(
-            length >= 2
-        AND substring( val = json
-                       off = 0
-                       len = 1 )         = '['
-        AND substring( val = json
-                       off = length - 1
-                       len = 1 )         = ']' ).
+    DATA length TYPE i.
+    DATA temp1 TYPE xsdboolean.
+    length = strlen( json ).
+    
+    temp1 = boolc( length >= 2 AND substring( val = json off = 0 len = 1 ) = '[' AND substring( val = json off = length - 1 len = 1 ) = ']' ).
+    result = temp1.
   ENDMETHOD.
 
 
   METHOD parse_batch_request.
+      DATA json_array TYPE REF TO zcl_mcp_ajson.
+      DATA members TYPE string_table.
+      DATA member LIKE LINE OF members.
+        DATA single_json TYPE REF TO zif_mcp_ajson.
+        DATA single_request TYPE zcl_mcp_jsonrpc=>request.
     " Check if JSON is batch (array) or single request
-    IF is_batch( json ).
+    IF is_batch( json ) IS NOT INITIAL.
       " Parse as array
-      DATA(json_array) = zcl_mcp_ajson=>parse( json ).
+      
+      json_array = zcl_mcp_ajson=>parse( json ).
 
       " Process each array item
-      DATA(members) = json_array->members( '/' ).
-      LOOP AT members INTO DATA(member).
-        DATA(single_json) = json_array->slice( |/{ member }| ).
+      
+      members = json_array->members( '/' ).
+      
+      LOOP AT members INTO member.
+        
+        single_json = json_array->slice( |/{ member }| ).
 
         " Parse as request
-        DATA(single_request) = parse_request( single_json->stringify( ) ).
+        
+        single_request = parse_request( single_json->stringify( ) ).
         APPEND single_request TO result.
       ENDLOOP.
     ELSE.
@@ -208,7 +215,7 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     result-method  = json_obj->get_string( '/method' ).
 
     " Extract parameters if they exist
-    IF json_obj->exists( '/params' ).
+    IF json_obj->exists( '/params' ) IS NOT INITIAL.
       result-params = json_obj->slice( '/params' ).
     ELSE.
       " Avoid null object references
@@ -230,17 +237,17 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     result-jsonrpc = json_obj->get_string( '/jsonrpc' ).
 
     " Extract result if it exists
-    IF json_obj->exists( '/result' ).
+    IF json_obj->exists( '/result' ) IS NOT INITIAL.
       result-result = json_obj->slice( '/result' ).
     ENDIF.
 
     " Extract error if it exists
-    IF json_obj->exists( '/error' ).
+    IF json_obj->exists( '/error' ) IS NOT INITIAL.
       result-error-code    = json_obj->get_integer( '/error/code' ).
       result-error-message = json_obj->get_string( '/error/message' ).
 
       " Extract error data if it exists
-      IF json_obj->exists( '/error/data' ).
+      IF json_obj->exists( '/error/data' ) IS NOT INITIAL.
         result-error-data = json_obj->slice( '/error/data' ).
       ENDIF.
     ENDIF.
@@ -252,15 +259,21 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
 
   METHOD serialize_batch_response.
     DATA array_json TYPE REF TO zif_mcp_ajson.
+    DATA response LIKE LINE OF responses.
+      DATA response_json TYPE string.
+      DATA response_obj TYPE REF TO zcl_mcp_ajson.
 
     " Create empty array
     array_json = zcl_mcp_ajson=>create_empty( ).
     array_json->touch_array( '/' ).
 
     " Add each response to the array
-    LOOP AT responses INTO DATA(response).
-      DATA(response_json) = serialize_response( response ).
-      DATA(response_obj) = zcl_mcp_ajson=>parse( response_json ).
+    
+    LOOP AT responses INTO response.
+      
+      response_json = serialize_response( response ).
+      
+      response_obj = zcl_mcp_ajson=>parse( response_json ).
       array_json->push( iv_path = '/'
                         iv_val  = response_obj ).
     ENDLOOP.
@@ -272,6 +285,11 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
 
   METHOD serialize_request.
     DATA json_obj TYPE REF TO zif_mcp_ajson.
+      DATA params_node_type TYPE zif_mcp_ajson_types=>ty_node_type.
+      DATA params_json TYPE string.
+      DATA params_obj TYPE REF TO zcl_mcp_ajson.
+          DATA temp1 TYPE i.
+          DATA number LIKE temp1.
 
     " Create new JSON object
     json_obj = zcl_mcp_ajson=>create_empty( ).
@@ -285,15 +303,18 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     " Add params if present
     IF request-params IS BOUND.
       " Use slice content at params path
-      DATA(params_node_type) = request-params->get_node_type( '/' ).
+      
+      params_node_type = request-params->get_node_type( '/' ).
 
       IF params_node_type = 'array'.
         json_obj->touch_array( '/params' ).
       ENDIF.
 
       " Copy params content to the request JSON
-      DATA(params_json) = request-params->stringify( ).
-      DATA(params_obj) = zcl_mcp_ajson=>parse( params_json ).
+      
+      params_json = request-params->stringify( ).
+      
+      params_obj = zcl_mcp_ajson=>parse( params_json ).
       json_obj->set( iv_path = '/params'
                      iv_val  = params_obj ).
     ENDIF.
@@ -302,7 +323,10 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     IF request-id IS NOT INITIAL.
       " Try to determine if it's numeric
       TRY.
-          DATA(number) = CONV i( request-id ).
+          
+          temp1 = request-id.
+          
+          number = temp1.
           " Only treat as number if exact string representation matches
           IF request-id = |{ number }|.
             json_obj->set_integer( iv_path = '/id'
@@ -326,6 +350,12 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
 
   METHOD serialize_response.
     DATA json_obj TYPE REF TO zif_mcp_ajson.
+      DATA result_json TYPE string.
+      DATA result_obj TYPE REF TO zcl_mcp_ajson.
+        DATA error_data_json TYPE string.
+        DATA error_data_obj TYPE REF TO zcl_mcp_ajson.
+          DATA temp2 TYPE i.
+          DATA number LIKE temp2.
 
     " Create new JSON object
     json_obj = zcl_mcp_ajson=>create_empty( ).
@@ -337,8 +367,10 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     " Add result if success response
     IF response-result IS BOUND AND response-error-message IS INITIAL.
       " Copy result content to response JSON
-      DATA(result_json) = response-result->stringify( ).
-      DATA(result_obj) = zcl_mcp_ajson=>parse( result_json ).
+      
+      result_json = response-result->stringify( ).
+      
+      result_obj = zcl_mcp_ajson=>parse( result_json ).
       json_obj->set( iv_path = '/result'
                      iv_val  = result_obj ).
     ENDIF.
@@ -353,8 +385,10 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
 
       " Error data if present
       IF response-error-data IS BOUND.
-        DATA(error_data_json) = response-error-data->stringify( ).
-        DATA(error_data_obj) = zcl_mcp_ajson=>parse( error_data_json ).
+        
+        error_data_json = response-error-data->stringify( ).
+        
+        error_data_obj = zcl_mcp_ajson=>parse( error_data_json ).
         json_obj->set( iv_path = '/error/data'
                        iv_val  = error_data_obj ).
       ENDIF.
@@ -363,7 +397,10 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     " Add ID with correct type
     IF response-id IS NOT INITIAL.
       TRY.
-          DATA(number) = CONV i( response-id ).
+          
+          temp2 = response-id.
+          
+          number = temp2.
           IF response-id = |{ number }|.
             json_obj->set_integer( iv_path = '/id'
                                    iv_val  = number ).

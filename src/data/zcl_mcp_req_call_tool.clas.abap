@@ -39,22 +39,26 @@ ENDCLASS.
 
 CLASS zcl_mcp_req_call_tool IMPLEMENTATION.
   METHOD constructor.
+        DATA temp1 TYPE REF TO zcx_mcp_server.
+      DATA temp2 TYPE REF TO zcx_mcp_server.
     " Check if name exists - it's a mandatory parameter
-    IF json->exists( '/name' ).
+    IF json->exists( '/name' ) IS NOT INITIAL.
       int_name = json->get_string( '/name' ).
 
       " Additional validation: name should not be empty
       IF int_name IS INITIAL.
-        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>unknown_tool
-                                            msgv1  = 'Tool name cannot be empty' ) ##NO_TEXT.
+        
+        CREATE OBJECT temp1 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>unknown_tool msgv1 = 'Tool name cannot be empty'.
+        RAISE EXCEPTION temp1 ##NO_TEXT.
       ENDIF.
     ELSE.
-      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
-                                          msgv1  = 'name' ).
+      
+      CREATE OBJECT temp2 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>required_params msgv1 = 'name'.
+      RAISE EXCEPTION temp2.
     ENDIF.
 
     " Check for optional arguments
-    IF json->exists( '/arguments' ).
+    IF json->exists( '/arguments' ) IS NOT INITIAL.
       int_has_arguments = abap_true.
 
       " Use slice to preserve the original JSON structure of arguments

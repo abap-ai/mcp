@@ -4,7 +4,7 @@ CLASS zcl_mcp_configuration DEFINITION
   CREATE PUBLIC.
 
   PUBLIC SECTION.
-    TYPES origins TYPE STANDARD TABLE OF string WITH EMPTY KEY.
+    TYPES origins TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
     CONSTANTS cors_mode_check TYPE zmcp_conf_cors VALUE 'C' ##NEEDED.
     CONSTANTS cors_mode_ignore TYPE zmcp_conf_cors VALUE 'I'.
     CONSTANTS cors_mode_enforce TYPE zmcp_conf_cors VALUE 'E'.
@@ -51,50 +51,55 @@ CLASS zcl_mcp_configuration IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_allowed_origins.
+    DATA temp1 TYPE zcl_mcp_configuration=>origins.
     IF allowed_origins IS NOT INITIAL.
       result = allowed_origins.
       RETURN.
     ENDIF.
 
     " Check settings on lowest level first, if none found, check on higher level
-    SELECT origin FROM zmcp_origins
-      WHERE area   = @area
-        AND server = @server
+    SELECT origin FROM zmcp_origins INTO TABLE allowed_origins
+      WHERE area   = area
+        AND server = server
         ORDER BY PRIMARY KEY
-        INTO TABLE @allowed_origins.
+        .
     IF sy-subrc = 0.
       result = allowed_origins.
       RETURN.
     ENDIF.
 
-    SELECT origin FROM zmcp_origins
+    SELECT origin FROM zmcp_origins INTO TABLE allowed_origins
       WHERE area   = '*'
-        AND server = @server
+        AND server = server
         ORDER BY PRIMARY KEY
-        INTO TABLE @allowed_origins.
+        .
     IF sy-subrc = 0.
       result = allowed_origins.
       RETURN.
     ENDIF.
 
-    SELECT origin FROM zmcp_origins
+    SELECT origin FROM zmcp_origins INTO TABLE allowed_origins
       WHERE area   = '*'
         AND server = '*'
         ORDER BY PRIMARY KEY
-        INTO TABLE @allowed_origins.
+        .
     IF sy-subrc = 0.
       result = allowed_origins.
       RETURN.
     ENDIF.
 
     " If no origins found, all are allowed
-    allowed_origins = VALUE #( ( `*` ) ).
+    
+    CLEAR temp1.
+    INSERT `*` INTO TABLE temp1.
+    allowed_origins = temp1.
     result = allowed_origins.
   ENDMETHOD.
 
   METHOD get_logger.
-    IF logger IS NOT BOUND.
       DATA log_level TYPE i.
+    IF logger IS NOT BOUND.
+      
       CASE configuration-log_level.
         WHEN zcl_mcp_logger=>log_levels-error.
           log_level = 3.
@@ -106,9 +111,7 @@ CLASS zcl_mcp_configuration IMPLEMENTATION.
           log_level = 0. " Default to off
       ENDCASE.
 
-      logger = NEW #( log_level    = log_level
-                      object       = configuration-object
-                      subobject    = configuration-subobject ).
+      CREATE OBJECT logger EXPORTING log_level = log_level object = configuration-object subobject = configuration-subobject.
     ENDIF.
 
     result = logger.
@@ -117,7 +120,7 @@ CLASS zcl_mcp_configuration IMPLEMENTATION.
   METHOD read_configuration.
     " Read configuration from database or other source
     SELECT SINGLE * FROM zmcp_config
-      INTO @configuration.
+      INTO configuration.
 
     IF sy-subrc <> 0.
       " Set default configuration

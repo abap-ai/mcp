@@ -34,16 +34,19 @@ ENDCLASS.
 
 CLASS zcl_mcp_req_list_tools IMPLEMENTATION.
   METHOD constructor.
+          DATA error TYPE REF TO zcx_mcp_ajson_error.
+          DATA temp1 TYPE REF TO zcx_mcp_server.
     " Check if cursor exists in the request (optional parameter)
-    IF json->exists( 'cursor' ).
+    IF json->exists( 'cursor' ) IS NOT INITIAL.
       TRY.
           int_cursor = json->get_string( 'cursor' ).
           int_has_cursor = abap_true.
-        CATCH zcx_mcp_ajson_error INTO DATA(error).
+          
+        CATCH zcx_mcp_ajson_error INTO error.
           " Convert JSON error to a more specific parameter error
-          RAISE EXCEPTION NEW zcx_mcp_server( textid   = zcx_mcp_server=>invalid_arguments
-                                              msgv1    = 'Invalid cursor format'
-                                              previous = error ) ##NO_TEXT.
+          
+          CREATE OBJECT temp1 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>invalid_arguments msgv1 = 'Invalid cursor format' previous = error.
+          RAISE EXCEPTION temp1 ##NO_TEXT.
       ENDTRY.
     ELSE.
       int_has_cursor = abap_false.

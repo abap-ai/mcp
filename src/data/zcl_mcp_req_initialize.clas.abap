@@ -93,20 +93,20 @@ CLASS zcl_mcp_req_initialize IMPLEMENTATION.
     int_client_info-version = json->get_string( '/clientInfo/version' ).
 
     " Parse capabilities
-    IF json->exists( '/capabilities/roots' ).
+    IF json->exists( '/capabilities/roots' ) IS NOT INITIAL.
       int_has_roots = abap_true.
-      IF json->exists( '/capabilities/roots/listChanged' ).
+      IF json->exists( '/capabilities/roots/listChanged' ) IS NOT INITIAL.
         int_capabilities-roots-list_changed = json->get_boolean( '/capabilities/roots/listChanged' ).
       ENDIF.
     ENDIF.
 
     " For complex structures, we'll just store the JSON subtree
-    IF json->exists( '/capabilities/sampling' ).
+    IF json->exists( '/capabilities/sampling' ) IS NOT INITIAL.
       int_has_sampling = abap_true.
       int_sampling_json = json->slice( '/capabilities/sampling' ).
     ENDIF.
 
-    IF json->exists( '/capabilities/experimental' ).
+    IF json->exists( '/capabilities/experimental' ) IS NOT INITIAL.
       int_has_experimental = abap_true.
       int_experimental_json = json->slice( '/capabilities/experimental' ).
     ENDIF.

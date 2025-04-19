@@ -411,6 +411,11 @@ class lcl_json_parser implementation.
     data lr_stack_top like line of mt_stack.
     data lo_node type ref to if_sxml_node.
     field-symbols <item> like line of rt_json_tree.
+          data lt_attributes type if_sxml_attribute=>attributes.
+          data lo_attr like line of lt_attributes.
+          data lo_open type ref to if_sxml_open_element.
+          data lo_close type ref to if_sxml_close_element.
+          data lo_value type ref to if_sxml_value_node.
 
     clear mt_stack.
     clear mv_stack_path.
@@ -430,9 +435,9 @@ class lcl_json_parser implementation.
 
       case lo_node->type.
         when if_sxml_node=>co_nt_element_open.
-          data lt_attributes type if_sxml_attribute=>attributes.
-          data lo_attr like line of lt_attributes.
-          data lo_open type ref to if_sxml_open_element.
+          
+          
+          
           lo_open ?= lo_node.
 
           append initial line to rt_json_tree assigning <item>.
@@ -470,7 +475,7 @@ class lcl_json_parser implementation.
           mv_stack_path = mv_stack_path && <item>-name && '/'.
 
         when if_sxml_node=>co_nt_element_close.
-          data lo_close type ref to if_sxml_close_element.
+          
           lo_close ?= lo_node.
 
           read table mt_stack index 1 into lr_stack_top.
@@ -482,7 +487,7 @@ class lcl_json_parser implementation.
           " remove last path component
           mv_stack_path = substring( val = mv_stack_path len = find( val = mv_stack_path sub = '/' occ = -2 ) + 1 ).
         when if_sxml_node=>co_nt_value.
-          data lo_value type ref to if_sxml_value_node.
+          
           lo_value ?= lo_node.
 
           <item>-value = lo_value->get_value( ).
@@ -602,6 +607,8 @@ class lcl_json_serializer implementation.
 
     data lv_item type string.
     data lv_indent_prefix type string.
+      data lv_children_path type string.
+      data lv_tail type string.
 
     if mv_indent_step > 0.
       lv_indent_prefix = repeat( val = ` ` occ = mv_indent_step * mv_level ).
@@ -645,8 +652,8 @@ class lcl_json_serializer implementation.
     " finish complex item
 
     if is_node-type = zif_mcp_ajson_types=>node_type-array or is_node-type = zif_mcp_ajson_types=>node_type-object.
-      data lv_children_path type string.
-      data lv_tail type string.
+      
+      
 
       lv_children_path = is_node-path && is_node-name && '/'. " for root: path = '' and name = '', so result is '/'
 
@@ -947,6 +954,7 @@ class lcl_json_to_abap implementation.
     field-symbols <parent_anytab> type any table.
     field-symbols <parent_struc> type any.
     field-symbols <tab_item> type any.
+            field-symbols <field> type any.
 
     " Assign container
     case is_parent_type-type_kind.
@@ -1011,7 +1019,7 @@ class lcl_json_to_abap implementation.
             endif.
 
           when lif_kind=>struct_flat or lif_kind=>struct_deep.
-            field-symbols <field> type any.
+            
             assign component ls_node_type-target_field_name of structure <parent_struc> to <field>.
             assert sy-subrc = 0.
             get reference of <field> into lr_target_field.

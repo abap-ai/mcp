@@ -82,6 +82,7 @@ ENDCLASS.
 
 CLASS zcl_mcp_server_base IMPLEMENTATION.
   METHOD zif_mcp_server~initialize.
+          DATA error TYPE REF TO zcx_mcp_server.
     " Handle session logic before handing off to the request handler
     IF server-session_id IS NOT INITIAL.
       server-http_response->set_status( code   = 400
@@ -95,10 +96,9 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
           server-session_id = generate_fallback_uuid( ).
       ENDTRY.
       TRY.
-          session = NEW zcl_mcp_session( session_id   = server-session_id
-                                                        session_mode = server-session_mode
-                                                        create_new   = abap_true ).
-        CATCH zcx_mcp_server INTO DATA(error).
+          CREATE OBJECT session TYPE zcl_mcp_session EXPORTING session_id = server-session_id session_mode = server-session_mode create_new = abap_true.
+          
+        CATCH zcx_mcp_server INTO error.
           zif_mcp_server~config->get_logger( )->error( |Failed to create session { error->get_text( ) }| ) ##NO_TEXT.
           server-http_response->set_status( code   = 500
                                                            reason = 'Internal Server Error' ) ##NO_TEXT.
@@ -110,13 +110,13 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
       server-http_server->set_session_stateful( ).
     ENDIF.
 
-    response-result = NEW zcl_mcp_resp_initialize( ).
+    CREATE OBJECT response-result TYPE zcl_mcp_resp_initialize.
     handle_initialize( EXPORTING request = request CHANGING response = response ).
   ENDMETHOD.
 
   METHOD zif_mcp_server~prompts_get.
     " Pre-initialize the response object
-    response-result = NEW zcl_mcp_resp_get_prompt( ).
+    CREATE OBJECT response-result TYPE zcl_mcp_resp_get_prompt.
 
     " Call the handler to modify the response
     handle_get_prompt( EXPORTING request = request
@@ -125,7 +125,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
   METHOD zif_mcp_server~prompts_list.
     " Pre-initialize the response object
-    response-result = NEW zcl_mcp_resp_list_prompts( ).
+    CREATE OBJECT response-result TYPE zcl_mcp_resp_list_prompts.
 
     " Call the handler to modify the response
     handle_list_prompts( EXPORTING request = request
@@ -134,7 +134,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
   METHOD zif_mcp_server~resources_list.
     " Pre-initialize the response object
-    response-result = NEW zcl_mcp_resp_list_resources( ).
+    CREATE OBJECT response-result TYPE zcl_mcp_resp_list_resources.
 
     " Call the handler to modify the response
     handle_list_resources( EXPORTING request = request
@@ -143,7 +143,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
   METHOD zif_mcp_server~resources_read.
     " Pre-initialize the response object
-    response-result = NEW zcl_mcp_resp_read_resource( ).
+    CREATE OBJECT response-result TYPE zcl_mcp_resp_read_resource.
 
     " Call the handler to modify the response
     handle_resources_read( EXPORTING request = request
@@ -152,7 +152,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
   METHOD zif_mcp_server~resources_templates_list.
     " Pre-initialize the response object
-    response-result = NEW zcl_mcp_resp_list_res_tmpl( ).
+    CREATE OBJECT response-result TYPE zcl_mcp_resp_list_res_tmpl.
 
     " Call the handler to modify the response
     handle_list_res_tmpls( EXPORTING request = request
@@ -161,7 +161,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
   METHOD zif_mcp_server~tools_call.
     " Pre-initialize the response object
-    response-result = NEW zcl_mcp_resp_call_tool( ).
+    CREATE OBJECT response-result TYPE zcl_mcp_resp_call_tool.
 
     " Call the handler to modify the response
     handle_call_tool( EXPORTING request = request
@@ -170,7 +170,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
   METHOD zif_mcp_server~tools_list.
     " Pre-initialize the response object
-    response-result = NEW zcl_mcp_resp_list_tools( ).
+    CREATE OBJECT response-result TYPE zcl_mcp_resp_list_tools.
 
     " Call the handler to modify the response
     handle_list_tools( EXPORTING request = request
@@ -217,12 +217,15 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
     DATA hex_chars TYPE string VALUE '0123456789ABCDEF'.
     DATA char_idx  TYPE i.
     DATA hex_char  TYPE c LENGTH 1.
+    DATA temp1 TYPE i.
 
     " Get timestamp for uniqueness
     GET TIME STAMP FIELD timestamp.
 
     " Create random object with timestamp seed
-    random = cl_abap_random=>create( CONV i( timestamp ) ).
+    
+    temp1 = timestamp.
+    random = cl_abap_random=>create( temp1 ).
 
     " Generate 32 random hex characters
     DO 32 TIMES.

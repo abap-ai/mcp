@@ -53,14 +53,20 @@ ENDCLASS.
 
 CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
+    FIELD-SYMBOLS <prompt> LIKE LINE OF int_prompts.
+      DATA prompt_index LIKE sy-tabix.
+      FIELD-SYMBOLS <argument> LIKE LINE OF <prompt>-arguments.
+        DATA arg_index LIKE sy-tabix.
     result = zcl_mcp_ajson=>create_empty( ).
     " Create prompts array
     result->touch_array( '/prompts' ).
 
     " Add all prompts
-    LOOP AT int_prompts ASSIGNING FIELD-SYMBOL(<prompt>).
+    
+    LOOP AT int_prompts ASSIGNING <prompt>.
       " Create a new prompt object
-      DATA(prompt_index) = sy-tabix.
+      
+      prompt_index = sy-tabix.
 
       " Add name (required)
       result->set( iv_path         = |/prompts/{ prompt_index }/name|
@@ -81,8 +87,10 @@ CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
       result->touch_array( |/prompts/{ prompt_index }/arguments| ).
 
       " Add each argument
-      LOOP AT <prompt>-arguments ASSIGNING FIELD-SYMBOL(<argument>).
-        DATA(arg_index) = sy-tabix.
+      
+      LOOP AT <prompt>-arguments ASSIGNING <argument>.
+        
+        arg_index = sy-tabix.
 
         " Add name (required)
         result->set( iv_path         = |/prompts/{ prompt_index }/arguments/{ arg_index }/name|

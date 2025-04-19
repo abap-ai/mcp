@@ -8,7 +8,7 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
     INTERFACES zif_mcp_internal.
 
     TYPES: BEGIN OF annotations,
-             audience TYPE STANDARD TABLE OF string WITH EMPTY KEY,
+             audience TYPE STANDARD TABLE OF string WITH DEFAULT KEY,
              priority TYPE decfloat16,
            END OF annotations.
 
@@ -50,7 +50,7 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
              content TYPE REF TO data,
            END OF prompt_message.
 
-    TYPES prompt_messages TYPE STANDARD TABLE OF prompt_message WITH EMPTY KEY.
+    TYPES prompt_messages TYPE STANDARD TABLE OF prompt_message WITH DEFAULT KEY.
 
     "! <p class="shorttext synchronized">Set Prompt Description</p>
     "!
@@ -138,6 +138,19 @@ ENDCLASS.
 
 CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
+    FIELD-SYMBOLS <message> LIKE LINE OF int_messages.
+      DATA message_index LIKE sy-tabix.
+      DATA message_path TYPE string.
+          DATA temp1 TYPE REF TO text_content.
+          DATA text_content LIKE temp1.
+              DATA temp2 TYPE REF TO image_content.
+              DATA image_content LIKE temp2.
+                  DATA temp3 TYPE REF TO embedded_resource.
+                  DATA resource_content LIKE temp3.
+                        DATA temp4 TYPE REF TO text_resource_contents.
+                        DATA text_resource LIKE temp4.
+                            DATA temp5 TYPE REF TO blob_resource_contents.
+                            DATA blob_resource LIKE temp5.
     result = zcl_mcp_ajson=>create_empty( ).
     " Add description if present
     IF int_description IS NOT INITIAL.
@@ -149,9 +162,12 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
     result->touch_array( '/messages' ).
 
     " Add all messages
-    LOOP AT int_messages ASSIGNING FIELD-SYMBOL(<message>).
-      DATA(message_index) = sy-tabix.
-      DATA(message_path) = |/messages/{ message_index }|.
+    
+    LOOP AT int_messages ASSIGNING <message>.
+      
+      message_index = sy-tabix.
+      
+      message_path = |/messages/{ message_index }|.
 
       " Add role (required)
       result->set( iv_path         = |{ message_path }/role|
@@ -166,7 +182,10 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
       " Handle content based on its type
       TRY.
           " First try as text content
-          DATA(text_content) = CAST text_content( <message>-content ).
+          
+          temp1 ?= <message>-content.
+          
+          text_content = temp1.
 
           result->set( iv_path         = |{ message_path }/content/type|
                       iv_val          = 'text'
@@ -184,7 +203,10 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
         CATCH cx_sy_move_cast_error.
           TRY.
               " Try as image content
-              DATA(image_content) = CAST image_content( <message>-content ).
+              
+              temp2 ?= <message>-content.
+              
+              image_content = temp2.
 
               result->set( iv_path         = |{ message_path }/content/type|
                           iv_val          = 'image'
@@ -206,7 +228,10 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
             CATCH cx_sy_move_cast_error.
               TRY.
                   " Try as resource content
-                  DATA(resource_content) = CAST embedded_resource( <message>-content ).
+                  
+                  temp3 ?= <message>-content.
+                  
+                  resource_content = temp3.
 
                   result->set( iv_path         = |{ message_path }/content/type|
                               iv_val          = 'resource'
@@ -216,7 +241,10 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                     " Try to determine if it's a text or blob resource
                     TRY.
                         " Try as text resource first
-                        DATA(text_resource) = CAST text_resource_contents( resource_content->resource ).
+                        
+                        temp4 ?= resource_content->resource.
+                        
+                        text_resource = temp4.
 
                         " Set resource fields
                         result->set( iv_path         = |{ message_path }/content/resource/uri|
@@ -235,7 +263,10 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                       CATCH cx_sy_move_cast_error.
                         " Must be a blob resource
                         TRY.
-                            DATA(blob_resource) = CAST blob_resource_contents( resource_content->resource ).
+                            
+                            temp5 ?= resource_content->resource.
+                            
+                            blob_resource = temp5.
 
                             " Set resource fields
                             result->set( iv_path         = |{ message_path }/content/resource/uri|
@@ -279,6 +310,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_annotations_to_json.
+      FIELD-SYMBOLS <audience> LIKE LINE OF annotations-audience.
     " Add annotations if not empty
     IF annotations-audience IS INITIAL AND annotations-priority IS INITIAL.
       RETURN.
@@ -288,7 +320,8 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
     IF annotations-audience IS NOT INITIAL.
       result->touch_array( |{ path }/annotations/audience| ).
 
-      LOOP AT annotations-audience ASSIGNING FIELD-SYMBOL(<audience>).
+      
+      LOOP AT annotations-audience ASSIGNING <audience>.
         result->set( iv_path = |{ path }/annotations/audience/{ sy-tabix }|
                     iv_val  = <audience> ).
       ENDLOOP.
@@ -310,44 +343,63 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_text_message.
-    DATA(message) = VALUE prompt_message( role = role ).
-    DATA(content) = NEW text_content( type        = 'text'
-                                      text        = text
-                                      annotations = annotations ).
+    DATA temp6 TYPE prompt_message.
+    DATA message LIKE temp6.
+    DATA content TYPE REF TO zcl_mcp_resp_get_prompt=>text_content.
+    CLEAR temp6.
+    temp6-role = role.
+    
+    message = temp6.
+    
+    CREATE OBJECT content TYPE text_content EXPORTING type = 'text' text = text annotations = annotations.
     message-content = content.
     APPEND message TO int_messages.
   ENDMETHOD.
 
   METHOD add_image_message.
-    DATA(message) = VALUE prompt_message( role = role ).
-    DATA(content) = NEW image_content( type        = 'image'
-                                       data        = data
-                                       mime_type    = mime_type
-                                       annotations = annotations ).
+    DATA temp7 TYPE prompt_message.
+    DATA message LIKE temp7.
+    DATA content TYPE REF TO zcl_mcp_resp_get_prompt=>image_content.
+    CLEAR temp7.
+    temp7-role = role.
+    
+    message = temp7.
+    
+    CREATE OBJECT content TYPE image_content EXPORTING type = 'image' data = data mime_type = mime_type annotations = annotations.
     message-content = content.
     APPEND message TO int_messages.
   ENDMETHOD.
 
   METHOD add_text_resource_message.
-    DATA(message) = VALUE prompt_message( role = role ).
-    DATA(resource) = NEW text_resource_contents( uri      = uri
-                                                 text     = text
-                                                 mime_type = mime_type ).
-    DATA(content) = NEW embedded_resource( type        = 'resource'
-                                           resource    = resource
-                                           annotations = annotations ).
+    DATA temp8 TYPE prompt_message.
+    DATA message LIKE temp8.
+    DATA resource TYPE REF TO zcl_mcp_resp_get_prompt=>text_resource_contents.
+    DATA content TYPE REF TO zcl_mcp_resp_get_prompt=>embedded_resource.
+    CLEAR temp8.
+    temp8-role = role.
+    
+    message = temp8.
+    
+    CREATE OBJECT resource TYPE text_resource_contents EXPORTING uri = uri text = text mime_type = mime_type.
+    
+    CREATE OBJECT content TYPE embedded_resource EXPORTING type = 'resource' resource = resource annotations = annotations.
     message-content = content.
     APPEND message TO int_messages.
   ENDMETHOD.
 
   METHOD add_blob_resource_message.
-    DATA(message) = VALUE prompt_message( role = role ).
-    DATA(resource) = NEW blob_resource_contents( uri      = uri
-                                                 blob     = blob
-                                                 mime_type = mime_type ).
-    DATA(content) = NEW embedded_resource( type        = 'resource'
-                                           resource    = resource
-                                           annotations = annotations ).
+    DATA temp9 TYPE prompt_message.
+    DATA message LIKE temp9.
+    DATA resource TYPE REF TO zcl_mcp_resp_get_prompt=>blob_resource_contents.
+    DATA content TYPE REF TO zcl_mcp_resp_get_prompt=>embedded_resource.
+    CLEAR temp9.
+    temp9-role = role.
+    
+    message = temp9.
+    
+    CREATE OBJECT resource TYPE blob_resource_contents EXPORTING uri = uri blob = blob mime_type = mime_type.
+    
+    CREATE OBJECT content TYPE embedded_resource EXPORTING type = 'resource' resource = resource annotations = annotations.
     message-content = content.
     APPEND message TO int_messages.
   ENDMETHOD.

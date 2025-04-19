@@ -81,7 +81,7 @@ CLASS zcl_mcp_schema_builder DEFINITION
     DATA current_path TYPE string.
     DATA parent_builder TYPE REF TO zcl_mcp_schema_builder.
     DATA node_type TYPE string.
-    DATA required_properties TYPE STANDARD TABLE OF string WITH EMPTY KEY.
+    DATA required_properties TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
 
     METHODS add_property
       IMPORTING
@@ -128,12 +128,14 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_string.
+    DATA path TYPE string.
+      FIELD-SYMBOLS <enum_value> LIKE LINE OF enum.
     add_property( name        = name
                   type        = 'string'
                   description = description
                   required    = required ).
 
-    DATA path TYPE string.
+    
     IF current_path IS INITIAL.
       path = |/properties/{ name }|.
     ELSE.
@@ -143,7 +145,8 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
     " Add enum if provided
     IF enum IS NOT INITIAL.
       schema->touch_array( |{ path }/enum| ).
-      LOOP AT enum ASSIGNING FIELD-SYMBOL(<enum_value>).
+      
+      LOOP AT enum ASSIGNING <enum_value>.
         schema->set( iv_path = |{ path }/enum/{ sy-tabix }|
                      iv_val  = <enum_value> ).
       ENDLOOP.
@@ -153,12 +156,13 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_number.
+    DATA path TYPE string.
     add_property( name        = name
                   type        = 'number'
                   description = description
                   required    = required ).
 
-    DATA path TYPE string.
+    
     IF current_path IS INITIAL.
       path = |/properties/{ name }|.
     ELSE.
@@ -169,12 +173,13 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_integer.
+    DATA path TYPE string.
     add_property( name        = name
                   type        = 'integer'
                   description = description
                   required    = required ).
 
-    DATA path TYPE string.
+    
     IF current_path IS INITIAL.
       path = |/properties/{ name }|.
     ELSE.
@@ -194,6 +199,8 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD begin_object.
+    DATA path TYPE string.
+    DATA new_builder TYPE REF TO zcl_mcp_schema_builder.
     " Create a new object property
     add_property( name        = name
                   type        = 'object'
@@ -201,7 +208,7 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                   required    = required ).
 
     " Create path for this object
-    DATA path TYPE string.
+    
     IF current_path IS INITIAL.
       path = |/properties/{ name }|.
     ELSE.
@@ -209,7 +216,8 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
     ENDIF.
 
     " Create new builder for object properties
-    DATA(new_builder) = NEW zcl_mcp_schema_builder( ).
+    
+    CREATE OBJECT new_builder TYPE zcl_mcp_schema_builder.
     new_builder->schema         = schema.
     new_builder->parent_builder = me.
     new_builder->current_path   = path.
@@ -219,11 +227,13 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD end_object.
+      FIELD-SYMBOLS <required> LIKE LINE OF required_properties.
     " Add required properties if any
     IF required_properties IS NOT INITIAL AND node_type = 'object'.
       schema->touch_array( |{ current_path }/required| ).
 
-      LOOP AT required_properties ASSIGNING FIELD-SYMBOL(<required>).
+      
+      LOOP AT required_properties ASSIGNING <required>.
         schema->set( iv_path = |{ current_path }/required/{ sy-tabix }| iv_val = <required> ).
       ENDLOOP.
     ENDIF.
@@ -233,6 +243,8 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD begin_array.
+    DATA path TYPE string.
+    DATA new_builder TYPE REF TO zcl_mcp_schema_builder.
     " Create a new array property
     add_property( name        = name
                   type        = 'array'
@@ -240,7 +252,7 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                   required    = required ).
 
     " Create path for this array
-    DATA path TYPE string.
+    
     IF current_path IS INITIAL.
       path = |/properties/{ name }|.
     ELSE.
@@ -252,7 +264,8 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                  iv_val  = 'object' ).
 
     " Create new builder for array items
-    DATA(new_builder) = NEW zcl_mcp_schema_builder( ).
+    
+    CREATE OBJECT new_builder TYPE zcl_mcp_schema_builder.
     new_builder->schema         = schema.
     new_builder->parent_builder = me.
     new_builder->current_path   = |{ path }/items|.
@@ -262,11 +275,13 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD end_array.
+      FIELD-SYMBOLS <required> LIKE LINE OF required_properties.
     " Add required properties if any
     IF required_properties IS NOT INITIAL AND node_type = 'array'.
       schema->touch_array( |{ current_path }/required| ).
 
-      LOOP AT required_properties ASSIGNING FIELD-SYMBOL(<required>).
+      
+      LOOP AT required_properties ASSIGNING <required>.
         schema->set( iv_path = |{ current_path }/required/{ sy-tabix }|
                      iv_val  = <required> ).
       ENDLOOP.
@@ -277,11 +292,13 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD to_json.
+      FIELD-SYMBOLS <required> LIKE LINE OF required_properties.
     " Add required properties to the root object if any
     IF required_properties IS NOT INITIAL AND current_path IS INITIAL.
       schema->touch_array( '/required' ).
 
-      LOOP AT required_properties ASSIGNING FIELD-SYMBOL(<required>).
+      
+      LOOP AT required_properties ASSIGNING <required>.
         schema->set( iv_path = |/required/{ sy-tabix }|
                      iv_val  = <required> ).
       ENDLOOP.
