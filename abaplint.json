@@ -216,7 +216,7 @@
       "severity": "Information",
       "loop": true,
       "loopAllowIfSubrc": true,
-      "if": true,
+      "if": false,
       "while": true,
       "case": true,
       "select": true,
