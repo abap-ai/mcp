@@ -21,7 +21,7 @@ CLASS zcl_mcp_session DEFINITION
     "! @parameter session_id   | <p class="shorttext synchronized">Session ID</p>
     "! @parameter session_mode | <p class="shorttext synchronized">Session Mode</p>
     "! @parameter create_new   | <p class="shorttext synchronized">Create new session</p>
-    METHODS constructor IMPORTING session_id   TYPE guid_32
+    METHODS constructor IMPORTING session_id   TYPE sysuuid_c32
                                   session_mode TYPE zmcp_session_mode
                                   create_new   TYPE abap_bool DEFAULT abap_false
                         RAISING   zcx_mcp_server.
