@@ -1,0 +1,158 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_JSONRPC</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>JSON-RPC 2.0 protocol implementation</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>CREATE_ERROR_RESPONSE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Create an error response</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>CREATE_REQUEST</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Create a new JSON-RPC request</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>CREATE_SUCCESS_RESPONSE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Create a success response</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>IS_BATCH</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Check if JSON string is a batch array</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SERIALIZE_BATCH_RESPONSE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Serialize multiple responses to JSON format</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SERIALIZE_REQUEST</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Serialize a request to JSON format</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SERIALIZE_RESPONSE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Serialize a response to JSON format</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_ERROR_RESPONSE</CMPNAME>
+     <SCONAME>CODE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Error code (see error_codes constants)</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_ERROR_RESPONSE</CMPNAME>
+     <SCONAME>DATA</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Additional error details (optional)</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_ERROR_RESPONSE</CMPNAME>
+     <SCONAME>ID</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Request identifier to match with response</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_ERROR_RESPONSE</CMPNAME>
+     <SCONAME>MESSAGE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Human-readable error message</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_REQUEST</CMPNAME>
+     <SCONAME>ID</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Request identifier (omit for notifications)</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_REQUEST</CMPNAME>
+     <SCONAME>METHOD</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Name of the remote method to be called</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_REQUEST</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Generated JSON-RPC request object</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_SUCCESS_RESPONSE</CMPNAME>
+     <SCONAME>ID</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Request identifier to match with response</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_SUCCESS_RESPONSE</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Generated success response object</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>IS_BATCH</CMPNAME>
+     <SCONAME>JSON</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>JSON string to check</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>IS_BATCH</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>True if JSON represents an array</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SERIALIZE_BATCH_RESPONSE</CMPNAME>
+     <SCONAME>RESPONSES</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Table of response objects to serialize</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SERIALIZE_BATCH_RESPONSE</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>JSON array of responses</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SERIALIZE_REQUEST</CMPNAME>
+     <SCONAME>REQUEST</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Request object to serialize</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SERIALIZE_REQUEST</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>JSON string representation of the request</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SERIALIZE_RESPONSE</CMPNAME>
+     <SCONAME>RESPONSE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Response object to serialize</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SERIALIZE_RESPONSE</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>JSON string representation of the response</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

@@ -1,0 +1,40 @@
+"! <p class="shorttext synchronized" lang="en">Server Factory</p>
+CLASS zcl_mcp_server_factory DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+    "! <p class="shorttext synchronized" lang="en">Get an MCP Server</p>
+    "!
+    "! @parameter area | <p class="shorttext synchronized" lang="en">MCP Area</p>
+    "! @parameter server | <p class="shorttext synchronized" lang="en">MCP Server</p>
+    "! @parameter result | <p class="shorttext synchronized" lang="en">Server instance - initial means not found</p>
+    CLASS-METHODS get_server IMPORTING area TYPE zmcp_area server TYPE zmcp_server RETURNING VALUE(result) TYPE REF TO zif_mcp_server.
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+
+CLASS zcl_mcp_server_factory IMPLEMENTATION.
+  METHOD get_server.
+    SELECT SINGLE * FROM zmcp_servers WHERE area = @area AND server = @server INTO @DATA(server_def).
+    IF sy-subrc <> 0.
+      " No further error processing, the caller will check the instance
+      RETURN.
+    ENDIF.
+    TRY.
+        CREATE OBJECT result TYPE (server_def-class).
+      CATCH cx_sy_create_object_error.                 "#EC EMPTY_CATCH
+        " No further error processing, the caller will check the instance
+        RETURN.
+    ENDTRY.
+
+    result->config = NEW zcl_mcp_configuration( area   = area
+                                                server = server ).
+    result->server-session_mode = server_def-session_mode.
+    result->server-cors_mode    = result->config->get_cors_mode( ).
+  ENDMETHOD.
+
+ENDCLASS.

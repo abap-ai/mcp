@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_RESP_READ_RESOURCE</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP Read Resource Result</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>ADD_BLOB_RESOURCE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Add Blob Resource</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>ADD_TEXT_RESOURCE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Add Text Resource</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_CONTENTS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set Resource Contents</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_META</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set Meta Data</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_BLOB_RESOURCE</CMPNAME>
+     <SCONAME>BLOB</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Base64-encoded blob data</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_BLOB_RESOURCE</CMPNAME>
+     <SCONAME>MIME_TYPE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Optional MIME type</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_BLOB_RESOURCE</CMPNAME>
+     <SCONAME>URI</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>URI of the resource</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_TEXT_RESOURCE</CMPNAME>
+     <SCONAME>MIME_TYPE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Optional MIME type</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_TEXT_RESOURCE</CMPNAME>
+     <SCONAME>TEXT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Text content</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_TEXT_RESOURCE</CMPNAME>
+     <SCONAME>URI</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>URI of the resource</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_CONTENTS</CMPNAME>
+     <SCONAME>CONTENTS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>List of resource contents</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_META</CMPNAME>
+     <SCONAME>META</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Meta data</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_DOCV" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <DOC>
+    <HEAD>
+     <TDOBJECT>DOKU</TDOBJECT>
+     <TDNAME>ZMCP_SRV</TDNAME>
+     <TDID>UO</TDID>
+     <TDSPRAS>E</TDSPRAS>
+     <TDFORM>S_DOCU_SHOW</TDFORM>
+     <TDSTYLE>S_DOCUS1</TDSTYLE>
+     <TDVERSION>00001</TDVERSION>
+     <TDLINESIZE>072</TDLINESIZE>
+    </HEAD>
+    <LINES>
+     <TLINE>
+      <TDFORMAT>U1</TDFORMAT>
+      <TDLINE>&amp;DEFINITION&amp;</TDLINE>
+     </TLINE>
+     <TLINE>
+      <TDFORMAT>AS</TDFORMAT>
+      <TDLINE>MCP Server authorizations based on table ZMCP_SERVERS</TDLINE>
+     </TLINE>
+     <TLINE>
+      <TDFORMAT>U1</TDFORMAT>
+      <TDLINE>&amp;FIELDS&amp;</TDLINE>
+     </TLINE>
+     <TLINE>
+      <TDFORMAT>AS</TDFORMAT>
+      <TDLINE>ZMCP_AREA - Area</TDLINE>
+     </TLINE>
+     <TLINE>
+      <TDLINE>ZMCP_SRV - Server</TDLINE>
+     </TLINE>
+    </LINES>
+   </DOC>
+  </asx:values>
+ </asx:abap>
+</abapGit>

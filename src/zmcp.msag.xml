@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZMCP</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>Messages for MCP</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>000</MSGNR>
+     <TEXT>&amp;1&amp;2&amp;3&amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>Invalid prompt name &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>Missing required parameter &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>Internal error &amp;1 &amp;2 &amp;3 &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>Resource &amp;1 not found</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>Tool Schema - unsupported type &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>Tool Schema - description &amp;1 cannot be mapped</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>Tool Schema - generation error &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>Tool Schema - invalid structure definition &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>Unknown tool: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>010</MSGNR>
+     <TEXT>Invalid arguments &amp;1</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>

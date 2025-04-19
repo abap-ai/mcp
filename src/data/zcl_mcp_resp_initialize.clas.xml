@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_RESP_INITIALIZE</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP Initialize Response</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_CAPABILITIES</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set Server Capabilities</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_INSTRUCTIONS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set Server Instructions</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_CAPABILITIES</CMPNAME>
+     <SCONAME>CAPABILITIES</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Capabilities</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_INSTRUCTIONS</CMPNAME>
+     <SCONAME>INSTRUCTIONS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Instructions</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_LOGGER</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP Logger</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>CONSTRUCTOR</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Create a new logger instance</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>ERROR</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Log an error message</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>INFO</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Log an informational message</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SAVE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Save the log to the database</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>WARNING</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Log a warning message</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>CONSTRUCTOR</CMPNAME>
+     <SCONAME>EXTERNAL_ID</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>External ID for correlation with business processes</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CONSTRUCTOR</CMPNAME>
+     <SCONAME>LOG_LEVEL</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Minimum level for messages to be logged</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CONSTRUCTOR</CMPNAME>
+     <SCONAME>OBJECT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>BAL object (application area)</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CONSTRUCTOR</CMPNAME>
+     <SCONAME>SUBOBJECT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>BAL subobject (specific component)</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ERROR</CMPNAME>
+     <SCONAME>MESSAGE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>The message text to be logged</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>INFO</CMPNAME>
+     <SCONAME>MESSAGE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>The message text to be logged</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SAVE</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>The log number of the saved log</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>WARNING</CMPNAME>
+     <SCONAME>MESSAGE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>The message text to be logged</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>
