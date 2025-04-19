@@ -56,7 +56,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
         ELSE.
           response-result->set_description( `Greet prompt` ) ##NO_TEXT.
 
-          response-result->add_text_message( role = zif_llm_mcp_server=>role_user
+          response-result->add_text_message( role = zif_mcp_server=>role_user
                                              text = |Happily greet { argument-value } and wish them a great day| ) ##NO_TEXT.
         ENDIF.
       WHEN `joke`.
@@ -67,7 +67,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
         ELSE.
           response-result->set_description( `Joke prompt` ) ##NO_TEXT.
 
-          response-result->add_text_message( role = zif_llm_mcp_server=>role_user
+          response-result->add_text_message( role = zif_mcp_server=>role_user
                                              text = |Tell a great joke about the topic { argument-value }| ) ##NO_TEXT.
         ENDIF.
       WHEN OTHERS.
