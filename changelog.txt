@@ -1,0 +1,10 @@
+2025-04-19 v0.0.1
+-----------------
+
+- Initial version - early release, bugs and breaking changes possible
+- Model Context Protocol Server SDK supporting 2025-03-26 Protocol:
+    - Non-Streaming only (no SSE upgrade of connections)
+    - Authorization only based on ABAP capabilities --> spec deviation
+    - Stateless and either custom or ICF based sessions possible
+    - Tools, Prompts, Resources
+- Roadmap: See open issues for the next planned topics
