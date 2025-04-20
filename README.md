@@ -11,10 +11,15 @@ ABAP implementation of the [Model Context Protocol](https://modelcontextprotocol
 
 See [Overview](docs/Overview.md) in docs folder.
 
-## Used OpenSource projects
+## Used ABAP OpenSource projects
+
+Special thanks to:
 
 - [ajson](https://github.com/sbcgua/ajson) integrated as zmcp_ajson
 - [abaplint](https://github.com/abaplint/abaplint) for review and more important 7.02 downport
+- [abapGit](https://github.com/abapGit/abapGit) for source code control
+
+Find more awesome projects at [dotabap](https://dotabap.org/).
 
 ## Features & Limitations
 
