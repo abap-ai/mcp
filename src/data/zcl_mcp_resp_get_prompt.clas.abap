@@ -16,40 +16,40 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
              uri       TYPE string,
              mime_type TYPE string,
              text      TYPE string,
-           END OF text_resource_contents.
+           END OF text_resource_contents ##NEEDED.
 
     TYPES: BEGIN OF blob_resource_contents,
              uri       TYPE string,
              mime_type TYPE string,
              blob      TYPE string,
-           END OF blob_resource_contents.
+           END OF blob_resource_contents ##NEEDED.
 
     " Content types for messages
     TYPES: BEGIN OF text_content,
              type        TYPE string,
              text        TYPE string,
              annotations TYPE annotations,
-           END OF text_content.
+           END OF text_content ##NEEDED.
 
     TYPES: BEGIN OF image_content,
              type        TYPE string,
              data        TYPE string,
              mime_type   TYPE string,
              annotations TYPE annotations,
-           END OF image_content.
+           END OF image_content ##NEEDED.
 
     TYPES: BEGIN OF audio_content,
              type        TYPE string,
              data        TYPE string,
              mime_type   TYPE string,
              annotations TYPE annotations,
-           END OF audio_content.
+           END OF audio_content ##NEEDED.
 
     TYPES: BEGIN OF embedded_resource,
              type        TYPE string,
              resource    TYPE REF TO data,
              annotations TYPE annotations,
-           END OF embedded_resource.
+           END OF embedded_resource ##NEEDED.
 
     " Message structure
     TYPES: BEGIN OF prompt_message,
@@ -162,8 +162,6 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
     TYPES: BEGIN OF unified_message,
              type        TYPE i,           " Message type (see message_type)
              role        TYPE string,      " Role (user or assistant)
-
-             " Fields for different message types
              text        TYPE string,      " For text messages
              image_data  TYPE string,      " For image messages
              image_mime  TYPE string,      " For image messages
@@ -173,8 +171,6 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
              res_text    TYPE string,      " For text resource messages
              res_blob    TYPE string,      " For blob resource messages
              res_mime    TYPE string,      " For resource messages
-
-             " Common fields
              annotations TYPE annotations, " Annotations for any type
            END OF unified_message.
 
@@ -346,16 +342,16 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
       ASSIGN <input_message>-content->* TO <content_struct>.
 
       " Get content type field
-      DATA lv_type TYPE string.
+      DATA type TYPE string.
       ASSIGN COMPONENT 'TYPE' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<type>).
       IF sy-subrc <> 0.
         " Skip if no type field
         CONTINUE.
       ENDIF.
-      lv_type = <type>.
+      type = <type>.
 
       " Process based on content type
-      CASE lv_type.
+      CASE type.
         WHEN content_type-text.
           " Get text field
           ASSIGN COMPONENT 'TEXT' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<text>).
@@ -364,17 +360,17 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
           ENDIF.
 
           " Get annotations
-          DATA ls_annotations TYPE annotations.
+          DATA annotations TYPE annotations.
           ASSIGN COMPONENT 'ANNOTATIONS' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<annotations>).
           IF sy-subrc = 0.
-            ls_annotations = <annotations>.
+            annotations = <annotations>.
           ENDIF.
 
           " Add text message
           APPEND VALUE unified_message( type        = message_type-text
                                         role        = <input_message>-role
                                         text        = <text>
-                                        annotations = ls_annotations ) TO me->messages.
+                                        annotations = annotations ) TO me->messages.
 
         WHEN content_type-image.
           " Get image data
@@ -390,10 +386,10 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
           ENDIF.
 
           " Get annotations
-          CLEAR ls_annotations.
+          CLEAR annotations.
           ASSIGN COMPONENT 'ANNOTATIONS' OF STRUCTURE <content_struct> TO <annotations>.
           IF sy-subrc = 0.
-            ls_annotations = <annotations>.
+            annotations = <annotations>.
           ENDIF.
 
           " Add image message
@@ -401,7 +397,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                                         role        = <input_message>-role
                                         image_data  = <data>
                                         image_mime  = <mime_type>
-                                        annotations = ls_annotations ) TO me->messages.
+                                        annotations = annotations ) TO me->messages.
 
         WHEN content_type-audio.
           " Get audio data
@@ -417,10 +413,10 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
           ENDIF.
 
           " Get annotations
-          CLEAR ls_annotations.
+          CLEAR annotations.
           ASSIGN COMPONENT 'ANNOTATIONS' OF STRUCTURE <content_struct> TO <annotations>.
           IF sy-subrc = 0.
-            ls_annotations = <annotations>.
+            annotations = <annotations>.
           ENDIF.
 
           " Add audio message
@@ -428,7 +424,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                                         role        = <input_message>-role
                                         audio_data  = <data>
                                         audio_mime  = <mime_type>
-                                        annotations = ls_annotations ) TO me->messages.
+                                        annotations = annotations ) TO me->messages.
 
         WHEN content_type-resource.
           " Get resource reference
@@ -438,10 +434,10 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
           ENDIF.
 
           " Get annotations
-          CLEAR ls_annotations.
+          CLEAR annotations.
           ASSIGN COMPONENT 'ANNOTATIONS' OF STRUCTURE <content_struct> TO <annotations>.
           IF sy-subrc = 0.
-            ls_annotations = <annotations>.
+            annotations = <annotations>.
           ENDIF.
 
           " Access resource structure
@@ -472,7 +468,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                                           res_uri     = <uri>
                                           res_text    = <res_text>
                                           res_mime    = lv_mime_type
-                                          annotations = ls_annotations ) TO me->messages.
+                                          annotations = annotations ) TO me->messages.
           ELSE.
             " Check if it's a blob resource
             ASSIGN COMPONENT 'BLOB' OF STRUCTURE <res_struct> TO FIELD-SYMBOL(<res_blob>).
@@ -483,7 +479,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                                             res_uri     = <uri>
                                             res_blob    = <res_blob>
                                             res_mime    = lv_mime_type
-                                            annotations = ls_annotations ) TO me->messages.
+                                            annotations = annotations ) TO me->messages.
             ENDIF.
           ENDIF.
       ENDCASE.

@@ -18,8 +18,8 @@ ENDCLASS.
 
 CLASS zcl_mcp_test_mcp_session IMPLEMENTATION.
   METHOD handle_initialize.
-    response-result->set_implementation( implementation = VALUE #( name    = `Simple Test Server to check MCP sessions`
-                                                                   version = `1.0` ) ) ##NO_TEXT.
+    response-result->set_implementation( VALUE #( name    = `Simple Test Server to check MCP sessions`
+                                                  version = `1.0` ) ) ##NO_TEXT.
     response-result->set_capabilities( VALUE #( tools = abap_true ) ).
   ENDMETHOD.
 

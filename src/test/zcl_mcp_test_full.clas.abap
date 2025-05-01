@@ -24,8 +24,8 @@ ENDCLASS.
 
 CLASS zcl_mcp_test_full IMPLEMENTATION.
   METHOD handle_initialize.
-    response-result->set_implementation( implementation = VALUE #( name    = `Test Server with full feature set`
-                                                                   version = `1.0` ) ) ##NO_TEXT.
+    response-result->set_implementation( VALUE #( name    = `Test Server with full feature set`
+                                                  version = `1.0` ) ) ##NO_TEXT.
     response-result->set_capabilities( VALUE #( prompts   = abap_true
                                                 resources = abap_true
                                                 tools     = abap_true ) ).
