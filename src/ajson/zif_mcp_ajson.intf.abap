@@ -259,4 +259,14 @@ interface zif_mcp_ajson
     raising
       zcx_mcp_ajson_error.
 
+  methods touch_object
+    importing
+      iv_path type string
+      iv_clear type abap_bool default abap_false
+    returning
+      value(ri_json) type ref to zif_mcp_ajson
+    raising
+      zcx_mcp_ajson_error.
+
+
 endinterface.

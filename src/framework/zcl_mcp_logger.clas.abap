@@ -112,12 +112,9 @@ CLASS zcl_mcp_logger IMPLEMENTATION.
       EXCEPTIONS
         OTHERS       = 1.
 
-    IF sy-subrc = 0.
-      is_initialized = abap_true.
-    ELSE.
-      " In case of error, set log level to off to prevent further logging
+    is_initialized = abap_true.
+    IF sy-subrc <> 0.
       log_level = log_levels-off.
-      is_initialized = abap_true.
     ENDIF.
   ENDMETHOD.
 
