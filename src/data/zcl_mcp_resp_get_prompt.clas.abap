@@ -16,40 +16,40 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
              uri       TYPE string,
              mime_type TYPE string,
              text      TYPE string,
-           END OF text_resource_contents ##NEEDED.
+           END OF text_resource_contents.
 
     TYPES: BEGIN OF blob_resource_contents,
              uri       TYPE string,
              mime_type TYPE string,
              blob      TYPE string,
-           END OF blob_resource_contents ##NEEDED.
+           END OF blob_resource_contents.
 
     " Content types for messages
     TYPES: BEGIN OF text_content,
              type        TYPE string,
              text        TYPE string,
              annotations TYPE annotations,
-           END OF text_content ##NEEDED.
+           END OF text_content.
 
     TYPES: BEGIN OF image_content,
              type        TYPE string,
              data        TYPE string,
              mime_type   TYPE string,
              annotations TYPE annotations,
-           END OF image_content ##NEEDED.
+           END OF image_content.
 
     TYPES: BEGIN OF audio_content,
              type        TYPE string,
              data        TYPE string,
              mime_type   TYPE string,
              annotations TYPE annotations,
-           END OF audio_content ##NEEDED.
+           END OF audio_content.
 
     TYPES: BEGIN OF embedded_resource,
              type        TYPE string,
              resource    TYPE REF TO data,
              annotations TYPE annotations,
-           END OF embedded_resource ##NEEDED.
+           END OF embedded_resource.
 
     " Message structure
     TYPES: BEGIN OF prompt_message,
@@ -453,10 +453,10 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
             CONTINUE.
           ENDIF.
 
-          DATA lv_mime_type TYPE string.
+          DATA mime_type TYPE string.
           ASSIGN COMPONENT 'MIME_TYPE' OF STRUCTURE <res_struct> TO FIELD-SYMBOL(<res_mime>).
           IF sy-subrc = 0.
-            lv_mime_type = <res_mime>.
+            mime_type = <res_mime>.
           ENDIF.
 
           " Check if it's a text resource
@@ -467,7 +467,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                                           role        = <input_message>-role
                                           res_uri     = <uri>
                                           res_text    = <res_text>
-                                          res_mime    = lv_mime_type
+                                          res_mime    = mime_type
                                           annotations = annotations ) TO me->messages.
           ELSE.
             " Check if it's a blob resource
@@ -478,7 +478,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                                             role        = <input_message>-role
                                             res_uri     = <uri>
                                             res_blob    = <res_blob>
-                                            res_mime    = lv_mime_type
+                                            res_mime    = mime_type
                                             annotations = annotations ) TO me->messages.
             ENDIF.
           ENDIF.
