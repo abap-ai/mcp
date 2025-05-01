@@ -34,7 +34,8 @@ class zcl_mcp_ajson definition
       delete for zif_mcp_ajson~delete,
       touch_array for zif_mcp_ajson~touch_array,
       push for zif_mcp_ajson~push,
-      stringify for zif_mcp_ajson~stringify.
+      stringify for zif_mcp_ajson~stringify,
+      touch_object for zif_mcp_ajson~touch_object.
 
     aliases:
       clone for zif_mcp_ajson~clone,
@@ -980,4 +981,62 @@ CLASS zcl_mcp_ajson IMPLEMENTATION.
     ms_opts-to_abap_corresponding_only = iv_enable.
     ri_json = me.
   endmethod.
+
+  method zif_mcp_ajson~touch_object.
+
+  data lr_node type ref to zif_mcp_ajson_types=>ty_node.
+  data ls_deleted_node type zif_mcp_ajson_types=>ty_node.
+  data ls_new_node like line of mt_json_tree.
+  data ls_split_path type zif_mcp_ajson_types=>ty_path_name.
+    data lr_parent type ref to zif_mcp_ajson_types=>ty_node.
+
+  read_only_watchdog( ).
+
+  ls_split_path = lcl_utils=>split_path( iv_path ).
+  if ls_split_path is initial. " Assign root, exceptional processing
+    ls_new_node-path = ls_split_path-path.
+    ls_new_node-name = ls_split_path-name.
+    ls_new_node-type = zif_mcp_ajson_types=>node_type-object.
+    insert ls_new_node into table mt_json_tree.
+    return.
+  endif.
+
+  if iv_clear = abap_true.
+    ls_deleted_node = delete_subtree(
+      iv_path = ls_split_path-path
+      iv_name = ls_split_path-name ).
+  else.
+    lr_node = get_item( iv_path ).
+  endif.
+
+  if lr_node is initial. " Or node was cleared
+
+    
+    lr_parent = prove_path_exists( ls_split_path-path ).
+    assert lr_parent is not initial.
+
+    lr_parent->children = lr_parent->children + 1.
+
+    ls_new_node-path = ls_split_path-path.
+    ls_new_node-name = ls_split_path-name.
+    ls_new_node-type = zif_mcp_ajson_types=>node_type-object.
+
+    if ms_opts-keep_item_order = abap_true.
+      if ls_deleted_node is not initial.
+        ls_new_node-order = ls_deleted_node-order.
+      else.
+        ls_new_node-order = lr_parent->children.
+      endif.
+    endif.
+
+    insert ls_new_node into table mt_json_tree.
+
+  elseif lr_node->type <> zif_mcp_ajson_types=>node_type-object.
+    zcx_mcp_ajson_error=>raise( |Path [{ iv_path }] already used and is not object| ) ##NO_TEXT.
+  endif.
+
+  ri_json = me.
+
+endmethod.
+
 ENDCLASS.
