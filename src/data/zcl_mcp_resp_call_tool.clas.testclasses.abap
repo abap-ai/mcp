@@ -51,7 +51,7 @@ CLASS ltcl_call_tool_result IMPLEMENTATION.
 
   METHOD test_image_content.
     " Given
-    cut->add_image_content( data      = 'SGVsbG8gV29ybGQ=' " Base64 for "Hello World"
+    cut->add_image_content( data      = 'SGVsbG8gV29ybGQ='
                             mime_type = 'image/jpeg' ).
 
     " When
@@ -184,7 +184,7 @@ CLASS ltcl_call_tool_result IMPLEMENTATION.
     result = zcl_mcp_ajson=>parse( json_string ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'true'
-                                        act = result->get( '/isError' ) ).  " Note: JSON boolean value will be a string in AJSON
+                                        act = result->get( '/isError' ) ).
   ENDMETHOD.
 
   METHOD test_with_metadata.

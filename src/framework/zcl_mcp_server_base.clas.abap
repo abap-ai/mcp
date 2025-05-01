@@ -77,7 +77,7 @@ CLASS zcl_mcp_server_base DEFINITION ABSTRACT
   PRIVATE SECTION.
     METHODS generate_fallback_uuid
       RETURNING
-        VALUE(guid) TYPE sysuuid_c32.
+        VALUE(result) TYPE sysuuid_c32.
 ENDCLASS.
 
 CLASS zcl_mcp_server_base IMPLEMENTATION.
@@ -179,7 +179,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
   METHOD handle_list_prompts.
     " Empty implementation - to be implemented by subclasses
-  ENDMETHOD.
+  ENDMETHOD.                                       "#EC EMPTY_PROCEDURE
 
   METHOD handle_get_prompt.
     " Empty implementation - to be implemented by subclasses
@@ -189,11 +189,11 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
   METHOD handle_list_resources.
     " Empty implementation - to be implemented by subclasses
-  ENDMETHOD.
+  ENDMETHOD.                                       "#EC EMPTY_PROCEDURE
 
   METHOD handle_list_res_tmpls.
     " Empty implementation - to be implemented by subclasses
-  ENDMETHOD.
+  ENDMETHOD.                                       "#EC EMPTY_PROCEDURE
 
   METHOD handle_resources_read.
     " Empty implementation - to be implemented by subclasses
@@ -203,7 +203,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
   METHOD handle_list_tools.
     " Empty implementation - to be implemented by subclasses
-  ENDMETHOD.
+  ENDMETHOD.                                       "#EC EMPTY_PROCEDURE
 
   METHOD handle_call_tool.
     " Empty implementation - to be implemented by subclasses
@@ -230,7 +230,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
       char_idx = random->intinrange( low  = 0
                                      high = 15 ).
       hex_char = hex_chars+char_idx(1).
-      CONCATENATE guid hex_char INTO guid.
+      CONCATENATE result hex_char INTO result.
     ENDDO.
   ENDMETHOD.
 

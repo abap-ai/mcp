@@ -51,41 +51,37 @@ CLASS zcl_mcp_resp_initialize IMPLEMENTATION.
     result = zcl_mcp_ajson=>create_empty( ).
     " Protocol version is currently hard coded.
     " The server implementation ideally should not have to consider it.
-    result->set( iv_path = 'protocolVersion' iv_val = zif_mcp_constants=>protocol_version ).
+    result->set( iv_path = 'protocolVersion'
+                 iv_val  = zif_mcp_constants=>protocol_version ).
+
+    result->touch_object( 'capabilities' ).
 
     IF int_capabilities-prompts = abap_true.
-      result->set( iv_path         = 'capabilities/prompts/listChanged'
-                  iv_val          = abap_false
-                  iv_ignore_empty = abap_false ).
+      result->touch_object( 'capabilities/prompts' ).
     ENDIF.
+
     IF int_capabilities-resources = abap_true.
-      result->set( iv_path         = 'capabilities/resources/subscribe'
-                  iv_val          = abap_false
-                  iv_ignore_empty = abap_false ).
-      result->set( iv_path         = 'capabilities/resources/listChanged'
-                  iv_val          = abap_false
-                  iv_ignore_empty = abap_false  ).
+      result->touch_object( 'capabilities/resources' ).
     ENDIF.
+
     IF int_capabilities-tools = abap_true.
-      result->set( iv_path         = 'capabilities/tools/listChanged'
-                  iv_val          = abap_false
-                  iv_ignore_empty = abap_false ).
+      result->touch_object( 'capabilities/tools' ).
     ENDIF.
 
     result->set( iv_path         = 'serverInfo/name'
-                iv_val          = int_implementation-name
-                iv_ignore_empty = abap_false
-                iv_node_type    = zif_mcp_ajson_types=>node_type-string ).
+                 iv_val          = int_implementation-name
+                 iv_ignore_empty = abap_false
+                 iv_node_type    = zif_mcp_ajson_types=>node_type-string ).
     result->set( iv_path         = 'serverInfo/version'
-                iv_val          = int_implementation-version
-                iv_ignore_empty = abap_false
-                iv_node_type    = zif_mcp_ajson_types=>node_type-string ).
+                 iv_val          = int_implementation-version
+                 iv_ignore_empty = abap_false
+                 iv_node_type    = zif_mcp_ajson_types=>node_type-string ).
 
     IF int_instructions IS NOT INITIAL.
       result->set( iv_path         = 'instructions'
-                  iv_val          = int_instructions
-                  iv_ignore_empty = abap_false
-                  iv_node_type    = zif_mcp_ajson_types=>node_type-string ).
+                   iv_val          = int_instructions
+                   iv_ignore_empty = abap_false
+                   iv_node_type    = zif_mcp_ajson_types=>node_type-string ).
     ENDIF.
   ENDMETHOD.
 

@@ -40,6 +40,13 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
              annotations TYPE annotations,
            END OF image_content.
 
+    TYPES: BEGIN OF audio_content,
+             type        TYPE string,
+             data        TYPE string,
+             mime_type   TYPE string,
+             annotations TYPE annotations,
+           END OF audio_content.
+
     TYPES: BEGIN OF embedded_resource,
              type        TYPE string,
              resource    TYPE REF TO data,
@@ -74,6 +81,16 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
     "! @parameter mime_type   | <p class="shorttext synchronized">MIME type of the image</p>
     "! @parameter annotations | <p class="shorttext synchronized">Optional annotations</p>
     METHODS add_image_content
+      IMPORTING !data       TYPE string
+                mime_type   TYPE string
+                annotations TYPE annotations OPTIONAL.
+
+    "! <p class="shorttext synchronized">Add Audio Content</p>
+    "!
+    "! @parameter data        | <p class="shorttext synchronized">Base64-encoded audio data</p>
+    "! @parameter mime_type   | <p class="shorttext synchronized">MIME type of the audio file</p>
+    "! @parameter annotations | <p class="shorttext synchronized">Optional annotations</p>
+    METHODS add_audio_content
       IMPORTING !data       TYPE string
                 mime_type   TYPE string
                 annotations TYPE annotations OPTIONAL.
@@ -121,26 +138,29 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
                  text     TYPE string VALUE 'text',
                  image    TYPE string VALUE 'image',
                  resource TYPE string VALUE 'resource',
+                 audio    TYPE string VALUE 'audio',
                END OF content_type.
 
     " Simple content structures that don't use references
     TYPES: BEGIN OF content_item,
              type        TYPE string,
-             text        TYPE string,            " For text content
-             image_data  TYPE string,            " For image content
-             image_mime  TYPE string,            " For image content
-             res_uri     TYPE string,            " For resource content
-             res_text    TYPE string,            " For text resource content
-             res_mime    TYPE string,            " For resource content
-             res_blob    TYPE string,            " For blob resource content
-             res_is_blob TYPE abap_bool,         " Flag for blob vs text
-             annotations TYPE annotations,       " For any content
+             text        TYPE string,      " For text content
+             image_data  TYPE string,      " For image content
+             image_mime  TYPE string,      " For image content
+             audio_data  TYPE string,      " For audio content
+             audio_mime  TYPE string,      " For audio content
+             res_uri     TYPE string,      " For resource content
+             res_text    TYPE string,      " For text resource content
+             res_mime    TYPE string,      " For resource content
+             res_blob    TYPE string,      " For blob resource content
+             res_is_blob TYPE abap_bool,   " Flag for blob vs text
+             annotations TYPE annotations, " For any content
            END OF content_item.
 
     " Table for all content, maintaining original order
     DATA content_items TYPE STANDARD TABLE OF content_item WITH EMPTY KEY.
-    DATA meta         TYPE REF TO zif_mcp_ajson.
-    DATA has_error    TYPE abap_bool.
+    DATA meta          TYPE REF TO zif_mcp_ajson.
+    DATA has_error     TYPE abap_bool.
 
     METHODS add_annotations_to_json
       IMPORTING !path       TYPE string
@@ -182,6 +202,16 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
 
           result->set( iv_path         = |{ content_path }/mimeType|
                        iv_val          = <item>-image_mime
+                       iv_ignore_empty = abap_false ).
+
+        WHEN content_type-audio.
+          " Audio content
+          result->set( iv_path         = |{ content_path }/data|
+                       iv_val          = <item>-audio_data
+                       iv_ignore_empty = abap_false ).
+
+          result->set( iv_path         = |{ content_path }/mimeType|
+                       iv_val          = <item>-audio_mime
                        iv_ignore_empty = abap_false ).
 
         WHEN content_type-resource.
@@ -254,42 +284,38 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_text_content.
-    APPEND VALUE content_item(
-      type        = content_type-text
-      text        = text
-      annotations = annotations
-    ) TO content_items.
+    APPEND VALUE content_item( type        = content_type-text
+                               text        = text
+                               annotations = annotations )
+           TO content_items.
   ENDMETHOD.
 
   METHOD add_image_content.
-    APPEND VALUE content_item(
-      type        = content_type-image
-      image_data  = data
-      image_mime  = mime_type
-      annotations = annotations
-    ) TO content_items.
+    APPEND VALUE content_item( type        = content_type-image
+                               image_data  = data
+                               image_mime  = mime_type
+                               annotations = annotations )
+           TO content_items.
   ENDMETHOD.
 
   METHOD add_text_resource.
-    APPEND VALUE content_item(
-      type        = content_type-resource
-      res_uri     = uri
-      res_text    = text
-      res_mime    = mime_type
-      res_is_blob = abap_false
-      annotations = annotations
-    ) TO content_items.
+    APPEND VALUE content_item( type        = content_type-resource
+                               res_uri     = uri
+                               res_text    = text
+                               res_mime    = mime_type
+                               res_is_blob = abap_false
+                               annotations = annotations )
+           TO content_items.
   ENDMETHOD.
 
   METHOD add_blob_resource.
-    APPEND VALUE content_item(
-      type        = content_type-resource
-      res_uri     = uri
-      res_blob    = blob
-      res_mime    = mime_type
-      res_is_blob = abap_true
-      annotations = annotations
-    ) TO content_items.
+    APPEND VALUE content_item( type        = content_type-resource
+                               res_uri     = uri
+                               res_blob    = blob
+                               res_mime    = mime_type
+                               res_is_blob = abap_true
+                               annotations = annotations )
+           TO content_items.
   ENDMETHOD.
 
   METHOD set_content.
@@ -302,21 +328,28 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
         WHEN content_type-text.
           DATA(text_item) = CAST text_content( <content_wrapper>-content ).
 
-          APPEND VALUE content_item(
-            type        = content_type-text
-            text        = text_item->text
-            annotations = text_item->annotations
-          ) TO content_items.
+          APPEND VALUE content_item( type        = content_type-text
+                                     text        = text_item->text
+                                     annotations = text_item->annotations )
+                 TO content_items.
 
         WHEN content_type-image.
           DATA(image_item) = CAST image_content( <content_wrapper>-content ).
 
-          APPEND VALUE content_item(
-            type        = content_type-image
-            image_data  = image_item->data
-            image_mime  = image_item->mime_type
-            annotations = image_item->annotations
-          ) TO content_items.
+          APPEND VALUE content_item( type        = content_type-image
+                                     image_data  = image_item->data
+                                     image_mime  = image_item->mime_type
+                                     annotations = image_item->annotations )
+                 TO content_items.
+
+                WHEN content_type-audio.
+          DATA(audio_item) = CAST audio_content( <content_wrapper>-content ).
+
+          APPEND VALUE content_item( type        = content_type-image
+                                     audio_data  = audio_item->data
+                                     audio_mime  = audio_item->mime_type
+                                     annotations = audio_item->annotations )
+                 TO content_items.
 
         WHEN content_type-resource.
           DATA(resource_item) = CAST embedded_resource( <content_wrapper>-content ).
@@ -326,28 +359,26 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
               " Try as text resource first
               DATA(text_resource) = CAST text_resource_contents( resource_item->resource ).
 
-              APPEND VALUE content_item(
-                type        = content_type-resource
-                res_uri     = text_resource->uri
-                res_text    = text_resource->text
-                res_mime    = text_resource->mime_type
-                res_is_blob = abap_false
-                annotations = resource_item->annotations
-              ) TO content_items.
+              APPEND VALUE content_item( type        = content_type-resource
+                                         res_uri     = text_resource->uri
+                                         res_text    = text_resource->text
+                                         res_mime    = text_resource->mime_type
+                                         res_is_blob = abap_false
+                                         annotations = resource_item->annotations )
+                     TO content_items.
 
             CATCH cx_sy_move_cast_error.
               " Must be a blob resource
               TRY.
                   DATA(blob_resource) = CAST blob_resource_contents( resource_item->resource ).
 
-                  APPEND VALUE content_item(
-                    type        = content_type-resource
-                    res_uri     = blob_resource->uri
-                    res_blob    = blob_resource->blob
-                    res_mime    = blob_resource->mime_type
-                    res_is_blob = abap_true
-                    annotations = resource_item->annotations
-                  ) TO content_items.
+                  APPEND VALUE content_item( type        = content_type-resource
+                                             res_uri     = blob_resource->uri
+                                             res_blob    = blob_resource->blob
+                                             res_mime    = blob_resource->mime_type
+                                             res_is_blob = abap_true
+                                             annotations = resource_item->annotations )
+                         TO content_items.
 
                 CATCH cx_sy_move_cast_error.
                   " Unknown resource type - skip
@@ -361,4 +392,13 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
   METHOD set_meta.
     me->meta = meta.
   ENDMETHOD.
+
+  METHOD add_audio_content.
+    APPEND VALUE content_item( type        = content_type-audio
+                               audio_data  = data
+                               audio_mime  = mime_type
+                               annotations = annotations )
+           TO content_items.
+  ENDMETHOD.
+
 ENDCLASS.

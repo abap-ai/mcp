@@ -98,8 +98,9 @@ CLASS ltcl_mcp_req_call_tool IMPLEMENTATION.
         " Expected - name is required but missing
         cl_abap_unit_assert=>assert_equals( exp = 'ZMCP'
                                             act = lx_error->if_t100_message~t100key-msgid ).
+        " required_params message number
         cl_abap_unit_assert=>assert_equals( exp = '002'
-                                            act = lx_error->if_t100_message~t100key-msgno ). " required_params message number
+                                            act = lx_error->if_t100_message~t100key-msgno ).
     ENDTRY.
   ENDMETHOD.
 
@@ -120,8 +121,9 @@ CLASS ltcl_mcp_req_call_tool IMPLEMENTATION.
         " Expected - name is empty
         cl_abap_unit_assert=>assert_equals( exp = 'ZMCP'
                                             act = lx_error->if_t100_message~t100key-msgid ).
+        " unknown_tool message number
         cl_abap_unit_assert=>assert_equals( exp = '009'
-                                            act = lx_error->if_t100_message~t100key-msgno ). " unknown_tool message number
+                                            act = lx_error->if_t100_message~t100key-msgno ).
     ENDTRY.
   ENDMETHOD.
 ENDCLASS.

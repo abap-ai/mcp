@@ -119,7 +119,7 @@ CLASS zcl_mcp_session IMPLEMENTATION.
     IF sy-subrc <> 0.
       " Ignored, if it does not exist we cannot delete id.
       " Additional exception handling is not relevant.
-    ENDIF.
+    ENDIF. "#EC EMPTY_IF_BRANCH
   ENDMETHOD.
 
   METHOD get.
