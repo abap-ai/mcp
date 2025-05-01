@@ -2488,6 +2488,7 @@ class ltcl_writer_test definition final
     methods setx_float for testing raising zcx_mcp_ajson_error.
     methods setx_complex for testing raising zcx_mcp_ajson_error.
     methods setx_complex_w_keep_order for testing raising zcx_mcp_ajson_error.
+    methods touch_object for testing raising zcx_mcp_ajson_error.
 
     methods set_with_type_slice
       importing
@@ -3799,6 +3800,125 @@ class ltcl_writer_test implementation.
       exp = '{"c":3,"b":{"z":9,"y":8},"a":1,"0":9}' ).
 
   endmethod.
+
+method touch_object.
+
+  data lo_cut type ref to zcl_mcp_ajson.
+  data lo_nodes_exp type ref to lcl_nodes_helper.
+  data li_writer type ref to zif_mcp_ajson.
+
+  " Test 1: Create empty object at path
+  lo_cut = zcl_mcp_ajson=>create_empty( ).
+  li_writer = lo_cut.
+
+  create object lo_nodes_exp.
+  lo_nodes_exp->add( '        |      |object |     ||1' ).
+  lo_nodes_exp->add( '/       |a     |object |     ||0' ).
+
+  li_writer->touch_object( iv_path = '/a' ).
+
+  cl_abap_unit_assert=>assert_equals(
+    act = lo_cut->mt_json_tree
+    exp = lo_nodes_exp->sorted( ) ).
+
+  cl_abap_unit_assert=>assert_equals(
+    act = lo_cut->stringify( )
+    exp = '{"a":{}}' ).
+
+  " Test 2: Create empty object at root level
+  lo_cut = zcl_mcp_ajson=>create_empty( ).
+  li_writer = lo_cut.
+
+  create object lo_nodes_exp.
+  lo_nodes_exp->add( '        |      |object |     ||0' ).
+
+  li_writer->touch_object( iv_path = '/' ).
+
+  cl_abap_unit_assert=>assert_equals(
+    act = lo_cut->mt_json_tree
+    exp = lo_nodes_exp->sorted( ) ).
+
+  cl_abap_unit_assert=>assert_equals(
+    act = lo_cut->stringify( )
+    exp = '{}' ).
+
+  " Test 3: Create nested objects
+  lo_cut = zcl_mcp_ajson=>create_empty( ).
+  li_writer = lo_cut.
+
+  create object lo_nodes_exp.
+  lo_nodes_exp->add( '        |      |object |     ||1' ).
+  lo_nodes_exp->add( '/       |a     |object |     ||1' ).
+  lo_nodes_exp->add( '/a/     |b     |object |     ||1' ).
+  lo_nodes_exp->add( '/a/b/   |c     |object |     ||0' ).
+
+  li_writer->touch_object( iv_path = '/a' ).
+  li_writer->touch_object( iv_path = '/a/b' ).
+  li_writer->touch_object( iv_path = '/a/b/c' ).
+
+  cl_abap_unit_assert=>assert_equals(
+    act = lo_cut->mt_json_tree
+    exp = lo_nodes_exp->sorted( ) ).
+
+  cl_abap_unit_assert=>assert_equals(
+    act = lo_cut->stringify( )
+    exp = '{"a":{"b":{"c":{}}}}' ).
+
+  " Test 4: Clear existing content
+  lo_cut = zcl_mcp_ajson=>create_empty( ).
+  li_writer = lo_cut.
+
+  li_writer->set(
+    iv_path = '/a/x'
+    iv_val  = 'abc' ).
+
+  create object lo_nodes_exp.
+  lo_nodes_exp->add( '        |      |object |     ||1' ).
+  lo_nodes_exp->add( '/       |a     |object |     ||0' ).
+
+  li_writer->touch_object(
+    iv_path  = '/a'
+    iv_clear = abap_true ).
+
+  cl_abap_unit_assert=>assert_equals(
+    act = lo_cut->mt_json_tree
+    exp = lo_nodes_exp->sorted( ) ).
+
+  cl_abap_unit_assert=>assert_equals(
+    act = lo_cut->stringify( )
+    exp = '{"a":{}}' ).
+
+  " Test 5: Error when existing node isn't an object
+  lo_cut = zcl_mcp_ajson=>create_empty( ).
+  li_writer = lo_cut.
+
+  li_writer->touch_array( iv_path = '/a' ).
+
+  data lx type ref to zcx_mcp_ajson_error.
+  try.
+    li_writer->touch_object( iv_path = '/a' ).
+    cl_abap_unit_assert=>fail( ).
+  catch zcx_mcp_ajson_error into lx.
+    cl_abap_unit_assert=>assert_equals(
+      act = lx->message
+      exp = 'Path [/a] already used and is not object' ).
+  endtry.
+
+  " Test 6: With item ordering - FIXED TYPE ISSUE
+  lo_cut = zcl_mcp_ajson=>create_empty( ).
+  li_writer = lo_cut.
+  li_writer->keep_item_order( ).
+
+  li_writer->set(
+    iv_path = '/b'
+    iv_val  = 1 ).
+  li_writer->touch_object( '/a' ).
+
+  cl_abap_unit_assert=>assert_equals(
+    act = lo_cut->stringify( )
+    exp = '{"b":1,"a":{}}' ).
+
+endmethod.
 
 endclass.
 

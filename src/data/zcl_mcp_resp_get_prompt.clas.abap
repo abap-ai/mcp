@@ -38,6 +38,13 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
              annotations TYPE annotations,
            END OF image_content.
 
+    TYPES: BEGIN OF audio_content,
+             type        TYPE string,
+             data        TYPE string,
+             mime_type   TYPE string,
+             annotations TYPE annotations,
+           END OF audio_content.
+
     TYPES: BEGIN OF embedded_resource,
              type        TYPE string,
              resource    TYPE REF TO data,
@@ -86,6 +93,18 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
                 mime_type   TYPE string
                 annotations TYPE annotations OPTIONAL.
 
+    "! <p class="shorttext synchronized">Add Audio Message</p>
+    "!
+    "! @parameter role        | <p class="shorttext synchronized">Role (user or assistant)</p>
+    "! @parameter data        | <p class="shorttext synchronized">Base64-encoded audio data</p>
+    "! @parameter mime_type   | <p class="shorttext synchronized">MIME type of the audio file</p>
+    "! @parameter annotations | <p class="shorttext synchronized">Optional annotations</p>
+    METHODS add_audio_message
+      IMPORTING role        TYPE string
+                !data       TYPE string
+                mime_type   TYPE string
+                annotations TYPE annotations OPTIONAL.
+
     "! <p class="shorttext synchronized">Add Text Resource Message</p>
     "!
     "! @parameter role        | <p class="shorttext synchronized">Role (user or assistant)</p>
@@ -127,6 +146,7 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
                  text     TYPE string VALUE 'text',
                  image    TYPE string VALUE 'image',
                  resource TYPE string VALUE 'resource',
+                 audio    TYPE string VALUE 'audio',
                END OF content_type.
 
     " Message type enum
@@ -135,62 +155,36 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
                  image         TYPE i VALUE 2,
                  text_resource TYPE i VALUE 3,
                  blob_resource TYPE i VALUE 4,
+                 audio         TYPE i VALUE 5,
                END OF message_type.
 
-    " Simplified message structures without references
-    TYPES: BEGIN OF text_message_entry,
-             role        TYPE string,
-             text        TYPE string,
-             annotations TYPE annotations,
-           END OF text_message_entry.
-
-    TYPES: BEGIN OF image_message_entry,
-             role        TYPE string,
-             data        TYPE string,
-             mime_type   TYPE string,
-             annotations TYPE annotations,
-           END OF image_message_entry.
-
-    TYPES: BEGIN OF text_resource_message_entry,
-             role        TYPE string,
-             uri         TYPE string,
-             text        TYPE string,
-             mime_type   TYPE string,
-             annotations TYPE annotations,
-           END OF text_resource_message_entry.
-
-    TYPES: BEGIN OF blob_resource_message_entry,
-             role        TYPE string,
-             uri         TYPE string,
-             blob        TYPE string,
-             mime_type   TYPE string,
-             annotations TYPE annotations,
-           END OF blob_resource_message_entry.
-
-    " Message order tracking
-    TYPES: BEGIN OF message_order_entry,
-             type  TYPE i,   " Message type (see constants)
-             index TYPE i,   " Index in the corresponding table
-           END OF message_order_entry.
+    " Unified message storage structure
+    TYPES: BEGIN OF unified_message,
+             type        TYPE i,           " Message type (see message_type)
+             role        TYPE string,      " Role (user or assistant)
+             text        TYPE string,      " For text messages
+             image_data  TYPE string,      " For image messages
+             image_mime  TYPE string,      " For image messages
+             audio_data  TYPE string,      " For audio messages
+             audio_mime  TYPE string,      " For audio messages
+             res_uri     TYPE string,      " For resource messages
+             res_text    TYPE string,      " For text resource messages
+             res_blob    TYPE string,      " For blob resource messages
+             res_mime    TYPE string,      " For resource messages
+             annotations TYPE annotations, " Annotations for any type
+           END OF unified_message.
 
     " Internal data storage
-    DATA description         TYPE string.
-    DATA text_messages       TYPE STANDARD TABLE OF text_message_entry WITH EMPTY KEY.
-    DATA image_messages      TYPE STANDARD TABLE OF image_message_entry WITH EMPTY KEY.
-    DATA text_resources      TYPE STANDARD TABLE OF text_resource_message_entry WITH EMPTY KEY.
-    DATA blob_resources      TYPE STANDARD TABLE OF blob_resource_message_entry WITH EMPTY KEY.
-    DATA message_order       TYPE STANDARD TABLE OF message_order_entry WITH EMPTY KEY.
-    DATA meta                TYPE REF TO zif_mcp_ajson.
+    DATA description TYPE string.
+    DATA messages    TYPE STANDARD TABLE OF unified_message WITH EMPTY KEY.
+    DATA meta        TYPE REF TO zif_mcp_ajson.
 
     METHODS add_annotations_to_json
-      IMPORTING
-        path        TYPE string
-        annotations TYPE annotations
-        result      TYPE REF TO zif_mcp_ajson
-      RAISING
-        zcx_mcp_ajson_error.
+      IMPORTING !path       TYPE string
+                annotations TYPE annotations
+                !result     TYPE REF TO zif_mcp_ajson
+      RAISING   zcx_mcp_ajson_error.
 ENDCLASS.
-
 
 CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
@@ -205,134 +199,97 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
     " Create messages array
     result->touch_array( '/messages' ).
 
-    " Process messages in the original order they were added
-    DATA message_index TYPE i VALUE 0.
+    " Process all messages in order
+    LOOP AT messages ASSIGNING FIELD-SYMBOL(<message>).
+      DATA(message_path) = |/messages/{ sy-tabix }|.
 
-    LOOP AT message_order ASSIGNING FIELD-SYMBOL(<order>).
-      message_index = message_index + 1.
-      DATA(message_path) = |/messages/{ message_index }|.
+      " Add role for all message types
+      result->set( iv_path         = |{ message_path }/role|
+                   iv_val          = <message>-role
+                   iv_ignore_empty = abap_false ).
 
-      CASE <order>-type.
+      CASE <message>-type.
         WHEN message_type-text.
-          DATA(text_idx) = <order>-index.
-          READ TABLE text_messages INDEX text_idx ASSIGNING FIELD-SYMBOL(<text>).
-          IF sy-subrc = 0.
-            " Add role
-            result->set( iv_path         = |{ message_path }/role|
-                         iv_val          = <text>-role
-                         iv_ignore_empty = abap_false ).
+          " Handle text message
+          result->set( iv_path         = |{ message_path }/content/type|
+                       iv_val          = content_type-text
+                       iv_ignore_empty = abap_false ).
 
-            " Add content
-            result->set( iv_path         = |{ message_path }/content/type|
-                         iv_val          = content_type-text
-                         iv_ignore_empty = abap_false ).
-
-            result->set( iv_path         = |{ message_path }/content/text|
-                         iv_val          = <text>-text
-                         iv_ignore_empty = abap_false ).
-
-            " Add annotations if present
-            add_annotations_to_json( path        = |{ message_path }/content|
-                                     annotations = <text>-annotations
-                                     result      = result ).
-          ENDIF.
+          result->set( iv_path         = |{ message_path }/content/text|
+                       iv_val          = <message>-text
+                       iv_ignore_empty = abap_false ).
 
         WHEN message_type-image.
-          DATA(image_idx) = <order>-index.
-          READ TABLE image_messages INDEX image_idx ASSIGNING FIELD-SYMBOL(<image>).
-          IF sy-subrc = 0.
-            " Add role
-            result->set( iv_path         = |{ message_path }/role|
-                         iv_val          = <image>-role
-                         iv_ignore_empty = abap_false ).
+          " Handle image message
+          result->set( iv_path         = |{ message_path }/content/type|
+                       iv_val          = content_type-image
+                       iv_ignore_empty = abap_false ).
 
-            " Add content
-            result->set( iv_path         = |{ message_path }/content/type|
-                         iv_val          = content_type-image
-                         iv_ignore_empty = abap_false ).
+          result->set( iv_path         = |{ message_path }/content/data|
+                       iv_val          = <message>-image_data
+                       iv_ignore_empty = abap_false ).
 
-            result->set( iv_path         = |{ message_path }/content/data|
-                         iv_val          = <image>-data
-                         iv_ignore_empty = abap_false ).
+          result->set( iv_path         = |{ message_path }/content/mimeType|
+                       iv_val          = <message>-image_mime
+                       iv_ignore_empty = abap_false ).
 
-            result->set( iv_path         = |{ message_path }/content/mimeType|
-                         iv_val          = <image>-mime_type
-                         iv_ignore_empty = abap_false ).
+        WHEN message_type-audio.
+          " Handle audio message
+          result->set( iv_path         = |{ message_path }/content/type|
+                       iv_val          = content_type-audio
+                       iv_ignore_empty = abap_false ).
 
-            " Add annotations if present
-            add_annotations_to_json( path        = |{ message_path }/content|
-                                     annotations = <image>-annotations
-                                     result      = result ).
-          ENDIF.
+          result->set( iv_path         = |{ message_path }/content/data|
+                       iv_val          = <message>-audio_data
+                       iv_ignore_empty = abap_false ).
+
+          result->set( iv_path         = |{ message_path }/content/mimeType|
+                       iv_val          = <message>-audio_mime
+                       iv_ignore_empty = abap_false ).
 
         WHEN message_type-text_resource.
-          DATA(text_res_idx) = <order>-index.
-          READ TABLE text_resources INDEX text_res_idx ASSIGNING FIELD-SYMBOL(<text_res>).
-          IF sy-subrc = 0.
-            " Add role
-            result->set( iv_path         = |{ message_path }/role|
-                         iv_val          = <text_res>-role
-                         iv_ignore_empty = abap_false ).
+          " Handle text resource
+          result->set( iv_path         = |{ message_path }/content/type|
+                       iv_val          = content_type-resource
+                       iv_ignore_empty = abap_false ).
 
-            " Add content type
-            result->set( iv_path         = |{ message_path }/content/type|
-                         iv_val          = content_type-resource
-                         iv_ignore_empty = abap_false ).
+          result->set( iv_path         = |{ message_path }/content/resource/uri|
+                       iv_val          = <message>-res_uri
+                       iv_ignore_empty = abap_false ).
 
-            " Add resource details
-            result->set( iv_path         = |{ message_path }/content/resource/uri|
-                         iv_val          = <text_res>-uri
-                         iv_ignore_empty = abap_false ).
+          result->set( iv_path         = |{ message_path }/content/resource/text|
+                       iv_val          = <message>-res_text
+                       iv_ignore_empty = abap_false ).
 
-            result->set( iv_path         = |{ message_path }/content/resource/text|
-                         iv_val          = <text_res>-text
-                         iv_ignore_empty = abap_false ).
-
-            IF <text_res>-mime_type IS NOT INITIAL.
-              result->set( iv_path = |{ message_path }/content/resource/mimeType|
-                           iv_val  = <text_res>-mime_type ).
-            ENDIF.
-
-            " Add annotations if present
-            add_annotations_to_json( path        = |{ message_path }/content|
-                                     annotations = <text_res>-annotations
-                                     result      = result ).
+          IF <message>-res_mime IS NOT INITIAL.
+            result->set( iv_path = |{ message_path }/content/resource/mimeType|
+                         iv_val  = <message>-res_mime ).
           ENDIF.
 
         WHEN message_type-blob_resource.
-          DATA(blob_res_idx) = <order>-index.
-          READ TABLE blob_resources INDEX blob_res_idx ASSIGNING FIELD-SYMBOL(<blob_res>).
-          IF sy-subrc = 0.
-            " Add role
-            result->set( iv_path         = |{ message_path }/role|
-                         iv_val          = <blob_res>-role
-                         iv_ignore_empty = abap_false ).
+          " Handle blob resource
+          result->set( iv_path         = |{ message_path }/content/type|
+                       iv_val          = content_type-resource
+                       iv_ignore_empty = abap_false ).
 
-            " Add content type
-            result->set( iv_path         = |{ message_path }/content/type|
-                         iv_val          = content_type-resource
-                         iv_ignore_empty = abap_false ).
+          result->set( iv_path         = |{ message_path }/content/resource/uri|
+                       iv_val          = <message>-res_uri
+                       iv_ignore_empty = abap_false ).
 
-            " Add resource details
-            result->set( iv_path         = |{ message_path }/content/resource/uri|
-                         iv_val          = <blob_res>-uri
-                         iv_ignore_empty = abap_false ).
+          result->set( iv_path         = |{ message_path }/content/resource/blob|
+                       iv_val          = <message>-res_blob
+                       iv_ignore_empty = abap_false ).
 
-            result->set( iv_path         = |{ message_path }/content/resource/blob|
-                         iv_val          = <blob_res>-blob
-                         iv_ignore_empty = abap_false ).
-
-            IF <blob_res>-mime_type IS NOT INITIAL.
-              result->set( iv_path = |{ message_path }/content/resource/mimeType|
-                           iv_val  = <blob_res>-mime_type ).
-            ENDIF.
-
-            " Add annotations if present
-            add_annotations_to_json( path        = |{ message_path }/content|
-                                     annotations = <blob_res>-annotations
-                                     result      = result ).
+          IF <message>-res_mime IS NOT INITIAL.
+            result->set( iv_path = |{ message_path }/content/resource/mimeType|
+                         iv_val  = <message>-res_mime ).
           ENDIF.
       ENDCASE.
+
+      " Add annotations if present
+      add_annotations_to_json( path        = |{ message_path }/content|
+                               annotations = <message>-annotations
+                               result      = result ).
     ENDLOOP.
 
     " Add metadata (optional)
@@ -371,168 +328,203 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
 
   METHOD set_messages.
     " Clear existing messages
-    CLEAR: text_messages, image_messages, text_resources, blob_resources, message_order.
+    CLEAR me->messages.
 
-    " Process each message and convert to simplified storage
-    LOOP AT messages ASSIGNING FIELD-SYMBOL(<message>).
+    " Process each message
+    LOOP AT messages ASSIGNING FIELD-SYMBOL(<input_message>).
       " Skip if content is not bound
-      IF <message>-content IS NOT BOUND.
+      IF <input_message>-content IS NOT BOUND.
         CONTINUE.
       ENDIF.
 
-      " Try to determine the content type and process accordingly
-      TRY.
-          " First try as text content
-          DATA(text_content) = CAST text_content( <message>-content ).
+      " Get content as structure
+      FIELD-SYMBOLS <content_struct> TYPE any.
+      ASSIGN <input_message>-content->* TO <content_struct>.
 
-          APPEND VALUE text_message_entry(
-            role        = <message>-role
-            text        = text_content->text
-            annotations = text_content->annotations
-          ) TO text_messages.
+      " Get content type field
+      DATA type TYPE string.
+      ASSIGN COMPONENT 'TYPE' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<type>).
+      IF sy-subrc <> 0.
+        " Skip if no type field
+        CONTINUE.
+      ENDIF.
+      type = <type>.
 
-          " Track order
-          APPEND VALUE message_order_entry(
-            type  = message_type-text
-            index = lines( text_messages )
-          ) TO message_order.
+      " Process based on content type
+      CASE type.
+        WHEN content_type-text.
+          " Get text field
+          ASSIGN COMPONENT 'TEXT' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<text>).
+          IF sy-subrc <> 0.
+            CONTINUE.
+          ENDIF.
 
-        CATCH cx_sy_move_cast_error.
-          TRY.
-              " Try as image content
-              DATA(image_content) = CAST image_content( <message>-content ).
+          " Get annotations
+          DATA annotations TYPE annotations.
+          ASSIGN COMPONENT 'ANNOTATIONS' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<annotations>).
+          IF sy-subrc = 0.
+            annotations = <annotations>.
+          ENDIF.
 
-              APPEND VALUE image_message_entry(
-                role        = <message>-role
-                data        = image_content->data
-                mime_type   = image_content->mime_type
-                annotations = image_content->annotations
-              ) TO image_messages.
+          " Add text message
+          APPEND VALUE unified_message( type        = message_type-text
+                                        role        = <input_message>-role
+                                        text        = <text>
+                                        annotations = annotations ) TO me->messages.
 
-              " Track order
-              APPEND VALUE message_order_entry(
-                type  = message_type-image
-                index = lines( image_messages )
-              ) TO message_order.
+        WHEN content_type-image.
+          " Get image data
+          ASSIGN COMPONENT 'DATA' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<data>).
+          IF sy-subrc <> 0.
+            CONTINUE.
+          ENDIF.
 
-            CATCH cx_sy_move_cast_error.
-              TRY.
-                  " Try as resource content
-                  DATA(resource_content) = CAST embedded_resource( <message>-content ).
+          " Get MIME type
+          ASSIGN COMPONENT 'MIME_TYPE' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<mime_type>).
+          IF sy-subrc <> 0.
+            CONTINUE.
+          ENDIF.
 
-                  IF resource_content->resource IS BOUND.
-                    TRY.
-                        " Try as text resource
-                        DATA(text_resource) = CAST text_resource_contents( resource_content->resource ).
+          " Get annotations
+          CLEAR annotations.
+          ASSIGN COMPONENT 'ANNOTATIONS' OF STRUCTURE <content_struct> TO <annotations>.
+          IF sy-subrc = 0.
+            annotations = <annotations>.
+          ENDIF.
 
-                        APPEND VALUE text_resource_message_entry(
-                          role        = <message>-role
-                          uri         = text_resource->uri
-                          text        = text_resource->text
-                          mime_type   = text_resource->mime_type
-                          annotations = resource_content->annotations
-                        ) TO text_resources.
+          " Add image message
+          APPEND VALUE unified_message( type        = message_type-image
+                                        role        = <input_message>-role
+                                        image_data  = <data>
+                                        image_mime  = <mime_type>
+                                        annotations = annotations ) TO me->messages.
 
-                        " Track order
-                        APPEND VALUE message_order_entry(
-                          type  = message_type-text_resource
-                          index = lines( text_resources )
-                        ) TO message_order.
+        WHEN content_type-audio.
+          " Get audio data
+          ASSIGN COMPONENT 'DATA' OF STRUCTURE <content_struct> TO <data>.
+          IF sy-subrc <> 0.
+            CONTINUE.
+          ENDIF.
 
-                      CATCH cx_sy_move_cast_error.
-                        TRY.
-                            " Try as blob resource
-                            DATA(blob_resource) = CAST blob_resource_contents( resource_content->resource ).
+          " Get MIME type
+          ASSIGN COMPONENT 'MIME_TYPE' OF STRUCTURE <content_struct> TO <mime_type>.
+          IF sy-subrc <> 0.
+            CONTINUE.
+          ENDIF.
 
-                            APPEND VALUE blob_resource_message_entry(
-                              role        = <message>-role
-                              uri         = blob_resource->uri
-                              blob        = blob_resource->blob
-                              mime_type   = blob_resource->mime_type
-                              annotations = resource_content->annotations
-                            ) TO blob_resources.
+          " Get annotations
+          CLEAR annotations.
+          ASSIGN COMPONENT 'ANNOTATIONS' OF STRUCTURE <content_struct> TO <annotations>.
+          IF sy-subrc = 0.
+            annotations = <annotations>.
+          ENDIF.
 
-                            " Track order
-                            APPEND VALUE message_order_entry(
-                              type  = message_type-blob_resource
-                              index = lines( blob_resources )
-                            ) TO message_order.
+          " Add audio message
+          APPEND VALUE unified_message( type        = message_type-audio
+                                        role        = <input_message>-role
+                                        audio_data  = <data>
+                                        audio_mime  = <mime_type>
+                                        annotations = annotations ) TO me->messages.
 
-                          CATCH cx_sy_move_cast_error.
-                            " Unknown resource type - skip
-                            CONTINUE.
-                        ENDTRY.
-                    ENDTRY.
-                  ENDIF.
+        WHEN content_type-resource.
+          " Get resource reference
+          ASSIGN COMPONENT 'RESOURCE' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<resource>).
+          IF sy-subrc <> 0 OR <resource> IS INITIAL.
+            CONTINUE.
+          ENDIF.
 
-                CATCH cx_sy_move_cast_error.
-                  " Unknown content type - skip
-                  CONTINUE.
-              ENDTRY.
-          ENDTRY.
-      ENDTRY.
+          " Get annotations
+          CLEAR annotations.
+          ASSIGN COMPONENT 'ANNOTATIONS' OF STRUCTURE <content_struct> TO <annotations>.
+          IF sy-subrc = 0.
+            annotations = <annotations>.
+          ENDIF.
+
+          " Access resource structure
+          FIELD-SYMBOLS <res_struct> TYPE any.
+          ASSIGN <resource>->* TO <res_struct>.
+          IF sy-subrc <> 0.
+            CONTINUE.
+          ENDIF.
+
+          " Check common fields
+          ASSIGN COMPONENT 'URI' OF STRUCTURE <res_struct> TO FIELD-SYMBOL(<uri>).
+          IF sy-subrc <> 0.
+            CONTINUE.
+          ENDIF.
+
+          DATA mime_type TYPE string.
+          ASSIGN COMPONENT 'MIME_TYPE' OF STRUCTURE <res_struct> TO FIELD-SYMBOL(<res_mime>).
+          IF sy-subrc = 0.
+            mime_type = <res_mime>.
+          ENDIF.
+
+          " Check if it's a text resource
+          ASSIGN COMPONENT 'TEXT' OF STRUCTURE <res_struct> TO FIELD-SYMBOL(<res_text>).
+          IF sy-subrc = 0.
+            " It's a text resource
+            APPEND VALUE unified_message( type        = message_type-text_resource
+                                          role        = <input_message>-role
+                                          res_uri     = <uri>
+                                          res_text    = <res_text>
+                                          res_mime    = mime_type
+                                          annotations = annotations ) TO me->messages.
+          ELSE.
+            " Check if it's a blob resource
+            ASSIGN COMPONENT 'BLOB' OF STRUCTURE <res_struct> TO FIELD-SYMBOL(<res_blob>).
+            IF sy-subrc = 0.
+              " It's a blob resource
+              APPEND VALUE unified_message( type        = message_type-blob_resource
+                                            role        = <input_message>-role
+                                            res_uri     = <uri>
+                                            res_blob    = <res_blob>
+                                            res_mime    = mime_type
+                                            annotations = annotations ) TO me->messages.
+            ENDIF.
+          ENDIF.
+      ENDCASE.
     ENDLOOP.
   ENDMETHOD.
 
   METHOD add_text_message.
-    APPEND VALUE text_message_entry(
-      role        = role
-      text        = text
-      annotations = annotations
-    ) TO text_messages.
-
-    " Track order
-    APPEND VALUE message_order_entry(
-      type  = message_type-text
-      index = lines( text_messages )
-    ) TO message_order.
+    APPEND VALUE unified_message( type        = message_type-text
+                                  role        = role
+                                  text        = text
+                                  annotations = annotations ) TO messages.
   ENDMETHOD.
 
   METHOD add_image_message.
-    APPEND VALUE image_message_entry(
-      role        = role
-      data        = data
-      mime_type   = mime_type
-      annotations = annotations
-    ) TO image_messages.
+    APPEND VALUE unified_message( type        = message_type-image
+                                  role        = role
+                                  image_data  = data
+                                  image_mime  = mime_type
+                                  annotations = annotations ) TO messages.
+  ENDMETHOD.
 
-    " Track order
-    APPEND VALUE message_order_entry(
-      type  = message_type-image
-      index = lines( image_messages )
-    ) TO message_order.
+  METHOD add_audio_message.
+    APPEND VALUE unified_message( type        = message_type-audio
+                                  role        = role
+                                  audio_data  = data
+                                  audio_mime  = mime_type
+                                  annotations = annotations ) TO messages.
   ENDMETHOD.
 
   METHOD add_text_resource_message.
-    APPEND VALUE text_resource_message_entry(
-      role        = role
-      uri         = uri
-      text        = text
-      mime_type   = mime_type
-      annotations = annotations
-    ) TO text_resources.
-
-    " Track order
-    APPEND VALUE message_order_entry(
-      type  = message_type-text_resource
-      index = lines( text_resources )
-    ) TO message_order.
+    APPEND VALUE unified_message( type        = message_type-text_resource
+                                  role        = role
+                                  res_uri     = uri
+                                  res_text    = text
+                                  res_mime    = mime_type
+                                  annotations = annotations ) TO messages.
   ENDMETHOD.
 
   METHOD add_blob_resource_message.
-    APPEND VALUE blob_resource_message_entry(
-      role        = role
-      uri         = uri
-      blob        = blob
-      mime_type   = mime_type
-      annotations = annotations
-    ) TO blob_resources.
-
-    " Track order
-    APPEND VALUE message_order_entry(
-      type  = message_type-blob_resource
-      index = lines( blob_resources )
-    ) TO message_order.
+    APPEND VALUE unified_message( type        = message_type-blob_resource
+                                  role        = role
+                                  res_uri     = uri
+                                  res_blob    = blob
+                                  res_mime    = mime_type
+                                  annotations = annotations ) TO messages.
   ENDMETHOD.
 
   METHOD set_meta.

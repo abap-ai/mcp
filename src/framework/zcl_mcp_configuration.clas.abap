@@ -103,7 +103,8 @@ CLASS zcl_mcp_configuration IMPLEMENTATION.
         WHEN zcl_mcp_logger=>log_levels-info.
           log_level = 1.
         WHEN OTHERS.
-          log_level = 0. " Default to off
+          " Default to off
+          log_level = 0.
       ENDCASE.
 
       logger = NEW #( log_level    = log_level
@@ -124,7 +125,7 @@ CLASS zcl_mcp_configuration IMPLEMENTATION.
       configuration-log_level = zcl_mcp_logger=>log_levels-off.
       configuration-object    = 'ZMCP_SERVER'.
       configuration-subobject = 'DEFAULT'.
-      configuration-cors_mode = 'C'. " Check CORS if Origin header is present
+      configuration-cors_mode = 'C'.
     ENDIF.
 
     IF configuration-cors_mode IS INITIAL.

@@ -46,7 +46,7 @@ Not implmented:
 
 See currently open issues for details. In general the following topics are prioritized:
 
-- Full test suite especially covering session handling and error scenarios
+- ✅ Test suite using an MCP client --> exists via TypeScript SDK in folder test [Test](/test/README.md)
 - Demonstrate ways to use OAuth reducing challenges with only standard compliant clients
 - Cleanup batch job / report to delete outdated sessions
 - Improve logging by increasing the logged scope

@@ -6,7 +6,6 @@ CLASS zcl_mcp_http_handler DEFINITION
 
   PUBLIC SECTION.
     INTERFACES if_http_extension.
-    METHODS constructor.
 
   PRIVATE SECTION.
     "! JSON-RPC parser instance
@@ -141,7 +140,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                 " No ID means it's a notification
                 has_notifs = abap_true.
               ENDIF.
-            CATCH cx_root.
+            CATCH zcx_mcp_ajson_error.
               " If not a valid request, assume it's a response
               has_responses = abap_true.
           ENDTRY.
@@ -481,7 +480,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
           request = jsonrpc->parse_request( json ).
           APPEND request TO requests.
         ENDIF.
-      CATCH cx_root.
+      CATCH zcx_mcp_ajson_error.
         " JSON parse error
         error-code    = jsonrpc->error_codes-parse_error.
         error-message = 'Invalid JSON' ##NO_TEXT.
@@ -656,10 +655,6 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
         EXIT.
       ENDIF.
     ENDLOOP.
-  ENDMETHOD.
-
-  METHOD constructor.
-
   ENDMETHOD.
 
 ENDCLASS.
