@@ -846,7 +846,7 @@
       "severity": "Error"
     },
     "unused_types": {
-      "exclude": [],
+      "exclude": ["zcl_mcp_resp_get_prompt"],
       "severity": "Error",
       "skipNames": []
     },
