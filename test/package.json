@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.10.1",
+    "@modelcontextprotocol/sdk": "^1.11.0",
     "@types/node-fetch": "^2.6.12",
     "node-fetch": "^2.7.0"
   },
