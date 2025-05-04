@@ -143,7 +143,7 @@ The MCP Server SDK offers three session management modes:
 | MCP Session | Uses the custom MCP session handling mechanism via database |
 | ICF Session | Uses the standard ICF session management |
 
-Note that ICF session management leads to potentially high number of sessions if the clients do not properly close them. MCP Sessions are an alternative lightweight mode allowing you to store certain values in the DB between calls. In general use No Session --> Stateless where feasible.
+Note that ICF session management leads to potentially high number of sessions if the clients do not properly close them. Also your MCP client must support handling the session cookies. MCP Sessions are an alternative lightweight mode allowing you to store certain values in the DB between calls. In general use No Session --> Stateless where feasible.
 
 ## Core Components
 
