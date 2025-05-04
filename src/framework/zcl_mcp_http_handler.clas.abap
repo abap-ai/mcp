@@ -1,7 +1,6 @@
 "! <p class="shorttext synchronized" lang="en">MCP HTTP Handler</p>
 CLASS zcl_mcp_http_handler DEFINITION
   PUBLIC
-  FINAL
   CREATE PUBLIC.
 
   PUBLIC SECTION.
