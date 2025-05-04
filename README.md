@@ -38,21 +38,22 @@ Not implmented:
 - Roots - likely irrelevant for ABAP
 - Further notifications not relevant without SSE: Cancellation, Ping, Progress, Logging
 
-**Non-compliance** to the spec:
+## Authorization
 
-- [Authorization](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization) standard cannot be implemented in ABAP --> we rely on ABAP capabilties instead
+Implement the standard [Authorization](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization) in ABAP via custom code is not feasible, we have to rely on ABAP features. \
+An overview of likely options are outlined in [Authentication Documentation](./docs/Authentication.md).
+
+## Autentication
+
+OAuth is suggested but outside of newer S/4HANA releases challenging, for options see [Authentication](./docs/Authentication.md). Further suggestions are welcome.
 
 ## Roadmap
 
-See currently open issues for details. In general the following topics are prioritized:
+See currently open issues for the next planned steps. Longer term I intend to add features to create modular MCP servers based on reusable implmenetations.
 
-- ✅ Test suite using an MCP client --> exists via TypeScript SDK in folder test [Test](/test/README.md)
-- Demonstrate ways to use OAuth reducing challenges with only standard compliant clients
-- Cleanup batch job / report to delete outdated sessions
-- Improve logging by increasing the logged scope
-- Add options to record requests & responses for debugging purposes
-- Alternatve composable server - instead of writing a full server just configure a combination of standalone implementations for better reuse
-- Examples, documentation, etc.
+## FAQ
+
+See [FAQ](./docs/FAQ.md).
 
 ## Contributing
 

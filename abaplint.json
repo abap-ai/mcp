@@ -412,7 +412,7 @@
       "severity": "Error"
     },
     "implement_methods": {
-      "exclude": [],
+      "exclude": ["zcl_mcp_http_oauth_handler"],
       "severity": "Error"
     },
     "implicit_start_of_selection": {

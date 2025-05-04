@@ -1,3 +1,10 @@
+2025-05-04 v0.0.3
+-----------------
+
+- Added OAuth documentation
+- Added an OAuth handler for pre-S/4HANA OAuth support using the "old" approach enabling e.g. OAuth SAML Bearer Assertion flows
+
+
 2025-04-19 v0.0.1
 -----------------
 
