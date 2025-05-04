@@ -285,8 +285,8 @@ CLASS ltcl_schema_builder IMPLEMENTATION.
             exp = 'string'
             act = schema->get_string( '/properties/chapters/items/properties/sections/items/properties/heading/type' ) ).
 
-      " Skip the string comparison tests that are causing issues
-      " The above path-specific tests are sufficient to validate the structure
+        " Skip the string comparison tests that are causing issues
+        " The above path-specific tests are sufficient to validate the structure
 
       CATCH zcx_mcp_ajson_error INTO DATA(error).
         cl_abap_unit_assert=>fail( error->get_text( ) ).
@@ -339,11 +339,11 @@ CLASS ltcl_schema_builder IMPLEMENTATION.
         " Add some properties with chaining
         builder = builder->add_string( name     = 'id'
                                        required = abap_true ).
-        builder = builder->add_string( name = 'name' ).
+        builder = builder->add_string( 'name' ).
 
         " Add some properties without chaining
-        builder->add_number( name = 'score' ).
-        builder->add_boolean( name = 'verified' ).
+        builder->add_number( 'score' ).
+        builder->add_boolean( 'verified' ).
 
         " Then - Check the generated schema
         DATA(schema) = builder->to_json( ).
@@ -377,19 +377,19 @@ CLASS ltcl_schema_builder IMPLEMENTATION.
                              required = abap_true ).
 
         " Begin nested object without capturing return
-        builder->begin_object( name = 'address' ).
+        builder->begin_object( 'address' ).
 
         " Add properties to nested object
         builder->add_string( name     = 'street'
                              required = abap_true ).
-        builder->add_string( name = 'city' ).
-        builder->add_string( name = 'country' ).
+        builder->add_string( 'city' ).
+        builder->add_string( 'country' ).
 
         " End object without capturing return
         builder->end_object( ).
 
         " Add another property at root level
-        builder->add_string( name = 'email' ).
+        builder->add_string( 'email' ).
 
         " Then - Check the generated schema
         DATA(schema) = builder->to_json( ).
@@ -429,22 +429,22 @@ CLASS ltcl_schema_builder IMPLEMENTATION.
         DATA(builder) = NEW zcl_mcp_schema_builder( ).
 
         " Add root property
-        builder->add_string( name = 'title' ).
+        builder->add_string( 'title' ).
 
         " Begin array without capturing return
-        builder->begin_array( name = 'items' ).
+        builder->begin_array( 'items' ).
 
         " Add array item properties
         builder->add_string( name     = 'name'
                              required = abap_true ).
-        builder->add_number( name = 'price' ).
-        builder->add_boolean( name = 'inStock' ).
+        builder->add_number( 'price' ).
+        builder->add_boolean( 'inStock' ).
 
         " End array without capturing return
         builder->end_array( ).
 
         " Add another root property
-        builder->add_string( name = 'store' ).
+        builder->add_string( 'store' ).
 
         " Then - Check the generated schema
         DATA(schema) = builder->to_json( ).
@@ -491,27 +491,27 @@ CLASS ltcl_schema_builder IMPLEMENTATION.
         " Root level properties
         builder->add_string( name     = 'title'
                              required = abap_true ).
-        builder->add_string( name = 'description' ).
+        builder->add_string( 'description' ).
 
         " Nested object
         builder->begin_object( name     = 'author'
                                required = abap_true ).
         builder->add_string( name     = 'name'
                              required = abap_true ).
-        builder->add_string( name = 'email' ).
+        builder->add_string( 'email' ).
         builder->end_object( ).
 
         " Nested array with further nesting
-        builder->begin_array( name = 'chapters' ).
+        builder->begin_array( 'chapters' ).
         builder->add_string( name     = 'title'
                              required = abap_true ).
-        builder->add_integer( name = 'pages' ).
+        builder->add_integer( 'pages' ).
 
         " Array inside array
-        builder->begin_array( name = 'sections' ).
+        builder->begin_array( 'sections' ).
         builder->add_string( name     = 'heading'
                              required = abap_true ).
-        builder->add_integer( name = 'pageStart' ).
+        builder->add_integer( 'pageStart' ).
         builder->end_array( ).
 
         builder->end_array( ).

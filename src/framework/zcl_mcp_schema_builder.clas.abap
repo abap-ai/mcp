@@ -245,7 +245,6 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                   description = description
                   required    = required ).
 
-    " TODO: variable is assigned but never used (ABAP cleaner)
     DATA path TYPE string.
     IF current_path IS INITIAL.
       path = |/properties/{ name }|.
@@ -271,7 +270,6 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                   description = description
                   required    = required ).
 
-    " TODO: variable is assigned but never used (ABAP cleaner)
     DATA path TYPE string.
     IF current_path IS INITIAL.
       path = |/properties/{ name }|.
