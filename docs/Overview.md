@@ -55,12 +55,12 @@ To install the MCP Server SDK, follow these steps:
 
 Configure your MCP servers in the `ZMCP_SERVERS` table:
 
-| Field | Description |
-|-------|-------------|
-| AREA | Logical grouping for servers |
-| SERVER | Server identifier |
-| CLASS | Implementation class (must implement `ZIF_MCP_SERVER` or extend `ZCL_MCP_SERVER_BASE`) |
-| SESSION_MODE | Session handling mode (`No Session`, `MCP`, or `ICF`) |
+| Field        | Description                                                                            |
+| ------------ | -------------------------------------------------------------------------------------- |
+| AREA         | Logical grouping for servers                                                           |
+| SERVER       | Server identifier                                                                      |
+| CLASS        | Implementation class (must implement `ZIF_MCP_SERVER` or extend `ZCL_MCP_SERVER_BASE`) |
+| SESSION_MODE | Session handling mode (`No Session`, `MCP`, or `ICF`)                                  |
 
 Use the area to group your servers based on a well known structure in your company. This can e.g. be modules or end to end processes. For the session mode No Session is recommended except you really require session management.
 
@@ -68,8 +68,8 @@ Use the area to group your servers based on a well known structure in your compa
 
 Configure CORS settings in the `ZMCP_CONFIG` table:
 
-| Field | Description |
-|-------|-------------|
+| Field     | Description                                          |
+| --------- | ---------------------------------------------------- |
 | CORS_MODE | CORS handling mode (`Ignore`, `Check`, or `Enforce`) |
 
 Ignore = no validation, Check = if Origin header is present it is validated against maintained origins, Enforce ensures that the Origin header is present and checks against maintained origins. For whitelisted origins, maintain entries in the `ZMCP_ORIGINS` table. Use * in area and/or server for generic whitelists.
@@ -78,10 +78,10 @@ Ignore = no validation, Check = if Origin header is present it is validated agai
 
 Configure logging in the `ZMCP_CONFIG` table:
 
-| Field | Description |
-|-------|-------------|
-| LOG_LEVEL | Logging detail level |
-| OBJECT | Application log object |
+| Field     | Description               |
+| --------- | ------------------------- |
+| LOG_LEVEL | Logging detail level      |
+| OBJECT    | Application log object    |
 | SUBOBJECT | Application log subobject |
 
 Make sure to create the Object/Subobject in SLG0. By default no logging happens. Note in case of incorrect object and subobject loggin will fail silently and not dump the server.
@@ -119,8 +119,8 @@ At minimum, you must implement the `HANDLE_INITIALIZE` method to define your ser
 ```abap
 METHOD handle_initialize.
   response-result->set_capabilities( VALUE #( 
-    prompts   = abap_true
-    resources = abap_true
+    prompts   = abap_false
+    resources = abap_false
     tools     = abap_true 
   ) ).
   response-result->set_implementation( VALUE #( 
@@ -137,11 +137,11 @@ ENDMETHOD.
 
 The MCP Server SDK offers three session management modes:
 
-| Mode | Description |
-|------|-------------|
-| No Session | No session management (stateless) |
+| Mode        | Description                                                 |
+| ----------- | ----------------------------------------------------------- |
+| No Session  | No session management (stateless)                           |
 | MCP Session | Uses the custom MCP session handling mechanism via database |
-| ICF Session | Uses the standard ICF session management |
+| ICF Session | Uses the standard ICF session management                    |
 
 Note that ICF session management leads to potentially high number of sessions if the clients do not properly close them. Also your MCP client must support handling the session cookies. MCP Sessions are an alternative lightweight mode allowing you to store certain values in the DB between calls. In general use No Session --> Stateless where feasible.
 
@@ -169,7 +169,7 @@ Interface defining all required MCP server methods. The main methods include:
 
 ### ZCL_MCP_SCHEMA_BUILDER
 
-Helper class to build JSON schemas for tool input validation:
+Helper class to build JSON schemas for tool input validation. You can call it multiple times like below or fully chain it.
 
 ```abap
 DATA(schema) = NEW zcl_mcp_schema_builder( ).
@@ -208,32 +208,44 @@ Demonstrates ICF session handling with:
 - Session information tool
 - Instance variables that persist state between calls
 
+### Demo Configuration
+
+| Area | Service             | Class                             | SessionMode   |
+|------|---------------------|-----------------------------------|---------------|
+| demo | demo_session_icf    | ZCL_MCP_DEMO_SERVER_ICFSESSION    | ICF Stateful  |
+| demo | demo_session_mcp    | ZCL_MCP_DEMO_SERVER_MCPSESSION    | MCP Session   |
+| demo | demo_standard       | ZCL_MCP_DEMO_SERVER_STATELESS     | No Session    |
+
+## Usage/Clients
+
+At the time of writing this clients supporting HTTP Streamable protocol are still extremely rare and most official MCP SDKs do not yet fully support it. The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) is currently a recommended testing tool.
+
 ## API Reference
 
 ### Handler Methods
 
-| Method | Description |
-|--------|-------------|
-| `handle_initialize` | Required: Set up server capabilities |
-| `handle_list_prompts` | List available prompts |
-| `handle_get_prompt` | Retrieve specific prompt details |
-| `handle_list_resources` | List available resources |
-| `handle_resources_read` | Read resource content |
-| `handle_list_res_tmpls` | List resource templates |
-| `handle_list_tools` | List available tools |
-| `handle_call_tool` | Execute a tool |
+| Method                  | Description                          |
+| ----------------------- | ------------------------------------ |
+| `handle_initialize`     | Required: Set up server capabilities |
+| `handle_list_prompts`   | List available prompts               |
+| `handle_get_prompt`     | Retrieve specific prompt details     |
+| `handle_list_resources` | List available resources             |
+| `handle_resources_read` | Read resource content                |
+| `handle_list_res_tmpls` | List resource templates              |
+| `handle_list_tools`     | List available tools                 |
+| `handle_call_tool`      | Execute a tool                       |
 
 ### Key Data Types
 
-| Type | Description |
-|------|-------------|
-| `initialize_response` | Server capabilities and information |
-| `list_prompts_response` | Collection of available prompts |
-| `get_prompt_response` | Details of a specific prompt |
-| `list_resources_response` | Collection of available resources |
-| `resources_read_response` | Content of a specific resource |
-| `list_tools_response` | Collection of available tools |
-| `call_tool_response` | Result of tool execution |
+| Type                      | Description                         |
+| ------------------------- | ----------------------------------- |
+| `initialize_response`     | Server capabilities and information |
+| `list_prompts_response`   | Collection of available prompts     |
+| `get_prompt_response`     | Details of a specific prompt        |
+| `list_resources_response` | Collection of available resources   |
+| `resources_read_response` | Content of a specific resource      |
+| `list_tools_response`     | Collection of available tools       |
+| `call_tool_response`      | Result of tool execution            |
 
 ### Request/Response Classes
 
@@ -245,10 +257,10 @@ See the relevant subpages:
 
 ### Server Properties
 
-| Property | Description |
-|----------|-------------|
-| `server` | Server context information |
-| `config` | Server configuration |
+| Property  | Description                     |
+| --------- | ------------------------------- |
+| `server`  | Server context information      |
+| `config`  | Server configuration            |
 | `session` | Session handling (when enabled) |
 
 ---

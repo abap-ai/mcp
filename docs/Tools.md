@@ -4,23 +4,25 @@ This documentation explains how to implement and use tools in the Model Context 
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Tool Request Classes](#tool-request-classes)
-  - [List Tools Request](#list-tools-request)
-  - [Call Tool Request](#call-tool-request)
-- [Tool Response Classes](#tool-response-classes)
-  - [List Tools Response](#list-tools-response)
-  - [Call Tool Response](#call-tool-response)
-- [Implementing Tool Handlers](#implementing-tool-handlers)
-  - [Handling List Tools](#handling-list-tools)
-  - [Handling Tool Calls](#handling-tool-calls)
-- [Tool Input Validation](#tool-input-validation)
-- [Tool Response Types](#tool-response-types)
-- [Tool Annotations](#tool-annotations)
-- [Examples](#examples)
-  - [Simple Information Tools](#simple-information-tools)
-  - [Database Query Tools](#database-query-tools)
-  - [Stateful Tools](#stateful-tools)
+- [MCP Server SDK: Tools](#mcp-server-sdk-tools)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Tool Request Classes](#tool-request-classes)
+    - [List Tools Request](#list-tools-request)
+    - [Call Tool Request](#call-tool-request)
+  - [Tool Response Classes](#tool-response-classes)
+    - [List Tools Response](#list-tools-response)
+    - [Call Tool Response](#call-tool-response)
+  - [Implementing Tool Handlers](#implementing-tool-handlers)
+    - [Handling List Tools](#handling-list-tools)
+    - [Handling Tool Calls](#handling-tool-calls)
+  - [Tool Input Validation](#tool-input-validation)
+  - [Tool Response Types](#tool-response-types)
+  - [Tool Annotations](#tool-annotations)
+  - [Examples](#examples)
+    - [Simple Information Tools](#simple-information-tools)
+    - [Database Query Tools](#database-query-tools)
+    - [Stateful Tools](#stateful-tools)
 
 ## Overview
 
@@ -279,7 +281,7 @@ ENDMETHOD.
 
 ## Tool Input Validation
 
-Tool inputs are defined using JSON Schema, which provides automatic validation of parameters. Use the `ZCL_MCP_SCHEMA_BUILDER` class to create schemas for your tools:
+Tool inputs are defined using JSON Schema. Use the `ZCL_MCP_SCHEMA_BUILDER` class to create schemas for your tools:
 
 ```abap
 DATA(schema) = NEW zcl_mcp_schema_builder( ).
@@ -465,7 +467,3 @@ METHOD increment_counter.
   ).
 ENDMETHOD.
 ```
-
----
-
-Tools are one of the most powerful features of the MCP protocol, allowing AI assistants to interact with your SAP system in meaningful ways. By implementing well-designed tools with clear schemas and descriptions, you enable AI models to access your business data and functionality in a controlled, secure manner.
