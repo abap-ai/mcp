@@ -4,15 +4,25 @@ The JSON Schema Builder (`ZCL_MCP_SCHEMA_BUILDER`) is a powerful utility class t
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Basic Usage](#basic-usage)
-- [Basic Property Types](#basic-property-types)
-- [Setting Properties as Required](#setting-properties-as-required)
-- [String Validation with Enumerations](#string-validation-with-enumerations)
-- [Creating Objects](#creating-objects)
-- [Creating Arrays](#creating-arrays)
-- [Complex Schema Examples](#complex-schema-examples)
-- [API Reference](#api-reference)
+- [JSON Schema Builder for MCP Server SDK](#json-schema-builder-for-mcp-server-sdk)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Basic Usage](#basic-usage)
+  - [Basic Property Types](#basic-property-types)
+    - [String Properties](#string-properties)
+    - [Number Properties](#number-properties)
+    - [Integer Properties](#integer-properties)
+    - [Boolean Properties](#boolean-properties)
+  - [Setting Properties as Required](#setting-properties-as-required)
+  - [String Validation with Enumerations](#string-validation-with-enumerations)
+  - [Creating Objects](#creating-objects)
+  - [Creating Arrays](#creating-arrays)
+  - [Complex Schema Examples](#complex-schema-examples)
+  - [API Reference](#api-reference)
+    - [Constructor](#constructor)
+    - [Property Methods](#property-methods)
+    - [Structure Methods](#structure-methods)
+    - [Output Method](#output-method)
 
 ## Overview
 
@@ -275,7 +285,3 @@ METHODS to_json
 ```
 
 Converts the built schema to a JSON object that can be used in tool definitions.
-
----
-
-Using the JSON Schema Builder, you can create clear and robust input validations for your MCP tools, ensuring that they receive correctly formatted data and providing better error messages to users when inputs don't meet your requirements.

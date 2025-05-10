@@ -4,20 +4,22 @@ This documentation explains how to implement and use prompts in the Model Contex
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Prompt Request Classes](#prompt-request-classes)
-  - [List Prompts Request](#list-prompts-request)
-  - [Get Prompt Request](#get-prompt-request)
-- [Prompt Response Classes](#prompt-response-classes)
-  - [Get Prompt Response](#get-prompt-response)
-  - [Message Types](#message-types)
-- [Implementing Prompt Handlers](#implementing-prompt-handlers)
-  - [Handling List Prompts](#handling-list-prompts)
-  - [Handling Get Prompt](#handling-get-prompt)
-- [Examples](#examples)
-  - [Simple Text Prompts](#simple-text-prompts)
-  - [Prompts with Images](#prompts-with-images)
-  - [Resource-based Prompts](#resource-based-prompts)
+- [MCP Server SDK: Prompts](#mcp-server-sdk-prompts)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Prompt Request Classes](#prompt-request-classes)
+    - [List Prompts Request](#list-prompts-request)
+    - [Get Prompt Request](#get-prompt-request)
+  - [Prompt Response Classes](#prompt-response-classes)
+    - [Get Prompt Response](#get-prompt-response)
+    - [Message Types](#message-types)
+  - [Implementing Prompt Handlers](#implementing-prompt-handlers)
+    - [Handling List Prompts](#handling-list-prompts)
+    - [Handling Get Prompt](#handling-get-prompt)
+  - [Examples](#examples)
+    - [Simple Text Prompts](#simple-text-prompts)
+    - [Prompts with Images](#prompts-with-images)
+    - [Resource-based Prompts](#resource-based-prompts)
 
 ## Overview
 
