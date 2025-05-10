@@ -11,21 +11,28 @@ CLASS ltcl_mcp_jsonrpc DEFINITION FINAL FOR TESTING
     METHODS setup.
 
     " Test methods for core functionality
-    METHODS create_request           FOR TESTING.
-    METHODS create_notification      FOR TESTING.
-    METHODS create_success_response  FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS create_error_response    FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS create_request                 FOR TESTING.
+    METHODS create_notification            FOR TESTING.
+    METHODS create_success_response        FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS create_error_response          FOR TESTING RAISING zcx_mcp_ajson_error.
 
     " Test methods for JSON operations
-    METHODS serialize_request        FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS parse_request            FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS parse_request_numeric_id FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS serialize_response       FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS parse_response           FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS serialize_request              FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS parse_request                  FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS parse_request_numeric_id       FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS serialize_response             FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS parse_response                 FOR TESTING RAISING zcx_mcp_ajson_error.
 
     " Test methods for batch operations
-    METHODS parse_batch_request      FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS serialize_batch_response FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS parse_batch_request            FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS serialize_batch_response       FOR TESTING RAISING zcx_mcp_ajson_error.
+
+    " Test different ID formats
+    METHODS parse_request_id_leading_zeros FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS parse_request_alphanumeric_id  FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS parse_request_uuid_id          FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS serialize_request_id_formats   FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS serialize_response_id_formats  FOR TESTING RAISING zcx_mcp_ajson_error.
 
     " Helper methods
     METHODS assert_json_equals
@@ -272,5 +279,117 @@ CLASS ltcl_mcp_jsonrpc IMPLEMENTATION.
     " Assert equality
     cl_abap_unit_assert=>assert_equals( exp = normalized_expected
                                         act = normalized_actual ).
+  ENDMETHOD.
+
+  METHOD parse_request_id_leading_zeros.
+    " Arrange - JSON request with string ID that has leading zeros
+    DATA(json) = `{"jsonrpc":"2.0","method":"test.method","id":"0123"}`.
+
+    " Act - parse the JSON to a request object
+    DATA(request) = cut->parse_request( json ).
+
+    " Assert - check ID is parsed correctly as a string, preserving leading zeros
+    cl_abap_unit_assert=>assert_equals( exp = '0123'
+                                        act = request-id ).
+
+    " Serialize and check that it's treated as a string in JSON
+    DATA(serialized) = cut->serialize_request( request ).
+    assert_json_equals( actual   = serialized
+                        expected = '{"jsonrpc":"2.0","method":"test.method","id":"0123"}' ).
+  ENDMETHOD.
+
+  METHOD parse_request_alphanumeric_id.
+    " Arrange - JSON request with alphanumeric ID
+    DATA(json) = `{"jsonrpc":"2.0","method":"test.method","id":"abc123"}`.
+
+    " Act - parse the JSON to a request object
+    DATA(request) = cut->parse_request( json ).
+
+    " Assert - check ID is parsed correctly
+    cl_abap_unit_assert=>assert_equals( exp = 'abc123'
+                                        act = request-id ).
+
+    " Serialize and check that it's treated as a string in JSON
+    DATA(serialized) = cut->serialize_request( request ).
+    assert_json_equals( actual   = serialized
+                        expected = '{"jsonrpc":"2.0","method":"test.method","id":"abc123"}' ).
+  ENDMETHOD.
+
+  METHOD parse_request_uuid_id.
+    " Arrange - JSON request with UUID-style ID
+    DATA(json) = `{"jsonrpc":"2.0","method":"test.method","id":"550e8400-e29b-41d4-a716-446655440000"}`.
+
+    " Act - parse the JSON to a request object
+    DATA(request) = cut->parse_request( json ).
+
+    " Assert - check ID is parsed correctly
+    cl_abap_unit_assert=>assert_equals( exp = '550e8400-e29b-41d4-a716-446655440000'
+                                        act = request-id ).
+
+    " Serialize and check that it's treated as a string in JSON
+    DATA(serialized) = cut->serialize_request( request ).
+    assert_json_equals(
+        actual   = serialized
+        expected = '{"jsonrpc":"2.0","method":"test.method","id":"550e8400-e29b-41d4-a716-446655440000"}' ).
+  ENDMETHOD.
+
+  METHOD serialize_request_id_formats.
+    " Test different ID formats in serialization
+
+    " 1. Numeric ID
+    DATA(request1) = cut->create_request( method = 'test.method'
+                                          id     = '123' ).
+    DATA(json1) = cut->serialize_request( request1 ).
+    assert_json_equals( actual   = json1
+                        expected = '{"jsonrpc":"2.0","method":"test.method","id":123}' ).
+
+    " 2. ID with leading zeros
+    DATA(request2) = cut->create_request( method = 'test.method'
+                                          id     = '0123' ).
+    DATA(json2) = cut->serialize_request( request2 ).
+    assert_json_equals( actual   = json2
+                        expected = '{"jsonrpc":"2.0","method":"test.method","id":"0123"}' ).
+
+    " 3. ID with special formatting (plus sign)
+    DATA(request3) = cut->create_request( method = 'test.method'
+                                          id     = '+123' ).
+    DATA(json3) = cut->serialize_request( request3 ).
+    assert_json_equals( actual   = json3
+                        expected = '{"jsonrpc":"2.0","method":"test.method","id":"+123"}' ).
+
+    " 4. Alphanumeric ID
+    DATA(request4) = cut->create_request( method = 'test.method'
+                                          id     = 'abc123' ).
+    DATA(json4) = cut->serialize_request( request4 ).
+    assert_json_equals( actual   = json4
+                        expected = '{"jsonrpc":"2.0","method":"test.method","id":"abc123"}' ).
+  ENDMETHOD.
+
+  METHOD serialize_response_id_formats.
+    " Setup a simple result for all responses
+    DATA(result_json) = zcl_mcp_ajson=>create_empty( ).
+    result_json->set_string( iv_path = '/status'
+                             iv_val  = 'success' ).
+
+    " 1. Numeric ID
+    DATA(response1) = cut->create_success_response( id     = '123'
+                                                    result = result_json ).
+    DATA(json1) = cut->serialize_response( response1 ).
+    assert_json_equals( actual   = json1
+                        expected = '{"jsonrpc":"2.0","result":{"status":"success"},"id":123}' ).
+
+    " 2. ID with leading zeros
+    DATA(response2) = cut->create_success_response( id     = '0123'
+                                                    result = result_json ).
+    DATA(json2) = cut->serialize_response( response2 ).
+    assert_json_equals( actual   = json2
+                        expected = '{"jsonrpc":"2.0","result":{"status":"success"},"id":"0123"}' ).
+
+    " 3. Alphanumeric ID
+    DATA(response3) = cut->create_success_response( id     = 'abc123'
+                                                    result = result_json ).
+    DATA(json3) = cut->serialize_response( response3 ).
+    assert_json_equals( actual   = json3
+                        expected = '{"jsonrpc":"2.0","result":{"status":"success"},"id":"abc123"}' ).
   ENDMETHOD.
 ENDCLASS.

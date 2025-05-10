@@ -269,7 +269,6 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     result = array_json->stringify( ).
   ENDMETHOD.
 
-
   METHOD serialize_request.
     DATA json_obj TYPE REF TO zif_mcp_ajson.
 
@@ -312,17 +311,18 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
             json_obj->set_string( iv_path = '/id'
                                   iv_val  = request-id ).
           ENDIF.
-        CATCH zcx_mcp_ajson_error.
+        CATCH cx_sy_conversion_no_number.
           " Not a number, use as string
           json_obj->set_string( iv_path = '/id'
                                 iv_val  = request-id ).
+        CATCH zcx_mcp_ajson_error.
+          " Handle JSON operation error
       ENDTRY.
     ENDIF.
 
     " Convert to string
     result = json_obj->stringify( ).
   ENDMETHOD.
-
 
   METHOD serialize_response.
     DATA json_obj TYPE REF TO zif_mcp_ajson.
@@ -362,18 +362,24 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
 
     " Add ID with correct type
     IF response-id IS NOT INITIAL.
+      " Add ID with correct type if present
       TRY.
           DATA(number) = CONV i( response-id ).
+          " Only treat as number if exact string representation matches
           IF response-id = |{ number }|.
             json_obj->set_integer( iv_path = '/id'
                                    iv_val  = number ).
           ELSE.
+            " Not an exact number, treat as string
             json_obj->set_string( iv_path = '/id'
                                   iv_val  = response-id ).
           ENDIF.
-        CATCH zcx_mcp_ajson_error.
+        CATCH cx_sy_conversion_no_number.
+          " Not a number, use as string
           json_obj->set_string( iv_path = '/id'
                                 iv_val  = response-id ).
+        CATCH zcx_mcp_ajson_error.
+          " Handle JSON operation error
       ENDTRY.
     ELSE.
       " Null ID
