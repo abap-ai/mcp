@@ -241,7 +241,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_mcp_server~get_session_mode.
-    result = me->get_session_mode( ).
+    result = get_session_mode( ).
   ENDMETHOD.
 
 ENDCLASS.
