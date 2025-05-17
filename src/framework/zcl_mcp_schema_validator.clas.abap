@@ -17,28 +17,28 @@ CLASS zcl_mcp_schema_validator DEFINITION
     "! @parameter result              | <p class="shorttext synchronized">Validation result</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS validate
-      IMPORTING !json TYPE REF TO zif_mcp_ajson
+      IMPORTING !json         TYPE REF TO zif_mcp_ajson
       RETURNING VALUE(result) TYPE abap_bool
       RAISING   zcx_mcp_ajson_error.
 
     "! <p class="shorttext synchronized">Get validation errors</p>
     "!
-    "! @parameter errors | <p class="shorttext synchronized">Validation errors</p>
+    "! @parameter result | <p class="shorttext synchronized">Validation errors</p>
     METHODS get_errors
-      RETURNING VALUE(errors) TYPE string_table.
+      RETURNING VALUE(result) TYPE string_table.
 
   PRIVATE SECTION.
     TYPES:
       "! Validation error structure
-      BEGIN OF ty_error,
+      BEGIN OF error,
         path    TYPE string,
         message TYPE string,
-      END OF ty_error,
-      ty_errors TYPE STANDARD TABLE OF ty_error WITH EMPTY KEY.
+      END OF error,
+      errors TYPE STANDARD TABLE OF error WITH EMPTY KEY.
 
-    DATA schema TYPE REF TO zif_mcp_ajson.
-    DATA detailed_errors TYPE ty_errors.
-    DATA errors TYPE string_table.
+    DATA schema          TYPE REF TO zif_mcp_ajson.
+    DATA detailed_errors TYPE errors.
+    DATA error_list      TYPE string_table.
 
     "! <p class="shorttext synchronized">Validate object properties</p>
     "!
@@ -48,9 +48,9 @@ CLASS zcl_mcp_schema_validator DEFINITION
     "! @parameter result              | <p class="shorttext synchronized">Validation result</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS validate_object
-      IMPORTING !json_path    TYPE string
-                !schema_path  TYPE string
-                !json         TYPE REF TO zif_mcp_ajson
+      IMPORTING json_path     TYPE string
+                schema_path   TYPE string
+                json          TYPE REF TO zif_mcp_ajson
       RETURNING VALUE(result) TYPE abap_bool
       RAISING   zcx_mcp_ajson_error.
 
@@ -62,9 +62,9 @@ CLASS zcl_mcp_schema_validator DEFINITION
     "! @parameter result              | <p class="shorttext synchronized">Validation result</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS validate_array
-      IMPORTING !json_path    TYPE string
-                !schema_path  TYPE string
-                !json         TYPE REF TO zif_mcp_ajson
+      IMPORTING json_path     TYPE string
+                schema_path   TYPE string
+                json          TYPE REF TO zif_mcp_ajson
       RETURNING VALUE(result) TYPE abap_bool
       RAISING   zcx_mcp_ajson_error.
 
@@ -76,9 +76,9 @@ CLASS zcl_mcp_schema_validator DEFINITION
     "! @parameter result              | <p class="shorttext synchronized">Validation result</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS validate_property
-      IMPORTING !json_path    TYPE string
-                !schema_path  TYPE string
-                !json         TYPE REF TO zif_mcp_ajson
+      IMPORTING json_path     TYPE string
+                schema_path   TYPE string
+                json          TYPE REF TO zif_mcp_ajson
       RETURNING VALUE(result) TYPE abap_bool
       RAISING   zcx_mcp_ajson_error.
 
@@ -90,9 +90,9 @@ CLASS zcl_mcp_schema_validator DEFINITION
     "! @parameter result              | <p class="shorttext synchronized">Validation result</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS validate_string
-      IMPORTING !json_path    TYPE string
-                !schema_path  TYPE string
-                !json         TYPE REF TO zif_mcp_ajson
+      IMPORTING json_path     TYPE string
+                schema_path   TYPE string
+                json          TYPE REF TO zif_mcp_ajson
       RETURNING VALUE(result) TYPE abap_bool
       RAISING   zcx_mcp_ajson_error.
 
@@ -104,9 +104,9 @@ CLASS zcl_mcp_schema_validator DEFINITION
     "! @parameter result              | <p class="shorttext synchronized">Validation result</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS validate_number
-      IMPORTING !json_path    TYPE string
-                !schema_path  TYPE string
-                !json         TYPE REF TO zif_mcp_ajson
+      IMPORTING json_path     TYPE string
+                schema_path   TYPE string
+                json          TYPE REF TO zif_mcp_ajson
       RETURNING VALUE(result) TYPE abap_bool
       RAISING   zcx_mcp_ajson_error.
 
@@ -118,9 +118,9 @@ CLASS zcl_mcp_schema_validator DEFINITION
     "! @parameter result              | <p class="shorttext synchronized">Validation result</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS validate_integer
-      IMPORTING !json_path    TYPE string
-                !schema_path  TYPE string
-                !json         TYPE REF TO zif_mcp_ajson
+      IMPORTING json_path     TYPE string
+                schema_path   TYPE string
+                json          TYPE REF TO zif_mcp_ajson
       RETURNING VALUE(result) TYPE abap_bool
       RAISING   zcx_mcp_ajson_error.
 
@@ -131,8 +131,8 @@ CLASS zcl_mcp_schema_validator DEFINITION
     "! @parameter result              | <p class="shorttext synchronized">Whether property exists</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS property_exists
-      IMPORTING !json_path    TYPE string
-                !json         TYPE REF TO zif_mcp_ajson
+      IMPORTING json_path     TYPE string
+                json          TYPE REF TO zif_mcp_ajson
       RETURNING VALUE(result) TYPE abap_bool
       RAISING   zcx_mcp_ajson_error.
 
@@ -144,7 +144,6 @@ CLASS zcl_mcp_schema_validator DEFINITION
       IMPORTING !path    TYPE string
                 !message TYPE string.
 
-    CONSTANTS msgid TYPE sy-msgid VALUE 'ZMCP'.
 ENDCLASS.
 
 CLASS zcl_mcp_schema_validator IMPLEMENTATION.
@@ -155,7 +154,7 @@ CLASS zcl_mcp_schema_validator IMPLEMENTATION.
   METHOD validate.
     " Clear previous errors
     CLEAR detailed_errors.
-    CLEAR errors.
+    CLEAR error_list.
 
     " The schema root should be an object type
     TRY.
@@ -184,12 +183,12 @@ CLASS zcl_mcp_schema_validator IMPLEMENTATION.
 
     " Convert detailed errors to simple string table
     LOOP AT detailed_errors ASSIGNING FIELD-SYMBOL(<error>).
-      APPEND |{ <error>-path }: { <error>-message }| TO errors.
+      APPEND |{ <error>-path }: { <error>-message }| TO error_list.
     ENDLOOP.
   ENDMETHOD.
 
   METHOD get_errors.
-    errors = me->errors.
+    result = me->error_list.
   ENDMETHOD.
 
   METHOD validate_object.
