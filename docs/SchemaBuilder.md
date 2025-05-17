@@ -1,44 +1,38 @@
 # JSON Schema Builder for MCP Server SDK
 
-The JSON Schema Builder (`ZCL_MCP_SCHEMA_BUILDER`) is a powerful utility class that simplifies the creation of JSON Schema definitions for your Model Context Protocol tools. This page provides detailed information on how to use the schema builder to define input validation rules for your tools.
+The JSON Schema Builder (`ZCL_MCP_SCHEMA_BUILDER`) is a utility class that simplifies creating JSON Schema definitions for your Model Context Protocol tools, allowing you to define input validation rules with a chainable API.
 
 ## Table of Contents
 
-- [JSON Schema Builder for MCP Server SDK](#json-schema-builder-for-mcp-server-sdk)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Basic Usage](#basic-usage)
-  - [Basic Property Types](#basic-property-types)
-    - [String Properties](#string-properties)
-    - [Number Properties](#number-properties)
-    - [Integer Properties](#integer-properties)
-    - [Boolean Properties](#boolean-properties)
-  - [Setting Properties as Required](#setting-properties-as-required)
-  - [String Validation with Enumerations](#string-validation-with-enumerations)
-  - [Creating Objects](#creating-objects)
-  - [Creating Arrays](#creating-arrays)
-  - [Complex Schema Examples](#complex-schema-examples)
-  - [API Reference](#api-reference)
-    - [Constructor](#constructor)
-    - [Property Methods](#property-methods)
-    - [Structure Methods](#structure-methods)
-    - [Output Method](#output-method)
+- [Overview](#overview)
+- [Basic Usage](#basic-usage)
+- [Basic Property Types](#basic-property-types)
+  - [String Properties](#string-properties)
+  - [Number Properties](#number-properties)
+  - [Integer Properties](#integer-properties)
+  - [Boolean Properties](#boolean-properties)
+- [Property Validation](#property-validation)
+  - [String Validation](#string-validation)
+  - [Number and Integer Validation](#number-and-integer-validation)
+  - [Array Validation](#array-validation)
+- [Defining Required Properties](#defining-required-properties)
+- [Creating Objects](#creating-objects)
+- [Creating Arrays](#creating-arrays)
+- [Complex Schema Examples](#complex-schema-examples)
+- [API Reference](#api-reference)
 
 ## Overview
 
-JSON Schema is a standard for validating the structure of JSON data. In the MCP Server SDK, JSON schemas are used to define the expected input format for tools that can be called by AI models. The Schema Builder provides a fluent interface that makes creating complex schemas simple and readable.
+JSON Schema is used in the MCP Server SDK to define the expected input format for tools that can be called by AI models. The Schema Builder provides a fluent interface that makes creating complex schemas simple and readable.
 
 Key features:
 
 - Easy definition of property types (string, number, integer, boolean)
+- Rich validation options for property values
 - Support for nested objects and arrays
-- Marking properties as required
-- Defining allowed values through enumerations
 - Fluent interface for chainable method calls
 
 ## Basic Usage
-
-To create a JSON schema with the Schema Builder:
 
 ```abap
 TRY.
@@ -47,7 +41,7 @@ TRY.
     
     " Add properties with method chaining
     schema_builder->add_string( name = 'name' required = abap_true )
-                  ->add_integer( name = 'age' )
+                  ->add_integer( name = 'age' minimum = 18 )
                   ->add_boolean( name = 'active' ).
                   
     " Convert to JSON for use in your tool definition
@@ -64,8 +58,6 @@ ENDTRY.
 ```
 
 ## Basic Property Types
-
-The Schema Builder supports all standard JSON Schema property types:
 
 ### String Properties
 
@@ -104,9 +96,68 @@ schema_builder->add_boolean(
 ).
 ```
 
-## Setting Properties as Required
+## Property Validation
 
-You can mark properties as required by setting the `required` parameter to `abap_true`:
+### String Validation
+
+You can apply length constraints and enumeration validation to strings:
+
+```abap
+" Length validation
+schema_builder->add_string(
+    name = 'password'
+    description = 'User password'
+    min_length = 8
+    max_length = 30
+).
+
+" Enumeration validation
+DATA(status_values) = VALUE string_table( ( 'pending' ) ( 'active' ) ( 'cancelled' ) ).
+schema_builder->add_string(
+    name = 'status'
+    description = 'Order status'
+    enum = status_values
+).
+```
+
+### Number and Integer Validation
+
+You can set minimum and maximum constraints for numeric values:
+
+```abap
+" Number range validation
+schema_builder->add_number(
+    name = 'weight'
+    description = 'Product weight in kg'
+    minimum = 0.1
+    maximum = 1000.0
+).
+
+" Integer range validation
+schema_builder->add_integer(
+    name = 'age'
+    description = 'User age'
+    minimum = 18
+    maximum = 120
+).
+```
+
+### Array Validation
+
+You can constrain the number of items in an array:
+
+```abap
+schema_builder->begin_array(
+    name = 'tags'
+    description = 'Product tags'
+    min_items = 1
+    max_items = 10
+)->add_string( name = 'value' )->end_array( ).
+```
+
+## Defining Required Properties
+
+Mark properties as required by setting the `required` parameter:
 
 ```abap
 schema_builder->add_string( name = 'username' required = abap_true )
@@ -114,100 +165,48 @@ schema_builder->add_string( name = 'username' required = abap_true )
               ->add_string( name = 'email' required = abap_false ).
 ```
 
-Required properties will be included in the schema's `required` array, and MCP clients will enforce these requirements before calling your tool.
-
-## String Validation with Enumerations
-
-You can restrict string values to a specific set of allowed values using enumerations:
-
-```abap
-DATA(enum_values) = VALUE string_table( 
-    ( `red` ) 
-    ( `green` ) 
-    ( `blue` ) 
-).
-
-schema_builder->add_string(
-    name = 'color'
-    description = 'The color selection'
-    enum = enum_values
-).
-```
-
-This will ensure the input only accepts the values "red", "green", or "blue".
-
 ## Creating Objects
 
-You can create nested object structures using the `begin_object` and `end_object` methods:
+Use `begin_object` and `end_object` to create nested structures:
 
 ```abap
 schema_builder->add_string( name = 'name' )
-              ->begin_object( name = 'address' )
-                  ->add_string( name = 'street' )
-                  ->add_string( name = 'city' )
+              ->begin_object( name = 'address' required = abap_true )
+                  ->add_string( name = 'street' required = abap_true )
+                  ->add_string( name = 'city' required = abap_true )
                   ->add_string( name = 'country' )
-              ->end_object( ).
-```
-
-This creates a schema with an object property named "address" that contains string properties for "street", "city", and "country".
-
-You can nest objects to any depth:
-
-```abap
-schema_builder->begin_object( name = 'company' )
-                  ->add_string( name = 'name' )
-                  ->begin_object( name = 'address' )
-                      ->add_string( name = 'street' required = abap_true )
-                      ->add_string( name = 'city' required = abap_true )
-                  ->end_object( )
               ->end_object( ).
 ```
 
 ## Creating Arrays
 
-Arrays of objects can be created using the `begin_array` and `end_array` methods:
+Create arrays of objects using `begin_array` and `end_array`:
 
 ```abap
-schema_builder->begin_array( name = 'tags' )
+schema_builder->begin_array( name = 'tags' min_items = 1 )
                   ->add_string( name = 'value' required = abap_true )
                   ->add_string( name = 'color' )
               ->end_array( ).
 ```
 
-This creates an array property named "tags" where each array item is an object with "value" and "color" properties.
-
 ## Complex Schema Examples
 
-You can combine all these features to create complex schema structures:
+Combine these features to create complex schemas:
 
 ```abap
-schema_builder->add_string( name = 'title' required = abap_true )
-              ->add_string( name = 'description' )
+schema_builder->add_string( name = 'title' required = abap_true max_length = 100 )
+              ->add_string( name = 'description' max_length = 500 )
               ->begin_object( name = 'author' required = abap_true )
                   ->add_string( name = 'name' required = abap_true )
                   ->add_string( name = 'email' )
               ->end_object( )
-              ->begin_array( name = 'chapters' )
+              ->begin_array( name = 'chapters' min_items = 1 )
                   ->add_string( name = 'title' required = abap_true )
-                  ->add_integer( name = 'pages' )
-                  ->begin_array( name = 'sections' )
-                      ->add_string( name = 'heading' required = abap_true )
-                      ->add_integer( name = 'pageStart' )
-                  ->end_array( )
+                  ->add_integer( name = 'pages' minimum = 1 )
               ->end_array( ).
 ```
 
-This creates a schema for a book structure with nested objects and arrays.
-
 ## API Reference
-
-### Constructor
-
-```abap
-METHODS constructor RAISING zcx_mcp_ajson_error.
-```
-
-Creates a new schema builder instance.
 
 ### Property Methods
 
@@ -218,6 +217,8 @@ METHODS add_string
     description TYPE string OPTIONAL
     enum        TYPE string_table OPTIONAL
     required    TYPE abap_bool DEFAULT abap_false
+    min_length  TYPE i OPTIONAL
+    max_length  TYPE i OPTIONAL
   RETURNING
     VALUE(self) TYPE REF TO zcl_mcp_schema_builder.
 
@@ -226,6 +227,8 @@ METHODS add_number
     name        TYPE string
     description TYPE string OPTIONAL
     required    TYPE abap_bool DEFAULT abap_false
+    minimum     TYPE f OPTIONAL
+    maximum     TYPE f OPTIONAL
   RETURNING
     VALUE(self) TYPE REF TO zcl_mcp_schema_builder.
 
@@ -234,6 +237,8 @@ METHODS add_integer
     name        TYPE string
     description TYPE string OPTIONAL
     required    TYPE abap_bool DEFAULT abap_false
+    minimum     TYPE i OPTIONAL
+    maximum     TYPE i OPTIONAL
   RETURNING
     VALUE(self) TYPE REF TO zcl_mcp_schema_builder.
 
@@ -266,6 +271,8 @@ METHODS begin_array
     name        TYPE string
     description TYPE string OPTIONAL
     required    TYPE abap_bool DEFAULT abap_false
+    min_items   TYPE i OPTIONAL
+    max_items   TYPE i OPTIONAL
   RETURNING
     VALUE(self) TYPE REF TO zcl_mcp_schema_builder.
 
@@ -283,5 +290,3 @@ METHODS to_json
   RAISING
     zcx_mcp_ajson_error.
 ```
-
-Converts the built schema to a JSON object that can be used in tool definitions.
