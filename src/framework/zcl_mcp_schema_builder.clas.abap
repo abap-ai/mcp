@@ -247,13 +247,13 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
     ENDIF.
 
     IF min_length IS SUPPLIED AND min_length > 0.
-      schema->set( iv_path = |{ path }/minLength|
-                   iv_val  = min_length ).
+      schema->set_integer( iv_path = |{ path }/minLength|
+                           iv_val  = min_length ).
     ENDIF.
 
     IF max_length IS SUPPLIED AND max_length > 0.
-      schema->set( iv_path = |{ path }/maxLength|
-                   iv_val  = max_length ).
+      schema->set_integer( iv_path = |{ path }/maxLength|
+                           iv_val  = max_length ).
     ENDIF.
 
     self = me.
@@ -321,13 +321,13 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
     ENDIF.
 
     IF minimum IS SUPPLIED.
-      schema->set( iv_path = |{ path }/minimum|
-                   iv_val  = minimum ).
+      schema->set_integer( iv_path = |{ path }/minimum|
+                           iv_val  = minimum ).
     ENDIF.
 
     IF maximum IS SUPPLIED.
-      schema->set( iv_path = |{ path }/maximum|
-                   iv_val  = maximum ).
+      schema->set_integer( iv_path = |{ path }/maximum|
+                           iv_val  = maximum ).
     ENDIF.
 
     self = me.
@@ -441,13 +441,13 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
     ENDIF.
 
     IF min_items IS SUPPLIED AND min_items > 0.
-      schema->set( iv_path = |{ path }/minItems|
-                   iv_val  = min_items ).
+      schema->set_integer( iv_path = |{ path }/minItems|
+                           iv_val  = min_items ).
     ENDIF.
 
     IF max_items IS SUPPLIED AND max_items > 0.
-      schema->set( iv_path = |{ path }/maxItems|
-                   iv_val  = max_items ).
+      schema->set_integer( iv_path = |{ path }/maxItems|
+                           iv_val  = max_items ).
     ENDIF.
 
     " Set items type to object
