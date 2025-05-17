@@ -2,8 +2,8 @@ CLASS ltcl_mcp_logger DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
   PRIVATE SECTION.
-    CONSTANTS test_object    TYPE balobj_d  VALUE 'ZMCPTEST'.
-    CONSTANTS test_subobject TYPE balsubobj VALUE 'LOGGER'.
+    CONSTANTS test_object    TYPE balobj_d  VALUE 'APPL_LOG'.
+    CONSTANTS test_subobject TYPE balsubobj VALUE 'TEST'.
     CONSTANTS test_ext_id    TYPE balnrext  VALUE 'TEST_ID_12345'.
 
     DATA logger TYPE REF TO zcl_mcp_logger.

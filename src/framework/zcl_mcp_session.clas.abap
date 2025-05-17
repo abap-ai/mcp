@@ -5,10 +5,10 @@ CLASS zcl_mcp_session DEFINITION
   CREATE PUBLIC .
 
   PUBLIC SECTION.
-    CONSTANTS session_mode_off TYPE zmcp_session_mode VALUE ''.
-    CONSTANTS session_mode_icf TYPE zmcp_session_mode VALUE 'I'.
-    CONSTANTS session_mode_mcp TYPE zmcp_session_mode VALUE 'M'.
-    CONSTANTS session_validity TYPE i                 VALUE 3600.
+    CONSTANTS session_mode_stateless TYPE zmcp_session_mode VALUE ''.
+    CONSTANTS session_mode_icf       TYPE zmcp_session_mode VALUE 'I'.
+    CONSTANTS session_mode_mcp       TYPE zmcp_session_mode VALUE 'M'.
+    CONSTANTS session_validity       TYPE i                 VALUE 3600.
 
     TYPES: BEGIN OF session_entry,
              key   TYPE string,
@@ -116,10 +116,10 @@ CLASS zcl_mcp_session IMPLEMENTATION.
 
   METHOD remove.
     DELETE session_data WHERE key = key.
-    IF sy-subrc <> 0.
+    IF sy-subrc <> 0. "#EC EMPTY_IF_BRANCH
       " Ignored, if it does not exist we cannot delete id.
       " Additional exception handling is not relevant.
-    ENDIF. "#EC EMPTY_IF_BRANCH
+    ENDIF.
   ENDMETHOD.
 
   METHOD get.

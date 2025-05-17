@@ -5,8 +5,9 @@ CLASS zcl_mcp_schema_builder DEFINITION
   PUBLIC SECTION.
     "! <p class="shorttext synchronized">Create a new JSON schema builder</p>
     "!
-    "! @raising zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
-    METHODS constructor RAISING zcx_mcp_ajson_error.
+    "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
+    METHODS constructor
+      RAISING zcx_mcp_ajson_error.
 
     "! <p class="shorttext synchronized">Add string property to schema</p>
     "!
@@ -14,6 +15,8 @@ CLASS zcl_mcp_schema_builder DEFINITION
     "! @parameter description         | <p class="shorttext synchronized">Property description</p>
     "! @parameter enum                | <p class="shorttext synchronized">Enumeration values</p>
     "! @parameter required            | <p class="shorttext synchronized">Whether property is required</p>
+    "! @parameter min_length          | <p class="shorttext synchronized">Minimum length</p>
+    "! @parameter max_length          | <p class="shorttext synchronized">Maximum length</p>
     "! @parameter self                | <p class="shorttext synchronized">Builder instance for chaining</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS add_string
@@ -21,6 +24,8 @@ CLASS zcl_mcp_schema_builder DEFINITION
                 !description TYPE string       OPTIONAL
                 !enum        TYPE string_table OPTIONAL
                 !required    TYPE abap_bool    DEFAULT abap_false
+                min_length   TYPE i            OPTIONAL
+                max_length   TYPE i            OPTIONAL
       RETURNING VALUE(self)  TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -29,12 +34,16 @@ CLASS zcl_mcp_schema_builder DEFINITION
     "! @parameter name                | <p class="shorttext synchronized">Property name</p>
     "! @parameter description         | <p class="shorttext synchronized">Property description</p>
     "! @parameter required            | <p class="shorttext synchronized">Whether property is required</p>
+    "! @parameter minimum             | <p class="shorttext synchronized">Minimum value</p>
+    "! @parameter maximum             | <p class="shorttext synchronized">Maximum value</p>
     "! @parameter self                | <p class="shorttext synchronized">Builder instance for chaining</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS add_number
       IMPORTING !name        TYPE string
                 !description TYPE string    OPTIONAL
                 !required    TYPE abap_bool DEFAULT abap_false
+                !minimum     TYPE f         OPTIONAL
+                !maximum     TYPE f         OPTIONAL
       RETURNING VALUE(self)  TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -43,12 +52,16 @@ CLASS zcl_mcp_schema_builder DEFINITION
     "! @parameter name                | <p class="shorttext synchronized">Property name</p>
     "! @parameter description         | <p class="shorttext synchronized">Property description</p>
     "! @parameter required            | <p class="shorttext synchronized">Whether property is required</p>
+    "! @parameter minimum             | <p class="shorttext synchronized">Minimum value</p>
+    "! @parameter maximum             | <p class="shorttext synchronized">Maximum value</p>
     "! @parameter self                | <p class="shorttext synchronized">Builder instance for chaining</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS add_integer
       IMPORTING !name        TYPE string
                 !description TYPE string    OPTIONAL
                 !required    TYPE abap_bool DEFAULT abap_false
+                !minimum     TYPE i         OPTIONAL
+                !maximum     TYPE i         OPTIONAL
       RETURNING VALUE(self)  TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -93,12 +106,16 @@ CLASS zcl_mcp_schema_builder DEFINITION
     "! @parameter name                | <p class="shorttext synchronized">Array name</p>
     "! @parameter description         | <p class="shorttext synchronized">Array description</p>
     "! @parameter required            | <p class="shorttext synchronized">Whether array is required</p>
+    "! @parameter min_items           | <p class="shorttext synchronized">Minimum number of items</p>
+    "! @parameter max_items           | <p class="shorttext synchronized">Maximum number of items</p>
     "! @parameter self                | <p class="shorttext synchronized">Builder instance for the array items</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS begin_array
       IMPORTING !name        TYPE string
                 !description TYPE string    OPTIONAL
                 !required    TYPE abap_bool DEFAULT abap_false
+                min_items    TYPE i         OPTIONAL
+                max_items    TYPE i         OPTIONAL
       RETURNING VALUE(self)  TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -202,7 +219,9 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
       self = builder->add_string( name        = name
                                   description = description
                                   enum        = enum
-                                  required    = required ).
+                                  required    = required
+                                  min_length  = min_length
+                                  max_length  = max_length ).
       RETURN.
     ENDIF.
 
@@ -227,6 +246,16 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
       ENDLOOP.
     ENDIF.
 
+    IF min_length IS SUPPLIED AND min_length > 0.
+      schema->set( iv_path = |{ path }/minLength|
+                   iv_val  = min_length ).
+    ENDIF.
+
+    IF max_length IS SUPPLIED AND max_length > 0.
+      schema->set( iv_path = |{ path }/maxLength|
+                   iv_val  = max_length ).
+    ENDIF.
+
     self = me.
   ENDMETHOD.
 
@@ -236,7 +265,9 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
     IF builder <> me.
       self = builder->add_number( name        = name
                                   description = description
-                                  required    = required ).
+                                  required    = required
+                                  minimum     = minimum
+                                  maximum     = maximum ).
       RETURN.
     ENDIF.
 
@@ -252,6 +283,16 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
       path = |{ current_path }/properties/{ name }|.
     ENDIF.
 
+    IF minimum IS SUPPLIED.
+      schema->set( iv_path = |{ path }/minimum|
+                   iv_val  = minimum ).
+    ENDIF.
+
+    IF maximum IS SUPPLIED.
+      schema->set( iv_path = |{ path }/maximum|
+                   iv_val  = maximum ).
+    ENDIF.
+
     self = me.
   ENDMETHOD.
 
@@ -261,7 +302,9 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
     IF builder <> me.
       self = builder->add_integer( name        = name
                                    description = description
-                                   required    = required ).
+                                   required    = required
+                                   minimum     = minimum
+                                   maximum     = maximum ).
       RETURN.
     ENDIF.
 
@@ -275,6 +318,16 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
       path = |/properties/{ name }|.
     ELSE.
       path = |{ current_path }/properties/{ name }|.
+    ENDIF.
+
+    IF minimum IS SUPPLIED.
+      schema->set( iv_path = |{ path }/minimum|
+                   iv_val  = minimum ).
+    ENDIF.
+
+    IF maximum IS SUPPLIED.
+      schema->set( iv_path = |{ path }/maximum|
+                   iv_val  = maximum ).
     ENDIF.
 
     self = me.
@@ -367,7 +420,9 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
     IF builder <> me.
       self = builder->begin_array( name        = name
                                    description = description
-                                   required    = required ).
+                                   required    = required
+                                   min_items   = min_items
+                                   max_items   = max_items ).
       RETURN.
     ENDIF.
 
@@ -383,6 +438,16 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
       path = |/properties/{ name }|.
     ELSE.
       path = |{ current_path }/properties/{ name }|.
+    ENDIF.
+
+    IF min_items IS SUPPLIED AND min_items > 0.
+      schema->set( iv_path = |{ path }/minItems|
+                   iv_val  = min_items ).
+    ENDIF.
+
+    IF max_items IS SUPPLIED AND max_items > 0.
+      schema->set( iv_path = |{ path }/maxItems|
+                   iv_val  = max_items ).
     ENDIF.
 
     " Set items type to object
@@ -446,6 +511,7 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
       ENDLOOP.
     ENDIF.
 
+    " Get the result
     result = schema.
   ENDMETHOD.
 ENDCLASS.

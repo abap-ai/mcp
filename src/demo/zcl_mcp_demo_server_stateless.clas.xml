@@ -11,6 +11,55 @@
     <FIXPT>X</FIXPT>
     <UNICODE>X</UNICODE>
    </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>GET_FLIGHT_CONN_DETAILS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Fetches flight connection details</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>GET_FLIGHT_CONN_SCHEMA</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Creates schema for flight connection query</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>GET_SERVER_TIME</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Retrieves current server time</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_FLIGHT_CONN_DETAILS</CMPNAME>
+     <SCONAME>REQUEST</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Request object containing airline code and flight number</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_FLIGHT_CONN_DETAILS</CMPNAME>
+     <SCONAME>RESPONSE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Response object to be filled with flight details</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_FLIGHT_CONN_SCHEMA</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Schema builder object with flight connection parameters</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_FLIGHT_CONN_SCHEMA</CMPNAME>
+     <SCONAME>ZCX_MCP_AJSON_ERROR</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Error when creating JSON schema</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_SERVER_TIME</CMPNAME>
+     <SCONAME>RESPONSE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Response object to be filled with server time</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
   </asx:values>
  </asx:abap>
 </abapGit>

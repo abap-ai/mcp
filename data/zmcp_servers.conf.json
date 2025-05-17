@@ -1,0 +1,8 @@
+{
+  "name": "ZMCP_SERVERS",
+  "skip_initial": false,
+  "type": "TABU",
+  "where": [
+    "AREA = 'demo'"
+  ]
+}

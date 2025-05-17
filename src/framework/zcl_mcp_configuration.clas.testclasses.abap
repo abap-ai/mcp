@@ -62,10 +62,12 @@ CLASS ltcl_mcp_configuration IMPLEMENTATION.
 
     APPEND VALUE #( area   = test_area
                     server = test_server
-                    origin = 'https://example.com' ) TO test_origins.
+                    origin = 'https://example.com'
+                    id     = 1 ) TO test_origins.
     APPEND VALUE #( area   = test_area
                     server = test_server
-                    origin = 'https://test.example.com' ) TO test_origins.
+                    origin = 'https://test.example.com'
+                    id     = 2 ) TO test_origins.
     sql_environment->insert_test_data( test_origins ).
 
     DATA test_config TYPE TABLE OF zmcp_config.
@@ -110,10 +112,12 @@ CLASS ltcl_mcp_configuration IMPLEMENTATION.
 
     APPEND VALUE #( area   = '*'
                     server = test_server
-                    origin = 'https://area-wildcard.com' ) TO test_origins.
+                    origin = 'https://area-wildcard.com'
+                    id     = 1 ) TO test_origins.
     APPEND VALUE #( area   = '*'
                     server = test_server
-                    origin = 'https://another.com' ) TO test_origins.
+                    origin = 'https://another.com'
+                    id     = 2 ) TO test_origins.
     sql_environment->insert_test_data( test_origins ).
 
     DATA test_config TYPE TABLE OF zmcp_config.
@@ -150,10 +154,12 @@ CLASS ltcl_mcp_configuration IMPLEMENTATION.
 
     APPEND VALUE #( area   = '*'
                     server = '*'
-                    origin = 'https://full-wildcard.com' ) TO test_origins.
+                    origin = 'https://full-wildcard.com'
+                    id     = 1  ) TO test_origins.
     APPEND VALUE #( area   = '*'
                     server = '*'
-                    origin = 'https://another-full.com' ) TO test_origins.
+                    origin = 'https://another-full.com'
+                    id     = 2 ) TO test_origins.
     sql_environment->insert_test_data( test_origins ).
 
     DATA test_config TYPE TABLE OF zmcp_config.

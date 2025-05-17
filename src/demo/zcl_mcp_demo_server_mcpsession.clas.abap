@@ -9,6 +9,7 @@ CLASS zcl_mcp_demo_server_mcpsession DEFINITION
     METHODS handle_initialize REDEFINITION.
     METHODS handle_list_tools REDEFINITION.
     METHODS handle_call_tool  REDEFINITION.
+    METHODS: get_session_mode REDEFINITION.
 
   PRIVATE SECTION.
     METHODS get_session_details CHANGING  response TYPE zif_mcp_server=>call_tool_response.
@@ -96,6 +97,10 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
     " Store the new value in the session
     session->add( VALUE #( key   = `increment`
                                           value = current_increment ) ).
+  ENDMETHOD.
+
+  METHOD get_session_mode.
+    result = zcl_mcp_session=>session_mode_mcp.
   ENDMETHOD.
 
 ENDCLASS.

@@ -1,3 +1,4 @@
+"! <p class="shorttext synchronized" lang="en">Demo MCP Server</p>
 CLASS zcl_mcp_demo_server_stateless DEFINITION
   PUBLIC
   INHERITING FROM zcl_mcp_server_base
@@ -14,11 +15,31 @@ CLASS zcl_mcp_demo_server_stateless DEFINITION
     METHODS handle_resources_read REDEFINITION.
     METHODS handle_list_tools REDEFINITION.
     METHODS handle_call_tool REDEFINITION.
+    METHODS: get_session_mode REDEFINITION.
+
   PRIVATE SECTION.
 
-    METHODS get_server_time CHANGING  response TYPE zif_mcp_server=>call_tool_response.
-    METHODS get_flight_conn_details IMPORTING !request TYPE REF TO zcl_mcp_req_call_tool
-                                    CHANGING  response TYPE zif_mcp_server=>call_tool_response.
+    "! <p class="shorttext synchronized">Retrieves current server time</p>
+    "! Fetches the system date and time and returns it in internal format
+    "!
+    "! @parameter response | <p class="shorttext synchronized">Response object to be filled with server time</p>
+    METHODS get_server_time CHANGING !response TYPE zif_mcp_server=>call_tool_response.
+
+    "! <p class="shorttext synchronized">Fetches flight connection details</p>
+    "! Retrieves information about a specific flight connection based on airline code and flight number
+    "!
+    "! @parameter request  | <p class="shorttext synchronized">Request object containing airline code and flight number</p>
+    "! @parameter response | <p class="shorttext synchronized">Response object to be filled with flight details</p>
+    METHODS get_flight_conn_details IMPORTING !request  TYPE REF TO zcl_mcp_req_call_tool
+                                    CHANGING  !response TYPE zif_mcp_server=>call_tool_response.
+
+    "! <p class="shorttext synchronized">Creates schema for flight connection query</p>
+    "! Builds a schema definition that validates flight connection query parameters
+    "!
+    "! @parameter result              | <p class="shorttext synchronized">Schema builder object with flight connection parameters</p>
+    "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">Error when creating JSON schema</p>
+    METHODS get_flight_conn_schema RETURNING VALUE(result) TYPE REF TO zcl_mcp_schema_builder
+                                   RAISING   zcx_mcp_ajson_error.
 ENDCLASS.
 
 
@@ -131,19 +152,11 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
                     description = `Get the current server date and time in internal format.`  ) TO tools ##NO_TEXT.
 
     " Demo tool with input parameters
+    " Note: The schema is defined in the get_flight_conn_schema method
     TRY.
-        DATA(schema) = NEW zcl_mcp_schema_builder( ).
-        schema->add_string( name        = `airline_code`
-                            description = `Airline Code`
-                            required    = abap_true
-                            enum        = VALUE #( ( `AA` ) ( `AB` ) ( `AC` ) ) ) ##NO_TEXT.
-        schema->add_integer( name        = `flight_number`
-                             description = `Flight Number`
-                             required    = abap_true ) ##NO_TEXT.
-
         APPEND VALUE #( name         = `get_flight_conn_details`
                         description  = `Get details of one specific flight connection`
-                        input_schema = schema->to_json( ) )
+                        input_schema = get_flight_conn_schema( )->to_json( ) )
                TO tools ##NO_TEXT.
       CATCH zcx_mcp_ajson_error INTO DATA(error).
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
@@ -170,19 +183,21 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     DATA(airline_code) = input->get_string( `airline_code` ).
     DATA(flight_number) = input->get_integer( `flight_number` ).
 
-    " Validate input parameter
-
-    IF airline_code <> `AA` AND airline_code <> `AB` AND airline_code <> `AC`.
-      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-      response-error-message = |Only AA, AB, AC allowed. Got { airline_code }| ##NO_TEXT.
-      RETURN.
-    ENDIF.
-
-    IF flight_number > 9999 OR flight_number < 0.
-      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-      response-error-message = |Flight Connection Number must be between 0 and 9999| ##NO_TEXT.
-      RETURN.
-    ENDIF.
+    " Validate input parameter via schema validator class
+    TRY.
+        DATA(schema) = get_flight_conn_schema( ).
+        DATA(validator) = NEW zcl_mcp_schema_validator( schema->to_json( ) ).
+        DATA(validation_result) = validator->validate( input ).
+        IF validation_result = abap_false.
+          response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+          response-error-message = concat_lines_of( validator->get_errors( ) ).
+          RETURN.
+        ENDIF.
+      CATCH zcx_mcp_ajson_error INTO DATA(error).
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+        response-error-message = error->get_text( ).
+        RETURN.
+    ENDTRY.
 
     DATA connid TYPE s_conn_id.
     connid = flight_number.
@@ -222,6 +237,25 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
 
   METHOD get_server_time.
     response-result->add_text_content( |Current Server Date: { sy-datum } Time: { sy-uzeit } in internal format.| ) ##NO_TEXT.
+  ENDMETHOD.
+
+  METHOD get_flight_conn_schema.
+    DATA(schema) = NEW zcl_mcp_schema_builder( ).
+    schema->add_string( name        = `airline_code`
+                        description = `Airline Code`
+                        required    = abap_true
+                        enum        = VALUE #( ( `AA` ) ( `AB` ) ( `AC` ) ) ) ##NO_TEXT.
+    schema->add_integer( name        = `flight_number`
+                         description = `Flight Number`
+                         minimum     = 0
+                         maximum     = 9999
+                         required    = abap_true ) ##NO_TEXT.
+    result = schema.
+
+  ENDMETHOD.
+
+  METHOD get_session_mode.
+    result = zcl_mcp_session=>session_mode_stateless.
   ENDMETHOD.
 
 ENDCLASS.

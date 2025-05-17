@@ -9,6 +9,7 @@ CLASS zcl_mcp_demo_server_icfsession DEFINITION
     METHODS handle_initialize REDEFINITION.
     METHODS handle_list_tools REDEFINITION.
     METHODS handle_call_tool  REDEFINITION.
+    METHODS: get_session_mode REDEFINITION.
 
   PRIVATE SECTION.
     METHODS get_session_details CHANGING  response TYPE zif_mcp_server=>call_tool_response.
@@ -86,6 +87,10 @@ CLASS zcl_mcp_demo_server_icfsession IMPLEMENTATION.
 
     current_increment = current_increment + increment.
     response-result->add_text_content( |Incremented value: { current_increment }| ) ##NO_TEXT.
+  ENDMETHOD.
+
+  METHOD get_session_mode.
+    result = zcl_mcp_session=>session_mode_icf.
   ENDMETHOD.
 
 ENDCLASS.
