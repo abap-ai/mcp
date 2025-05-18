@@ -42,6 +42,10 @@ To install the MCP Server SDK, follow these steps:
     Create a new node e.g. zmcp with handler class zcl_mcp_http_handler
 3. Setup server configuration, e.g. create an entry for the stateless demo server zcl_mcp_demo_server_stateless
 
+## Maintenance
+
+You can use the report `zmcp_clear_mcp_sessions` to get rid of outdated MCP sessions. Ideally run it regularly as a background job if you use MCP sessions.
+
 ### Prerequisites
 
 - SAP NetWeaver 7.52 or higher for the main branch

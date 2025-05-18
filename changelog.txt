@@ -1,3 +1,14 @@
+2025-05-18 v0.1
+-----------------
+
+- Extended Schema Builder with min/max, etc.
+- Added Schema Validator to simplify validation based on the Schema Builder Schema
+- Added a report to cleanup MCP sessions
+- Added demo configuration as tabu entries
+- Removed tests and moved them into their own repo mcp_tests
+- Changed the origins table to avoid the key length warning - table conversion might be required
+- Moved DDIC content into it's own package
+
 2025-05-04 v0.0.3
 -----------------
 
