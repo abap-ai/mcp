@@ -11,6 +11,55 @@
     <FIXPT>X</FIXPT>
     <UNICODE>X</UNICODE>
    </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>GET_INCREMENT_SCHEMA</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Get the JSON schema for the increment example</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>GET_SESSION_DETAILS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Get session details for the current ICF session</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>INCREMENT_EXAMPLE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Increment the current value by a given amount</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_INCREMENT_SCHEMA</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Schema builder object containing increment definition</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_INCREMENT_SCHEMA</CMPNAME>
+     <SCONAME>ZCX_MCP_AJSON_ERROR</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Error during JSON schema creation</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_SESSION_DETAILS</CMPNAME>
+     <SCONAME>RESPONSE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Response object with session details</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>INCREMENT_EXAMPLE</CMPNAME>
+     <SCONAME>REQUEST</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>The call tool request containing increment parameter</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>INCREMENT_EXAMPLE</CMPNAME>
+     <SCONAME>RESPONSE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Response object with the incremented result</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
   </asx:values>
  </asx:abap>
 </abapGit>

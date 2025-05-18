@@ -42,6 +42,10 @@ To install the MCP Server SDK, follow these steps:
     Create a new node e.g. zmcp with handler class zcl_mcp_http_handler
 3. Setup server configuration, e.g. create an entry for the stateless demo server zcl_mcp_demo_server_stateless
 
+## Maintenance
+
+You can use the report `zmcp_clear_mcp_sessions` to get rid of outdated MCP sessions. Ideally run it regularly as a background job if you use MCP sessions.
+
 ### Prerequisites
 
 - SAP NetWeaver 7.52 or higher for the main branch
@@ -60,9 +64,8 @@ Configure your MCP servers in the `ZMCP_SERVERS` table:
 | AREA         | Logical grouping for servers                                                           |
 | SERVER       | Server identifier                                                                      |
 | CLASS        | Implementation class (must implement `ZIF_MCP_SERVER` or extend `ZCL_MCP_SERVER_BASE`) |
-| SESSION_MODE | Session handling mode (`No Session`, `MCP`, or `ICF`)                                  |
 
-Use the area to group your servers based on a well known structure in your company. This can e.g. be modules or end to end processes. For the session mode No Session is recommended except you really require session management.
+Use the area to group your servers based on a well known structure in your company. This can e.g. be modules or end to end processes.
 
 ### CORS Configuration
 
@@ -114,7 +117,7 @@ ENDCLASS.
 
 ### Minimal Implementation
 
-At minimum, you must implement the `HANDLE_INITIALIZE` method to define your server's capabilities:
+At minimum, you must implement the `HANDLE_INITIALIZE` method to define your server's capabilities and `GET_SESSION_MODE`:
 
 ```abap
 METHOD handle_initialize.
@@ -131,6 +134,10 @@ METHOD handle_initialize.
     `Instructions for the AI model on when to use this server...` 
   ).
 ENDMETHOD.
+
+METHOD get_session_mode.
+  result = zcl_mcp_session=>session_mode_stateless.
+ENDMETHOD.
 ```
 
 ## Session Management
@@ -139,11 +146,11 @@ The MCP Server SDK offers three session management modes:
 
 | Mode        | Description                                                 |
 | ----------- | ----------------------------------------------------------- |
-| No Session  | No session management (stateless)                           |
+| Stateless   | No session management (stateless)                           |
 | MCP Session | Uses the custom MCP session handling mechanism via database |
 | ICF Session | Uses the standard ICF session management                    |
 
-Note that ICF session management leads to potentially high number of sessions if the clients do not properly close them. Also your MCP client must support handling the session cookies. MCP Sessions are an alternative lightweight mode allowing you to store certain values in the DB between calls. In general use No Session --> Stateless where feasible.
+Note that ICF session management leads to potentially high number of sessions if the clients do not properly close them. Also your MCP client must support handling the session cookies. MCP Sessions are an alternative lightweight mode allowing you to store certain values in the DB between calls. In general use Stateless where feasible.
 
 ## Core Components
 
@@ -166,22 +173,55 @@ Interface defining all required MCP server methods. The main methods include:
 - `resources_read` - Read resource content
 - `tools_list` - List available tools
 - `tools_call` - Execute tool function
+- `get_session_mode` - Define session logic
 
-### ZCL_MCP_SCHEMA_BUILDER
+### Schema Builder
 
-Helper class to build JSON schemas for tool input validation. You can call it multiple times like below or fully chain it.
+`ZCL_MCP_SCHEMA_BUILDER` creates JSON Schema definitions for tool input validation with a fluent, chainable API:
 
 ```abap
 DATA(schema) = NEW zcl_mcp_schema_builder( ).
-schema->add_string( name = 'parameter' required = abap_true ).
-schema->add_integer( name = 'count' ).
-schema->begin_object( name = 'options' ).
-schema->add_boolean( name = 'flag' ).
-schema->end_object( ).
+schema->add_string( name = 'parameter' required = abap_true )
+      ->add_integer( name = 'count' minimum = 1 )
+      ->begin_object( name = 'options' )
+          ->add_boolean( name = 'flag' )
+      ->end_object( ).
 ```
+
+Key features:
+
+- Define basic property types (string, number, integer, boolean)
+- Apply validation constraints (min/max length, value ranges, enums)
+- Create nested objects and arrays
+- Mark required properties
 
 For details see [Schema Builder](SchemaBuilder.md).
 
+### Schema Validator
+
+`ZCL_MCP_SCHEMA_VALIDATOR` validates JSON data against schemas created with the Schema Builder:
+
+```abap
+" Create validator with a schema
+DATA(validator) = NEW zcl_mcp_schema_validator( schema ).
+
+" Validate JSON input
+IF validator->validate( json_input ) = abap_false.
+    " Get validation errors
+    DATA(errors) = validator->get_errors( ).
+    " Handle invalid input...
+ENDIF.
+```
+
+Key features:
+
+- Verifies data types match schema definitions
+- Checks presence of required properties
+- Validates string lengths and pattern constraints
+- Ensures numeric values are within defined ranges
+- Validates array sizes and nested structures
+- Provides detailed error messages for validation failures
+  
 ## Demo Implementations
 
 The SDK includes three demo implementations:
@@ -209,6 +249,8 @@ Demonstrates ICF session handling with:
 - Instance variables that persist state between calls
 
 ### Demo Configuration
+
+This is included in the repo. Delete if you don't want it.
 
 | Area | Service             | Class                             | SessionMode   |
 |------|---------------------|-----------------------------------|---------------|

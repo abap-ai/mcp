@@ -5,10 +5,10 @@ CLASS zcl_mcp_session DEFINITION
   CREATE PUBLIC .
 
   PUBLIC SECTION.
-    CONSTANTS session_mode_off TYPE zmcp_session_mode VALUE ''.
-    CONSTANTS session_mode_icf TYPE zmcp_session_mode VALUE 'I'.
-    CONSTANTS session_mode_mcp TYPE zmcp_session_mode VALUE 'M'.
-    CONSTANTS session_validity TYPE i                 VALUE 3600.
+    CONSTANTS session_mode_stateless TYPE zmcp_session_mode VALUE ''.
+    CONSTANTS session_mode_icf       TYPE zmcp_session_mode VALUE 'I'.
+    CONSTANTS session_mode_mcp       TYPE zmcp_session_mode VALUE 'M'.
+    CONSTANTS session_validity       TYPE i                 VALUE 3600.
 
     TYPES: BEGIN OF session_entry,
              key   TYPE string,
@@ -58,6 +58,13 @@ CLASS zcl_mcp_session DEFINITION
 
     "! <p class="shorttext synchronized">Delete session from DBy</p>
     METHODS delete.
+
+    "! <p class="shorttext synchronized">Delete outdated sessions</p>
+    "! Removes all sessions from the database that have not been updated
+    "! for longer than session_validity plus a 10 minute grace period.
+    "! @parameter result | <p class="shorttext synchronized">Number of deleted sessions</p>
+    CLASS-METHODS delete_outdated_sessions
+      RETURNING VALUE(result) TYPE i.
 
   PRIVATE SECTION.
     DATA session_id   TYPE string.
@@ -116,10 +123,10 @@ CLASS zcl_mcp_session IMPLEMENTATION.
 
   METHOD remove.
     DELETE session_data WHERE key = key.
-    IF sy-subrc <> 0.
+    IF sy-subrc <> 0. "#EC EMPTY_IF_BRANCH
       " Ignored, if it does not exist we cannot delete id.
       " Additional exception handling is not relevant.
-    ENDIF. "#EC EMPTY_IF_BRANCH
+    ENDIF.
   ENDMETHOD.
 
   METHOD get.
@@ -171,5 +178,31 @@ CLASS zcl_mcp_session IMPLEMENTATION.
       COMMIT WORK AND WAIT.
     ENDIF.
   ENDMETHOD.
+
+  METHOD delete_outdated_sessions.
+    DATA current_timestamp     TYPE timestampl.
+    DATA outdated_timestamp    TYPE timestampl.
+    DATA db_outdated_timestamp TYPE timestamp.
+
+    " Get current detailed timestamp
+    GET TIME STAMP FIELD current_timestamp.
+
+    " Calculate outdated timestamp (current - (validity + 10min))
+    DATA(lifetime) = session_validity + 600.
+    outdated_timestamp = cl_abap_tstmp=>subtractsecs( tstmp = current_timestamp
+                                                      secs  = lifetime ).
+
+    " Convert to database timestamp format properly
+    db_outdated_timestamp = cl_abap_tstmp=>move_to_short( outdated_timestamp ).
+
+    " Delete outdated sessions
+    DELETE FROM zmcp_sessions WHERE updated < @db_outdated_timestamp.
+    result = sy-dbcnt.
+
+    IF result > 0.
+      COMMIT WORK AND WAIT.
+    ENDIF.
+  ENDMETHOD.
+
 
 ENDCLASS.

@@ -33,8 +33,8 @@ CLASS zcl_mcp_server_factory IMPLEMENTATION.
 
     result->config = NEW zcl_mcp_configuration( area   = area
                                                 server = server ).
-    result->server-session_mode = server_def-session_mode.
     result->server-cors_mode    = result->config->get_cors_mode( ).
+    result->server-session_mode = result->get_session_mode( ).
   ENDMETHOD.
 
 ENDCLASS.

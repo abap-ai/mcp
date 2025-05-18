@@ -9,71 +9,77 @@ CLASS zcl_mcp_server_base DEFINITION ABSTRACT
   PROTECTED SECTION.
     "! <p class="shorttext synchronized">Process initialization request</p>
     "! Handles server initialization with client configuration
-    "! @parameter request | <p class="shorttext synchronized">Initialize request object</p>
+    "! @parameter request  | <p class="shorttext synchronized">Initialize request object</p>
     "! @parameter response | <p class="shorttext synchronized">Initialize response containing server capabilities</p>
     METHODS handle_initialize ABSTRACT
-      IMPORTING !request TYPE REF TO zcl_mcp_req_initialize
-      CHANGING  response TYPE zif_mcp_server=>initialize_response ##NEEDED.
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_initialize
+      CHANGING  !response TYPE zif_mcp_server=>initialize_response ##NEEDED.
+
+    "! <p class="shorttext synchronized">Get's the session mode of the server</p>
+    "! Mandatory method to be implemented by subclasses. Use zcl_mcp_session=>session_mode_xxxx
+    "! @parameter result | <p class="shorttext synchronized">Session Mode</p>
+    METHODS get_session_mode ABSTRACT RETURNING VALUE(result) TYPE zmcp_session_mode.
 
     "! <p class="shorttext synchronized">List available prompts</p>
     "! Handles request to retrieve all prompts available on the server
-    "! @parameter request | <p class="shorttext synchronized">List prompts request object</p>
+    "! @parameter request  | <p class="shorttext synchronized">List prompts request object</p>
     "! @parameter response | <p class="shorttext synchronized">Response with available prompts collection</p>
     METHODS handle_list_prompts
-      IMPORTING !request TYPE REF TO zcl_mcp_req_list_prompts
-      CHANGING  response TYPE zif_mcp_server=>list_prompts_response ##NEEDED.
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_list_prompts
+      CHANGING  !response TYPE zif_mcp_server=>list_prompts_response ##NEEDED.
 
     "! <p class="shorttext synchronized">Get specific prompt details</p>
     "! Retrieves detailed information for a specific prompt by ID
-    "! @parameter request | <p class="shorttext synchronized">Get prompt request with prompt ID</p>
+    "! @parameter request  | <p class="shorttext synchronized">Get prompt request with prompt ID</p>
     "! @parameter response | <p class="shorttext synchronized">Response with prompt details</p>
     METHODS handle_get_prompt
-      IMPORTING !request TYPE REF TO zcl_mcp_req_get_prompt
-      CHANGING  response TYPE zif_mcp_server=>get_prompt_response ##NEEDED.
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_get_prompt
+      CHANGING  !response TYPE zif_mcp_server=>get_prompt_response ##NEEDED.
 
     "! <p class="shorttext synchronized">List available resources</p>
     "! Handles request to retrieve all resources available on the server
-    "! @parameter request | <p class="shorttext synchronized">List resources request object</p>
+    "! @parameter request  | <p class="shorttext synchronized">List resources request object</p>
     "! @parameter response | <p class="shorttext synchronized">Response with available resources collection</p>
     METHODS handle_list_resources
-      IMPORTING !request TYPE REF TO zcl_mcp_req_list_resources
-      CHANGING  response TYPE zif_mcp_server=>list_resources_response ##NEEDED.
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_list_resources
+      CHANGING  !response TYPE zif_mcp_server=>list_resources_response ##NEEDED.
 
     "! <p class="shorttext synchronized">List resource templates</p>
     "! Retrieves available resource templates for resource creation
-    "! @parameter request | <p class="shorttext synchronized">List resource templates request</p>
+    "! @parameter request  | <p class="shorttext synchronized">List resource templates request</p>
     "! @parameter response | <p class="shorttext synchronized">Response with available resource templates</p>
     METHODS handle_list_res_tmpls
-      IMPORTING !request TYPE REF TO zcl_mcp_req_list_res_tmpls
-      CHANGING  response TYPE zif_mcp_server=>list_resources_tmpl_response ##NEEDED.
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_list_res_tmpls
+      CHANGING  !response TYPE zif_mcp_server=>list_resources_tmpl_response ##NEEDED.
 
     "! <p class="shorttext synchronized">Read resource content</p>
     "! Retrieves content and metadata for a specific resource
-    "! @parameter request | <p class="shorttext synchronized">Read resource request with resource ID</p>
+    "! @parameter request  | <p class="shorttext synchronized">Read resource request with resource ID</p>
     "! @parameter response | <p class="shorttext synchronized">Response with resource content and metadata</p>
     METHODS handle_resources_read
-      IMPORTING !request TYPE REF TO zcl_mcp_req_read_resource
-      CHANGING  response TYPE zif_mcp_server=>resources_read_response ##NEEDED.
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_read_resource
+      CHANGING  !response TYPE zif_mcp_server=>resources_read_response ##NEEDED.
 
     "! <p class="shorttext synchronized">List available tools</p>
     "! Handles request to retrieve all tools available on the server
-    "! @parameter request | <p class="shorttext synchronized">List tools request object</p>
+    "! @parameter request  | <p class="shorttext synchronized">List tools request object</p>
     "! @parameter response | <p class="shorttext synchronized">Response with available tools collection</p>
     METHODS handle_list_tools
-      IMPORTING !request TYPE REF TO zcl_mcp_req_list_tools
-      CHANGING  response TYPE zif_mcp_server=>list_tools_response ##NEEDED.
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_list_tools
+      CHANGING  !response TYPE zif_mcp_server=>list_tools_response ##NEEDED.
 
     "! <p class="shorttext synchronized">Execute tool</p>
     "! Handles request to call a specific tool with parameters
-    "! @parameter request | <p class="shorttext synchronized">Call tool request with tool ID and parameters</p>
+    "! @parameter request  | <p class="shorttext synchronized">Call tool request with tool ID and parameters</p>
     "! @parameter response | <p class="shorttext synchronized">Response with tool execution results</p>
     METHODS handle_call_tool
-      IMPORTING !request TYPE REF TO zcl_mcp_req_call_tool
-      CHANGING  response TYPE zif_mcp_server=>call_tool_response ##NEEDED.
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_call_tool
+      CHANGING  !response TYPE zif_mcp_server=>call_tool_response ##NEEDED.
 
-    ALIASES server FOR zif_mcp_server~server.
-    ALIASES config FOR zif_mcp_server~config.
+    ALIASES server  FOR zif_mcp_server~server.
+    ALIASES config  FOR zif_mcp_server~config.
     ALIASES session FOR zif_mcp_server~session.
+
   PRIVATE SECTION.
     METHODS generate_fallback_uuid
       RETURNING
@@ -88,7 +94,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
                                                        reason = 'Bad Request' ) ##NO_TEXT.
     ENDIF.
 
-    IF server-session_mode <> zcl_mcp_session=>session_mode_off.
+    IF server-session_mode <> zcl_mcp_session=>session_mode_stateless.
       TRY.
           server-session_id = cl_system_uuid=>create_uuid_c32_static( ).
         CATCH cx_uuid_error.
@@ -232,6 +238,10 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
       hex_char = hex_chars+char_idx(1).
       CONCATENATE result hex_char INTO result.
     ENDDO.
+  ENDMETHOD.
+
+  METHOD zif_mcp_server~get_session_mode.
+    result = get_session_mode( ).
   ENDMETHOD.
 
 ENDCLASS.

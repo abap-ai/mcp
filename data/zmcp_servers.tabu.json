@@ -1,0 +1,20 @@
+[
+  {
+    "client": "001",
+    "area": "demo",
+    "server": "demo_session_icf",
+    "class": "ZCL_MCP_DEMO_SERVER_ICFSESSION"
+  },
+  {
+    "client": "001",
+    "area": "demo",
+    "server": "demo_session_mcp",
+    "class": "ZCL_MCP_DEMO_SERVER_MCPSESSION"
+  },
+  {
+    "client": "001",
+    "area": "demo",
+    "server": "demo_standard",
+    "class": "ZCL_MCP_DEMO_SERVER_STATELESS"
+  }
+]
