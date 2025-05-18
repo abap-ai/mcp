@@ -12,16 +12,30 @@ CLASS zcl_mcp_demo_server_icfsession DEFINITION
     METHODS: get_session_mode REDEFINITION.
 
   PRIVATE SECTION.
-    METHODS get_session_details CHANGING  response TYPE zif_mcp_server=>call_tool_response.
+    "! <p class="shorttext synchronized">Get session details for the current ICF session</p>
+    "!
+    "! @parameter response | <p class="shorttext synchronized">Response object with session details</p>
+    METHODS get_session_details CHANGING !response TYPE zif_mcp_server=>call_tool_response.
 
-    METHODS increment_example IMPORTING !request TYPE REF TO zcl_mcp_req_call_tool
-                              CHANGING  response TYPE zif_mcp_server=>call_tool_response.
+    "! <p class="shorttext synchronized">Increment the current value by a given amount</p>
+    "!
+    "! @parameter request  | <p class="shorttext synchronized">The call tool request containing increment parameter</p>
+    "! @parameter response | <p class="shorttext synchronized">Response object with the incremented result</p>
+    METHODS increment_example IMPORTING !request  TYPE REF TO zcl_mcp_req_call_tool
+                              CHANGING  !response TYPE zif_mcp_server=>call_tool_response.
 
-    "In ICF Session we can store data here and do not need to pass it around
-    data current_increment TYPE i.
+    "! <p class="shorttext synchronized">Get the JSON schema for the increment example</p>
+    "!
+    "! @parameter result              | <p class="shorttext synchronized">Schema builder object containing increment definition</p>
+    "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">Error during JSON schema creation</p>
+    METHODS get_increment_schema
+      RETURNING VALUE(result) TYPE REF TO zcl_mcp_schema_builder
+      RAISING   zcx_mcp_ajson_error.
+
+    " In ICF Session we can store data here and do not need to pass it around
+    DATA current_increment TYPE i.
+    DATA increment_schema  TYPE REF TO zcl_mcp_schema_builder.
 ENDCLASS.
-
-
 
 CLASS zcl_mcp_demo_server_icfsession IMPLEMENTATION.
   METHOD handle_initialize.
@@ -78,12 +92,23 @@ CLASS zcl_mcp_demo_server_icfsession IMPLEMENTATION.
 
   METHOD increment_example.
     DATA(input) = request->get_arguments( ).
+    " Validate input parameter via schema validator class
+    TRY.
+        DATA(schema) = get_increment_schema( ).
+        DATA(validator) = NEW zcl_mcp_schema_validator( schema->to_json( ) ).
+        DATA(validation_result) = validator->validate( input ).
+        IF validation_result = abap_false.
+          response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+          response-error-message = concat_lines_of( validator->get_errors( ) ).
+          RETURN.
+        ENDIF.
+      CATCH zcx_mcp_ajson_error INTO DATA(error).
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+        response-error-message = error->get_text( ).
+        RETURN.
+    ENDTRY.
+
     DATA(increment) = input->get_integer( `increment` ).
-    IF increment IS INITIAL.
-      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-      response-error-message = |Increment value is required.| ##NO_TEXT.
-      RETURN.
-    ENDIF.
 
     current_increment = current_increment + increment.
     response-result->add_text_content( |Incremented value: { current_increment }| ) ##NO_TEXT.
@@ -91,6 +116,21 @@ CLASS zcl_mcp_demo_server_icfsession IMPLEMENTATION.
 
   METHOD get_session_mode.
     result = zcl_mcp_session=>session_mode_icf.
+  ENDMETHOD.
+
+  METHOD get_increment_schema.
+    IF increment_schema IS BOUND.
+      result = increment_schema.
+      RETURN.
+    ELSE.
+      increment_schema = NEW zcl_mcp_schema_builder( ).
+      increment_schema->add_integer( name        = `increment`
+                                     description = `Increment value`
+                                     required    = abap_true
+                                     minimum     = 1
+                                     maximum     = 1000000 ) ##NO_TEXT.
+      result = increment_schema.
+    ENDIF.
   ENDMETHOD.
 
 ENDCLASS.

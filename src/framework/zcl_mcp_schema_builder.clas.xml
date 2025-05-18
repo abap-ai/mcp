@@ -73,6 +73,26 @@
      <LANGU>E</LANGU>
      <DESCRIPT>Convert schema to JSON</DESCRIPT>
     </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>_ADD_INTEGER</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Internal helper for add_integer</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>_ADD_NUMBER</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Internal helper for add_number</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>_ADD_STRING</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Internal helper for add_string</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>_BEGIN_ARRAY</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Internal helper for begin_array</DESCRIPT>
+    </SEOCOMPOTX>
    </DESCRIPTIONS>
    <DESCRIPTIONS_SUB>
     <SEOSUBCOTX>

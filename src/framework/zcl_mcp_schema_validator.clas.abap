@@ -574,7 +574,7 @@ CLASS zcl_mcp_schema_validator IMPLEMENTATION.
       strlength = strlen( string_value ).
       IF strlength > max_length.
         " String must have maximum length &1, but has &2
-        MESSAGE e121(zmcp) WITH min_length strlength INTO msg.
+        MESSAGE e121(zmcp) WITH max_length strlength INTO msg.
         add_error( path    = json_path
                    message = msg ).
         is_valid = abap_false.
