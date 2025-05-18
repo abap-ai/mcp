@@ -19,6 +19,9 @@ CLASS ltcl_schema_builder DEFINITION FINAL FOR TESTING
     METHODS test_number_with_constraints   FOR TESTING RAISING cx_static_check.
     METHODS test_integer_with_constraints  FOR TESTING RAISING cx_static_check.
     METHODS test_array_with_item_constr    FOR TESTING RAISING cx_static_check.
+    METHODS test_constraints_not_supplied  FOR TESTING RAISING cx_static_check.
+    METHODS test_mixed_constraints         FOR TESTING RAISING cx_static_check.
+    METHODS test_delegation_preserves      FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 CLASS ltcl_schema_builder IMPLEMENTATION.
@@ -650,6 +653,148 @@ CLASS ltcl_schema_builder IMPLEMENTATION.
                                             act = schema->get_integer( '/properties/tags/minItems' ) ).
         cl_abap_unit_assert=>assert_equals( exp = 10
                                             act = schema->get_integer( '/properties/tags/maxItems' ) ).
+
+      CATCH zcx_mcp_ajson_error INTO DATA(error).
+        cl_abap_unit_assert=>fail( error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD test_constraints_not_supplied.
+    TRY.
+        " When - Create properties without supplying constraints
+        DATA(builder) = NEW zcl_mcp_schema_builder( ).
+        builder->add_string( name = 'username' ).
+        builder->add_number( name = 'score' ).
+        builder->add_integer( name = 'count' ).
+        builder->begin_array( name = 'items' )->add_string( name = 'item' )->end_array( ).
+
+        " Then - Check no constraints are added
+        DATA(schema) = builder->to_json( ).
+
+        " Check string has no length constraints
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/username/minLength' ) ).
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/username/maxLength' ) ).
+
+        " Check number has no min/max
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/score/minimum' ) ).
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/score/maximum' ) ).
+
+        " Check integer has no min/max
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/count/minimum' ) ).
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/count/maximum' ) ).
+
+        " Check array has no min/max items
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/items/minItems' ) ).
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/items/maxItems' ) ).
+
+      CATCH zcx_mcp_ajson_error INTO DATA(error).
+        cl_abap_unit_assert=>fail( error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD test_mixed_constraints.
+    TRY.
+        " When - Create complex structure with mixed constraint patterns
+        DATA(builder) = NEW zcl_mcp_schema_builder( ).
+
+        " Root level - one with constraints, one without
+        builder->add_string( name = 'title' ).
+        builder->add_string( name       = 'code'
+                             min_length = 2
+                             max_length = 10 ).
+
+        " Object - nested properties with varying constraints
+        builder->begin_object( name = 'user' ).
+        builder->add_string( name = 'name' ).
+        builder->add_integer( name    = 'age'
+                              minimum = 18 ).
+        builder->add_number( name    = 'rating'
+                             maximum = 5 ).
+        builder->end_object( ).
+
+        " Then - Check only explicitly supplied constraints are present
+        DATA(schema) = builder->to_json( ).
+
+        " Root level
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/title/minLength' ) ).
+        cl_abap_unit_assert=>assert_equals( exp = 2
+                                            act = schema->get_integer( '/properties/code/minLength' ) ).
+        cl_abap_unit_assert=>assert_equals( exp = 10
+                                            act = schema->get_integer( '/properties/code/maxLength' ) ).
+
+        " Object level
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/user/properties/name/minLength' ) ).
+        cl_abap_unit_assert=>assert_equals( exp = 18
+                                            act = schema->get_integer( '/properties/user/properties/age/minimum' ) ).
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/user/properties/age/maximum' ) ).
+        cl_abap_unit_assert=>assert_equals( exp = '5'
+                                            act = schema->get_number( '/properties/user/properties/rating/maximum' ) ).
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/user/properties/rating/minimum' ) ).
+
+      CATCH zcx_mcp_ajson_error INTO DATA(error).
+        cl_abap_unit_assert=>fail( error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD test_delegation_preserves.
+    TRY.
+        " When - Create nested structures with varying constraint patterns
+        DATA(builder) = NEW zcl_mcp_schema_builder( ).
+
+        " Root level with constraints
+        builder->add_integer( name    = 'id'
+                              minimum = 1 ).
+
+        " Object without capturing return value
+        builder->begin_object( name = 'person' ).
+
+        " Object property with constraints
+        builder->add_string( name       = 'ssn'
+                             min_length = 9
+                             max_length = 9 ).
+
+        " Object property without constraints
+        builder->add_string( name = 'name' ).
+
+        " Nested array with constraints on the array only
+        builder->begin_array( name      = 'phones'
+                              min_items = 1 ).
+
+        " Array item without constraints
+        builder->add_string( name = 'number' ).
+
+        " End the nested structures
+        builder->end_array( ).
+        builder->end_object( ).
+
+        " Add another root property without constraints
+        builder->add_string( name = 'comment' ).
+
+        " Then - Check correct constraint pattern throughout the hierarchy
+        DATA(schema) = builder->to_json( ).
+
+        " Root level
+        cl_abap_unit_assert=>assert_equals( exp = 1
+                                            act = schema->get_integer( '/properties/id/minimum' ) ).
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/id/maximum' ) ).
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/comment/minLength' ) ).
+
+        " Object level
+        cl_abap_unit_assert=>assert_equals(
+            exp = 9
+            act = schema->get_integer( '/properties/person/properties/ssn/minLength' ) ).
+        cl_abap_unit_assert=>assert_equals(
+            exp = 9
+            act = schema->get_integer( '/properties/person/properties/ssn/maxLength' ) ).
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/person/properties/name/minLength' ) ).
+
+        " Array level
+        cl_abap_unit_assert=>assert_equals(
+            exp = 1
+            act = schema->get_integer( '/properties/person/properties/phones/minItems' ) ).
+        cl_abap_unit_assert=>assert_false( schema->exists( '/properties/person/properties/phones/maxItems' ) ).
+        cl_abap_unit_assert=>assert_false(
+            schema->exists( '/properties/person/properties/phones/items/properties/number/minLength' ) ).
 
       CATCH zcx_mcp_ajson_error INTO DATA(error).
         cl_abap_unit_assert=>fail( error->get_text( ) ).

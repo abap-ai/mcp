@@ -180,8 +180,6 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
 
   METHOD get_flight_conn_details.
     DATA(input) = request->get_arguments( ).
-    DATA(airline_code) = input->get_string( `airline_code` ).
-    DATA(flight_number) = input->get_integer( `flight_number` ).
 
     " Validate input parameter via schema validator class
     TRY.
@@ -198,6 +196,9 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
         response-error-message = error->get_text( ).
         RETURN.
     ENDTRY.
+
+    DATA(airline_code) = input->get_string( `airline_code` ).
+    DATA(flight_number) = input->get_integer( `flight_number` ).
 
     DATA connid TYPE s_conn_id.
     connid = flight_number.
