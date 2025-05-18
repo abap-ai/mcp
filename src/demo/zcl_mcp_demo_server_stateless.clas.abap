@@ -1,3 +1,4 @@
+"! <p class="shorttext synchronized" lang="en">Demo MCP Server</p>
 CLASS zcl_mcp_demo_server_stateless DEFINITION
   PUBLIC
   INHERITING FROM zcl_mcp_server_base
@@ -14,11 +15,31 @@ CLASS zcl_mcp_demo_server_stateless DEFINITION
     METHODS handle_resources_read REDEFINITION.
     METHODS handle_list_tools REDEFINITION.
     METHODS handle_call_tool REDEFINITION.
+    METHODS: get_session_mode REDEFINITION.
+
   PRIVATE SECTION.
 
-    METHODS get_server_time CHANGING  response TYPE zif_mcp_server=>call_tool_response.
-    METHODS get_flight_conn_details IMPORTING !request TYPE REF TO zcl_mcp_req_call_tool
-                                    CHANGING  response TYPE zif_mcp_server=>call_tool_response.
+    "! <p class="shorttext synchronized">Retrieves current server time</p>
+    "! Fetches the system date and time and returns it in internal format
+    "!
+    "! @parameter response | <p class="shorttext synchronized">Response object to be filled with server time</p>
+    METHODS get_server_time CHANGING !response TYPE zif_mcp_server=>call_tool_response.
+
+    "! <p class="shorttext synchronized">Fetches flight connection details</p>
+    "! Retrieves information about a specific flight connection based on airline code and flight number
+    "!
+    "! @parameter request  | <p class="shorttext synchronized">Request object containing airline code and flight number</p>
+    "! @parameter response | <p class="shorttext synchronized">Response object to be filled with flight details</p>
+    METHODS get_flight_conn_details IMPORTING !request  TYPE REF TO zcl_mcp_req_call_tool
+                                    CHANGING  !response TYPE zif_mcp_server=>call_tool_response.
+
+    "! <p class="shorttext synchronized">Creates schema for flight connection query</p>
+    "! Builds a schema definition that validates flight connection query parameters
+    "!
+    "! @parameter result              | <p class="shorttext synchronized">Schema builder object with flight connection parameters</p>
+    "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">Error when creating JSON schema</p>
+    METHODS get_flight_conn_schema RETURNING VALUE(result) TYPE REF TO zcl_mcp_schema_builder
+                                   RAISING   zcx_mcp_ajson_error.
 ENDCLASS.
 
 
@@ -177,9 +198,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
 
     " Demo Tool without any input parameter
     DATA temp9 TYPE zcl_mcp_resp_list_tools=>tool.
-        DATA schema TYPE REF TO zcl_mcp_schema_builder.
-        DATA temp10 TYPE string_table.
-        DATA temp12 TYPE zcl_mcp_resp_list_tools=>tool.
+        DATA temp10 TYPE zcl_mcp_resp_list_tools=>tool.
         DATA error TYPE REF TO zcx_mcp_ajson_error.
     CLEAR temp9.
     temp9-name = `get_server_time`.
@@ -187,28 +206,14 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     APPEND temp9 TO tools ##NO_TEXT.
 
     " Demo tool with input parameters
+    " Note: The schema is defined in the get_flight_conn_schema method
     TRY.
         
-        CREATE OBJECT schema TYPE zcl_mcp_schema_builder.
-        
         CLEAR temp10.
-        INSERT `AA` INTO TABLE temp10.
-        INSERT `AB` INTO TABLE temp10.
-        INSERT `AC` INTO TABLE temp10.
-        schema->add_string( name        = `airline_code`
-                            description = `Airline Code`
-                            required    = abap_true
-                            enum        = temp10 ) ##NO_TEXT.
-        schema->add_integer( name        = `flight_number`
-                             description = `Flight Number`
-                             required    = abap_true ) ##NO_TEXT.
-
-        
-        CLEAR temp12.
-        temp12-name = `get_flight_conn_details`.
-        temp12-description = `Get details of one specific flight connection`.
-        temp12-input_schema = schema->to_json( ).
-        APPEND temp12
+        temp10-name = `get_flight_conn_details`.
+        temp10-description = `Get details of one specific flight connection`.
+        temp10-input_schema = get_flight_conn_schema( )->to_json( ).
+        APPEND temp10
                TO tools ##NO_TEXT.
         
       CATCH zcx_mcp_ajson_error INTO error.
@@ -233,39 +238,50 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
 
   METHOD get_flight_conn_details.
     DATA input TYPE REF TO zif_mcp_ajson.
+        DATA schema TYPE REF TO zcl_mcp_schema_builder.
+        DATA validator TYPE REF TO zcl_mcp_schema_validator.
+        DATA validation_result TYPE abap_bool.
+        DATA error TYPE REF TO zcx_mcp_ajson_error.
     DATA airline_code TYPE string.
     DATA flight_number TYPE i.
     DATA connid TYPE s_conn_id.
-TYPES BEGIN OF temp13.
+TYPES BEGIN OF temp11.
 TYPES carrid TYPE sflight-carrid.
 TYPES connid TYPE sflight-connid.
 TYPES fldate TYPE sflight-fldate.
 TYPES price TYPE sflight-price.
 TYPES currency TYPE sflight-currency.
 TYPES planetype TYPE sflight-planetype.
-TYPES END OF temp13.
-    DATA flights TYPE STANDARD TABLE OF temp13 WITH DEFAULT KEY.
+TYPES END OF temp11.
+    DATA flights TYPE STANDARD TABLE OF temp11 WITH DEFAULT KEY.
     DATA markdown TYPE string.
     FIELD-SYMBOLS <flight> LIKE LINE OF flights.
     input = request->get_arguments( ).
+
+    " Validate input parameter via schema validator class
+    TRY.
+        
+        schema = get_flight_conn_schema( ).
+        
+        CREATE OBJECT validator TYPE zcl_mcp_schema_validator EXPORTING SCHEMA = schema->to_json( ).
+        
+        validation_result = validator->validate( input ).
+        IF validation_result = abap_false.
+          response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+          response-error-message = concat_lines_of( validator->get_errors( ) ).
+          RETURN.
+        ENDIF.
+        
+      CATCH zcx_mcp_ajson_error INTO error.
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+        response-error-message = error->get_text( ).
+        RETURN.
+    ENDTRY.
+
     
     airline_code = input->get_string( `airline_code` ).
     
     flight_number = input->get_integer( `flight_number` ).
-
-    " Validate input parameter
-
-    IF airline_code <> `AA` AND airline_code <> `AB` AND airline_code <> `AC`.
-      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-      response-error-message = |Only AA, AB, AC allowed. Got { airline_code }| ##NO_TEXT.
-      RETURN.
-    ENDIF.
-
-    IF flight_number > 9999 OR flight_number < 0.
-      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-      response-error-message = |Flight Connection Number must be between 0 and 9999| ##NO_TEXT.
-      RETURN.
-    ENDIF.
 
     
     connid = flight_number.
@@ -309,6 +325,32 @@ TYPES END OF temp13.
 
   METHOD get_server_time.
     response-result->add_text_content( |Current Server Date: { sy-datum } Time: { sy-uzeit } in internal format.| ) ##NO_TEXT.
+  ENDMETHOD.
+
+  METHOD get_flight_conn_schema.
+    DATA schema TYPE REF TO zcl_mcp_schema_builder.
+    DATA temp12 TYPE string_table.
+    CREATE OBJECT schema TYPE zcl_mcp_schema_builder.
+    
+    CLEAR temp12.
+    INSERT `AA` INTO TABLE temp12.
+    INSERT `AB` INTO TABLE temp12.
+    INSERT `AC` INTO TABLE temp12.
+    schema->add_string( name        = `airline_code`
+                        description = `Airline Code`
+                        required    = abap_true
+                        enum        = temp12 ) ##NO_TEXT.
+    schema->add_integer( name        = `flight_number`
+                         description = `Flight Number`
+                         minimum     = 0
+                         maximum     = 9999
+                         required    = abap_true ) ##NO_TEXT.
+    result = schema.
+
+  ENDMETHOD.
+
+  METHOD get_session_mode.
+    result = zcl_mcp_session=>session_mode_stateless.
   ENDMETHOD.
 
 ENDCLASS.

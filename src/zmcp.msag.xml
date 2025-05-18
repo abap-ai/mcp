@@ -74,6 +74,180 @@
      <MSGNR>010</MSGNR>
      <TEXT>Invalid arguments &amp;1</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>100</MSGNR>
+     <TEXT>Schema root must be of type &quot;object&quot;, but found &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>101</MSGNR>
+     <TEXT>Schema error: missing root type</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>102</MSGNR>
+     <TEXT>Required property &quot;&amp;1&quot; is missing</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>103</MSGNR>
+     <TEXT>Schema error: could not process required properties</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>104</MSGNR>
+     <TEXT>Schema error: missing type for array items</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>105</MSGNR>
+     <TEXT>Array must have at least &amp;1 items, but has &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>106</MSGNR>
+     <TEXT>Array must have at most &amp;1 items, but has &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>107</MSGNR>
+     <TEXT>Array item must be of type &quot;boolean&quot;, but is &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>108</MSGNR>
+     <TEXT>Error accessing array item</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>109</MSGNR>
+     <TEXT>Unsupported array item type &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>110</MSGNR>
+     <TEXT>Schema error: missing type for property</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>111</MSGNR>
+     <TEXT>Error accessing property</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>112</MSGNR>
+     <TEXT>Property must be of type &quot;string&quot;, but is &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>113</MSGNR>
+     <TEXT>Property must be of type &quot;number&quot;, but is &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>114</MSGNR>
+     <TEXT>Property must be of type &quot;integer&quot;, but is &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>115</MSGNR>
+     <TEXT>Property must be of type &quot;boolean&quot;, but is &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>116</MSGNR>
+     <TEXT>Property must be of type &quot;object&quot;, but is &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>117</MSGNR>
+     <TEXT>Property must be of type &quot;array&quot;, but is &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>118</MSGNR>
+     <TEXT>Unsupported property type &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>119</MSGNR>
+     <TEXT>Expected type &quot;string&quot; but got &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>120</MSGNR>
+     <TEXT>String must have minimum length &amp;1, but has &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>121</MSGNR>
+     <TEXT>String must have maximum length &amp;1, but has &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>122</MSGNR>
+     <TEXT>String must be one of &amp;1, but is &quot;&amp;2&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>123</MSGNR>
+     <TEXT>Expected type &quot;number&quot; but got &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>124</MSGNR>
+     <TEXT>Number must be at least &amp;1, but is &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>125</MSGNR>
+     <TEXT>Number must be at most &amp;1, but is &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>126</MSGNR>
+     <TEXT>Expected type &quot;integer&quot; but got &quot;&amp;1&quot;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>127</MSGNR>
+     <TEXT>Integer must be at least &amp;1, but is &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>128</MSGNR>
+     <TEXT>Integer must be at most &amp;1, but is &amp;2</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

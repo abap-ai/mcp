@@ -71,6 +71,11 @@ INTERFACE zif_mcp_server
   METHODS prompts_list IMPORTING !request        TYPE REF TO zcl_mcp_req_list_prompts
                        RETURNING VALUE(response) TYPE list_prompts_response.
 
+  "! <p class="shorttext synchronized">Get session mode</p>
+  "! Use zcl_mcp_session=>session_mode_xxx constants.
+  "! @parameter result | <p class="shorttext synchronized">Session mode</p>
+  METHODS get_session_mode RETURNING VALUE(result) TYPE zmcp_session_mode.
+
   "! <p class="shorttext synchronized">MCP prompts/get</p>
   "!
   "! @parameter request  | <p class="shorttext synchronized">JSONRPC Request</p>

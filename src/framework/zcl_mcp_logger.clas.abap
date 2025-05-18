@@ -181,7 +181,7 @@ CLASS zcl_mcp_logger IMPLEMENTATION.
         i_s_msg      = msg_details
       EXCEPTIONS
         OTHERS       = 1.
-    IF sy-subrc <> 0.
+    IF sy-subrc <> 0. "#EC EMPTY_IF_BRANCH
       " no error handling, just ignore
     ENDIF.
   ENDMETHOD.

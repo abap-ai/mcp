@@ -144,7 +144,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
               has_responses = abap_true.
           ENDTRY.
         ENDIF.
-      CATCH cx_root.
+      CATCH cx_root.   "#EC NEED_CX_ROOT
         " Invalid JSON - will be handled by caller
     ENDTRY.
   ENDMETHOD.
@@ -154,7 +154,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
             DATA temp1 TYPE sysuuid_c32.
             DATA session_error TYPE REF TO zcx_mcp_server.
     " Check if sessions are enabled
-    IF mcp_server->server-session_mode = zcl_mcp_session=>session_mode_off.
+    IF mcp_server->server-session_mode = zcl_mcp_session=>session_mode_stateless.
       response->set_status( code   = 405
                             reason = 'Method Not Allowed' ) ##NO_TEXT.
       response->set_header_field( name  = 'Allow'
