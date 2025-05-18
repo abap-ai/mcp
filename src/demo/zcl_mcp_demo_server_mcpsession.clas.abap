@@ -9,12 +9,28 @@ CLASS zcl_mcp_demo_server_mcpsession DEFINITION
     METHODS handle_initialize REDEFINITION.
     METHODS handle_list_tools REDEFINITION.
     METHODS handle_call_tool  REDEFINITION.
+    METHODS: get_session_mode REDEFINITION.
 
   PRIVATE SECTION.
-    METHODS get_session_details CHANGING  response TYPE zif_mcp_server=>call_tool_response.
+    "! <p class="shorttext synchronized">Get session details for the current MCP session</p>
+    "!
+    "! @parameter response | <p class="shorttext synchronized">Response object with session details</p>
+    METHODS get_session_details CHANGING !response TYPE zif_mcp_server=>call_tool_response.
 
-    METHODS increment_example IMPORTING !request TYPE REF TO zcl_mcp_req_call_tool
-                              CHANGING  response TYPE zif_mcp_server=>call_tool_response.
+    "! <p class="shorttext synchronized">Increment the current value by a given amount</p>
+    "!
+    "! @parameter request  | <p class="shorttext synchronized">The call tool request containing increment parameter</p>
+    "! @parameter response | <p class="shorttext synchronized">Response object with the incremented result</p>
+    METHODS increment_example IMPORTING !request  TYPE REF TO zcl_mcp_req_call_tool
+                              CHANGING  !response TYPE zif_mcp_server=>call_tool_response.
+
+    "! <p class="shorttext synchronized">Get the JSON schema for the increment example</p>
+    "!
+    "! @parameter result              | <p class="shorttext synchronized">Schema builder object containing increment definition</p>
+    "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">Error during JSON schema creation</p>
+    METHODS get_increment_schema
+      RETURNING VALUE(result) TYPE REF TO zcl_mcp_schema_builder
+      RAISING   zcx_mcp_ajson_error.
 ENDCLASS.
 
 
@@ -41,7 +57,6 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
     DATA tools TYPE zcl_mcp_resp_list_tools=>tools.
 
     DATA temp3 TYPE zcl_mcp_resp_list_tools=>tool.
-        DATA schema TYPE REF TO zcl_mcp_schema_builder.
         DATA temp4 TYPE zcl_mcp_resp_list_tools=>tool.
         DATA error TYPE REF TO zcx_mcp_ajson_error.
     CLEAR temp3.
@@ -52,16 +67,10 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
     " Demo tool with input parameters
     TRY.
         
-        CREATE OBJECT schema TYPE zcl_mcp_schema_builder.
-        schema->add_integer( name        = `increment`
-                             description = `Increment value`
-                             required    = abap_true ) ##NO_TEXT.
-
-        
         CLEAR temp4.
         temp4-name = `increment_example`.
         temp4-description = `Every time increments the result by the given number. This is to demonstrate the session logic.`.
-        temp4-input_schema = schema->to_json( ).
+        temp4-input_schema = get_increment_schema( )->to_json( ).
         APPEND temp4
                TO tools ##NO_TEXT.
         
@@ -78,7 +87,8 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
       WHEN `get_sesion_details`.
         get_session_details( CHANGING response = response ).
       WHEN `increment_example`.
-        increment_example( EXPORTING request = request CHANGING response = response ).
+        increment_example( EXPORTING request  = request
+                           CHANGING  response = response ).
       WHEN OTHERS.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
         response-error-message = |Tool { request->get_name( ) } not found.| ##NO_TEXT.
@@ -91,19 +101,38 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
 
   METHOD increment_example.
     DATA input TYPE REF TO zif_mcp_ajson.
+        DATA schema TYPE REF TO zcl_mcp_schema_builder.
+        DATA validator TYPE REF TO zcl_mcp_schema_validator.
+        DATA validation_result TYPE abap_bool.
+        DATA error TYPE REF TO zcx_mcp_ajson_error.
     DATA increment TYPE i.
     DATA session_increment TYPE zcl_mcp_session=>session_entry.
     DATA current_increment TYPE i.
     DATA temp5 TYPE zcl_mcp_session=>session_entry.
     input = request->get_arguments( ).
+
+    " Validate input parameter via schema validator class
+    TRY.
+        
+        schema = get_increment_schema( ).
+        
+        CREATE OBJECT validator TYPE zcl_mcp_schema_validator EXPORTING SCHEMA = schema->to_json( ).
+        
+        validation_result = validator->validate( input ).
+        IF validation_result = abap_false.
+          response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+          response-error-message = concat_lines_of( validator->get_errors( ) ).
+          RETURN.
+        ENDIF.
+        
+      CATCH zcx_mcp_ajson_error INTO error.
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+        response-error-message = error->get_text( ).
+        RETURN.
+    ENDTRY.
+
     
     increment = input->get_integer( `increment` ).
-    IF increment IS INITIAL.
-      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-      response-error-message = |Increment value is required.| ##NO_TEXT.
-      RETURN.
-    ENDIF.
-
     " Get the last increment value from the session
     
     session_increment = session->get( `increment` ).
@@ -123,6 +152,19 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
     temp5-key = `increment`.
     temp5-value = current_increment.
     session->add( temp5 ).
+  ENDMETHOD.
+
+  METHOD get_session_mode.
+    result = zcl_mcp_session=>session_mode_mcp.
+  ENDMETHOD.
+
+  METHOD get_increment_schema.
+    CREATE OBJECT result TYPE zcl_mcp_schema_builder.
+    result->add_integer( name        = `increment`
+                         description = `Increment value`
+                         required    = abap_true
+                         minimum     = 1
+                         maximum     = 1000000 ) ##NO_TEXT.
   ENDMETHOD.
 
 ENDCLASS.

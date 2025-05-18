@@ -339,8 +339,6 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
           " Not a number, use as string
           json_obj->set_string( iv_path = '/id'
                                 iv_val  = request-id ).
-        CATCH zcx_mcp_ajson_error.
-          " Handle JSON operation error
       ENDTRY.
     ENDIF.
 
@@ -415,8 +413,6 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
           " Not a number, use as string
           json_obj->set_string( iv_path = '/id'
                                 iv_val  = response-id ).
-        CATCH zcx_mcp_ajson_error.
-          " Handle JSON operation error
       ENDTRY.
     ELSE.
       " Null ID
