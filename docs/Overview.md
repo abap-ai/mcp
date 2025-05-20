@@ -29,6 +29,79 @@ With the MCP Server SDK, you can implement servers that provide:
 - Access to resources (like files, database records, etc.)
 - Custom tools that AI models can call
 
+## Architecture
+
+The MCP Server SDK follows a layered architecture that handles the communication between MCP clients and your custom business logic.
+
+### Component Interaction Diagram
+
+```mermaid
+graph TD
+    Client[MCP Client] <-->|HTTP/JSON-RPC| ICF[ICF Node]
+    ICF <--> Handler[ZCL_MCP_HTTP_HANDLER]
+    Handler <--> Auth[Authorization Check]
+    Handler <--> CORS[CORS Handling]
+    Handler <--> JSONRPC[ZCL_MCP_JSONRPC]
+    JSONRPC <--> ServerFactory[ZCL_MCP_SERVER_FACTORY]
+    ServerFactory --> ServerImpl[Custom Server Implementation]
+    ServerImpl -->|Inherits| ServerBase[ZCL_MCP_SERVER_BASE]
+    ServerBase -->|Implements| ServerInterface[ZIF_MCP_SERVER]
+    ServerImpl <--> SessionMgmt[Session Management]
+    SessionMgmt --> Stateless[Stateless Mode]
+    SessionMgmt --> MCPSession[MCP Session Mode]
+    SessionMgmt --> ICFSession[ICF Session Mode]
+    ServerImpl <--> SchemaBuilder[ZCL_MCP_SCHEMA_BUILDER]
+    ServerImpl <--> SchemaValidator[ZCL_MCP_SCHEMA_VALIDATOR]
+    ServerImpl <--> Logger[ZCL_MCP_LOGGER]
+    ServerImpl <--> Config[ZCL_MCP_CONFIGURATION]
+```
+
+### Key Components
+
+1. **HTTP Handler (ZCL_MCP_HTTP_HANDLER)**
+   - Entry point for all HTTP requests
+   - Handles authentication, CORS, and request routing
+   - Delegates to JSON-RPC processor
+
+2. **JSON-RPC Processor (ZCL_MCP_JSONRPC)**
+   - Parses JSON-RPC requests
+   - Validates request structure
+   - Routes to appropriate server method
+   - Formats responses
+
+3. **Server Factory (ZCL_MCP_SERVER_FACTORY)**
+   - Creates server instances based on configuration
+   - Manages server lifecycle
+
+4. **Server Base Class (ZCL_MCP_SERVER_BASE)**
+   - Abstract base class for all server implementations
+   - Handles common functionality
+   - Provides session management
+
+5. **Session Management**
+   - Supports three modes: Stateless, MCP Session, and ICF Session
+   - Persists data between requests when needed
+
+6. **Schema Builder & Validator**
+   - Tools for defining and validating JSON schemas
+   - Used for tool parameter validation
+
+7. **Configuration (ZCL_MCP_CONFIGURATION)**
+   - Manages server settings from database tables
+   - Controls CORS, logging, and other behaviors
+
+### Request Flow
+
+1. Client sends HTTP request to ICF node
+2. HTTP Handler processes request headers and authentication
+3. JSON-RPC processor parses the request
+4. Server Factory creates or retrieves server instance
+5. Request is routed to appropriate handler method
+6. Server processes request and generates response
+7. Response is formatted and returned to client
+
+This architecture provides a flexible foundation for implementing custom MCP servers while handling the complexities of the protocol, authentication, and session management.
+
 ## Authorizations
 
 The authorization object `ZMCP_SRV` is used to check if you area allowed to call a specific server. The fields `ZMCP_AREA` and `ZMCP_SRV` match the area and server in `ZMCP_SERVERS` table.
