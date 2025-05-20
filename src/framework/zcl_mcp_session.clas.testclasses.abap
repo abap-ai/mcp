@@ -435,7 +435,7 @@ CLASS ltcl_mcp_session IMPLEMENTATION.
     session->save( ).
 
     " Verify nothing was saved to the database
-    SELECT SINGLE * FROM zmcp_sessions
+    SELECT SINGLE client FROM zmcp_sessions
       WHERE session_id = 'TEST_STATELESS'
       INTO @DATA(db_session).
 
@@ -457,7 +457,7 @@ CLASS ltcl_mcp_session IMPLEMENTATION.
     session->delete( ).
 
     " Check if the session was deleted from the database
-    SELECT SINGLE * FROM zmcp_sessions
+    SELECT SINGLE client FROM zmcp_sessions
       WHERE session_id = @session_id_valid
       INTO @DATA(db_session).
 
@@ -516,7 +516,8 @@ CLASS ltcl_mcp_session IMPLEMENTATION.
     ).
 
     " Verify only valid session remains
-    SELECT COUNT(*) FROM zmcp_sessions INTO @DATA(remaining_count).
+
+    SELECT COUNT(*) FROM zmcp_sessions INTO @DATA(remaining_count). "#EC CI_NOWHERE
 
     cl_abap_unit_assert=>assert_equals(
       act = remaining_count
