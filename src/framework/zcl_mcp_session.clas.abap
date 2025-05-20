@@ -222,12 +222,12 @@ CLASS zcl_mcp_session IMPLEMENTATION.
                                                       secs  = lifetime ).
 
     " Convert to database timestamp format properly
+
     cl_abap_tstmp=>move( EXPORTING tstmp_src = outdated_timestamp
                          IMPORTING tstmp_tgt = db_outdated_timestamp ).
 
     " Delete outdated sessions
     DELETE FROM zmcp_sessions WHERE updated < db_outdated_timestamp. "#EC CI_NOWHERE "#EC CI_NOFIELD
-
     result = sy-dbcnt.
 
     IF result > 0.
