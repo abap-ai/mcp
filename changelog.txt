@@ -1,4 +1,4 @@
-2025-05-18 v0.1
+2025-05-26 v0.1
 -----------------
 
 - Extended Schema Builder with min/max, etc.
