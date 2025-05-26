@@ -1,8 +1,8 @@
 "! <p class="shorttext synchronized">MCP Get Prompt Result</p>
 "! Implementation for the GetPromptResult interface
 CLASS zcl_mcp_resp_get_prompt DEFINITION
-  PUBLIC FINAL
-  CREATE PUBLIC.
+PUBLIC FINAL
+CREATE PUBLIC.
 
   PUBLIC SECTION.
     INTERFACES zif_mcp_internal.
@@ -139,7 +139,6 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
     "! @parameter meta | <p class="shorttext synchronized">Meta data</p>
     METHODS set_meta
       IMPORTING meta TYPE REF TO zif_mcp_ajson.
-
   PRIVATE SECTION.
     " Content type identifiers
     CONSTANTS: BEGIN OF content_type,
