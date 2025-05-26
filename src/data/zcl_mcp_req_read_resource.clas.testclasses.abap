@@ -35,7 +35,7 @@ CLASS ltcl_mcp_req_read_resource IMPLEMENTATION.
         req = NEW #( json ).
         cl_abap_unit_assert=>fail( 'Expected exception for missing URI' ).
       CATCH zcx_mcp_server.
-        " Expected - URI is required but missing
-    ENDTRY. "#EC EMPTY_CATCH
+        " Expected
+    ENDTRY.
   ENDMETHOD.
 ENDCLASS.

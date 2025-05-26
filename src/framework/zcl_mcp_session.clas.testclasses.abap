@@ -50,12 +50,9 @@ CLASS ltcl_mcp_session DEFINITION FINAL FOR TESTING
 ENDCLASS.
 
 CLASS ltcl_mcp_session IMPLEMENTATION.
-
   METHOD class_setup.
     " Set up the SQL test environment once for all tests
-    sql_doubles = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'ZMCP_SESSIONS' ) )
-    ).
+    sql_doubles = cl_osql_test_environment=>create( VALUE #( ( 'ZMCP_SESSIONS' ) ) ).
   ENDMETHOD.
 
   METHOD class_teardown.

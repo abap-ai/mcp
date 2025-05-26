@@ -663,10 +663,10 @@ CLASS ltcl_schema_builder IMPLEMENTATION.
     TRY.
         " When - Create properties without supplying constraints
         DATA(builder) = NEW zcl_mcp_schema_builder( ).
-        builder->add_string( name = 'username' ).
-        builder->add_number( name = 'score' ).
-        builder->add_integer( name = 'count' ).
-        builder->begin_array( name = 'items' )->add_string( name = 'item' )->end_array( ).
+        builder->add_string( 'username' ).
+        builder->add_number( 'score' ).
+        builder->add_integer( 'count' ).
+        builder->begin_array( 'items' )->add_string( 'item' )->end_array( ).
 
         " Then - Check no constraints are added
         DATA(schema) = builder->to_json( ).
@@ -698,14 +698,14 @@ CLASS ltcl_schema_builder IMPLEMENTATION.
         DATA(builder) = NEW zcl_mcp_schema_builder( ).
 
         " Root level - one with constraints, one without
-        builder->add_string( name = 'title' ).
+        builder->add_string( 'title' ).
         builder->add_string( name       = 'code'
                              min_length = 2
                              max_length = 10 ).
 
         " Object - nested properties with varying constraints
-        builder->begin_object( name = 'user' ).
-        builder->add_string( name = 'name' ).
+        builder->begin_object( 'user' ).
+        builder->add_string( 'name' ).
         builder->add_integer( name    = 'age'
                               minimum = 18 ).
         builder->add_number( name    = 'rating'
@@ -746,7 +746,7 @@ CLASS ltcl_schema_builder IMPLEMENTATION.
                               minimum = 1 ).
 
         " Object without capturing return value
-        builder->begin_object( name = 'person' ).
+        builder->begin_object( 'person' ).
 
         " Object property with constraints
         builder->add_string( name       = 'ssn'
@@ -754,21 +754,21 @@ CLASS ltcl_schema_builder IMPLEMENTATION.
                              max_length = 9 ).
 
         " Object property without constraints
-        builder->add_string( name = 'name' ).
+        builder->add_string( 'name' ).
 
         " Nested array with constraints on the array only
         builder->begin_array( name      = 'phones'
                               min_items = 1 ).
 
         " Array item without constraints
-        builder->add_string( name = 'number' ).
+        builder->add_string( 'number' ).
 
         " End the nested structures
         builder->end_array( ).
         builder->end_object( ).
 
         " Add another root property without constraints
-        builder->add_string( name = 'comment' ).
+        builder->add_string( 'comment' ).
 
         " Then - Check correct constraint pattern throughout the hierarchy
         DATA(schema) = builder->to_json( ).
