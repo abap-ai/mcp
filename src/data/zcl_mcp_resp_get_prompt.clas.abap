@@ -1,8 +1,8 @@
 "! <p class="shorttext synchronized">MCP Get Prompt Result</p>
 "! Implementation for the GetPromptResult interface
 CLASS zcl_mcp_resp_get_prompt DEFINITION
-  PUBLIC FINAL
-  CREATE PUBLIC.
+PUBLIC FINAL
+CREATE PUBLIC.
 
   PUBLIC SECTION.
     INTERFACES zif_mcp_internal.
@@ -139,7 +139,6 @@ CLASS zcl_mcp_resp_get_prompt DEFINITION
     "! @parameter meta | <p class="shorttext synchronized">Meta data</p>
     METHODS set_meta
       IMPORTING meta TYPE REF TO zif_mcp_ajson.
-
   PRIVATE SECTION.
     " Content type identifiers
     CONSTANTS: BEGIN OF content_type,
@@ -488,43 +487,43 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
 
   METHOD add_text_message.
     APPEND VALUE unified_message( type        = message_type-text
-                                  role        = role
-                                  text        = text
-                                  annotations = annotations ) TO messages.
+    role        = role
+    text        = text
+    annotations = annotations ) TO messages.
   ENDMETHOD.
 
   METHOD add_image_message.
     APPEND VALUE unified_message( type        = message_type-image
-                                  role        = role
-                                  image_data  = data
-                                  image_mime  = mime_type
-                                  annotations = annotations ) TO messages.
+    role        = role
+    image_data  = data
+    image_mime  = mime_type
+    annotations = annotations ) TO messages.
   ENDMETHOD.
 
   METHOD add_audio_message.
     APPEND VALUE unified_message( type        = message_type-audio
-                                  role        = role
-                                  audio_data  = data
-                                  audio_mime  = mime_type
-                                  annotations = annotations ) TO messages.
+    role        = role
+    audio_data  = data
+    audio_mime  = mime_type
+    annotations = annotations ) TO messages.
   ENDMETHOD.
 
   METHOD add_text_resource_message.
     APPEND VALUE unified_message( type        = message_type-text_resource
-                                  role        = role
-                                  res_uri     = uri
-                                  res_text    = text
-                                  res_mime    = mime_type
-                                  annotations = annotations ) TO messages.
+    role        = role
+    res_uri     = uri
+    res_text    = text
+    res_mime    = mime_type
+    annotations = annotations ) TO messages.
   ENDMETHOD.
 
   METHOD add_blob_resource_message.
     APPEND VALUE unified_message( type        = message_type-blob_resource
-                                  role        = role
-                                  res_uri     = uri
-                                  res_blob    = blob
-                                  res_mime    = mime_type
-                                  annotations = annotations ) TO messages.
+    role        = role
+    res_uri     = uri
+    res_blob    = blob
+    res_mime    = mime_type
+    annotations = annotations ) TO messages.
   ENDMETHOD.
 
   METHOD set_meta.
