@@ -93,7 +93,7 @@ CLASS zcl_mcp_demo_server_icfsession IMPLEMENTATION.
 
   METHOD handle_call_tool.
     CASE request->get_name( ).
-      WHEN `get_sesion_details`.
+      WHEN `get_session_details`.
         get_session_details( CHANGING response = response ).
       WHEN `increment_example`.
         increment_example( EXPORTING request = request CHANGING response = response ).
