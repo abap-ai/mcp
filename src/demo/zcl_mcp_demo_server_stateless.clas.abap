@@ -158,9 +158,9 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     DATA temp8 LIKE LINE OF temp7.
     CLEAR temp7.
     
-    temp8-uritemplate = `file://sales_reciept/{sales_order}`.
-    temp8-name = `Sales Reciepts`.
-    temp8-description = `Reciepts for Sales Order`.
+    temp8-uritemplate = `file://sales_receipt/{sales_order}`.
+    temp8-name = `Sales Receipts`.
+    temp8-description = `Receipts for Sales Order`.
     temp8-mime_type = `application/pdf`.
     INSERT temp8 INTO TABLE temp7.
     response-result->set_resource_templates(
