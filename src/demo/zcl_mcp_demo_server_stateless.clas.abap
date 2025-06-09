@@ -114,9 +114,9 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
 
     response-result->set_resource_templates(
         VALUE #(
-          ( uritemplate = `file://sales_reciept/{sales_order}`
-            name         = `Sales Reciepts`
-            description  = `Reciepts for Sales Order`
+          ( uritemplate = `file://sales_receipt/{sales_order}`
+            name         = `Sales Receipts`
+            description  = `Receipts for Sales Order`
             mime_type    = `application/pdf` ) ) ) ##NO_TEXT.
   ENDMETHOD.
 
