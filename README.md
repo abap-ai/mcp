@@ -31,7 +31,7 @@ Currently implemented:
 
 No SSE support --> no notifications and therefore no support of listChanged, subscribe and logging.\
 
-Not implmented:
+Not implemented:
 
 - Sampling - considered for the future, open an issue if you have a use case that would benefit from it
 - Completions - questionable from a performance point of view with ABAP
@@ -41,7 +41,7 @@ Not implmented:
 ## Authorization
 
 Implement the standard [Authorization](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization) in ABAP via custom code is not feasible, we have to rely on ABAP features. \
-An overview of likely options are outlined in [Authentication Documentation](./docs/Authentication.md).
+An overview of likely options is outlined in [Authentication Documentation](./docs/Authentication.md).
 
 ## Autentication
 
@@ -49,7 +49,7 @@ OAuth is suggested but outside of newer S/4HANA releases challenging, for option
 
 ## Roadmap
 
-See currently open issues for the next planned steps. Longer term I intend to add features to create modular MCP servers based on reusable implmenetations.
+See currently open issues for the next planned steps. Longer term I intend to add features to create modular MCP servers based on reusable implementations.
 
 ## FAQ
 
