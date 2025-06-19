@@ -336,12 +336,11 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                                       reason = 'Not Found' ) ##NO_TEXT.
         continue = abap_false.
       ELSE.
-        mcp_server->server-area             = area.
-        mcp_server->server-server           = servername.
-        mcp_server->server-protocol_version = zif_mcp_constants=>protocol_version.
-        mcp_server->server-http_request     = server->request.
-        mcp_server->server-http_response    = server->response.
-        mcp_server->server-http_server      = server.
+        mcp_server->server-area          = area.
+        mcp_server->server-server        = servername.
+        mcp_server->server-http_request  = server->request.
+        mcp_server->server-http_response = server->response.
+        mcp_server->server-http_server   = server.
       ENDIF.
     ENDIF.
 
@@ -487,7 +486,8 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                                                    code    = error-code
                                                    message = error-message ).
         result = jsonrpc->serialize_response( response ).
-        logger->warning( |JSON parse error for { mcp_server->server-area } { mcp_server->server-server } details: { error-message }| ) ##NO_TEXT.
+        logger->warning(
+            |JSON parse error for { mcp_server->server-area } { mcp_server->server-server } details: { error-message }| ) ##NO_TEXT.
         RETURN.
     ENDTRY.
 
@@ -499,7 +499,8 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       response-id      = request-id.
       response-jsonrpc = request-jsonrpc.
       result = jsonrpc->serialize_batch_response( responses ).
-      logger->warning( |Batch request with initialize for { mcp_server->server-area } { mcp_server->server-server } details: { response-error-message }| ) ##NO_TEXT.
+      logger->warning(
+          |Batch request with initialize for { mcp_server->server-area } { mcp_server->server-server } details: { response-error-message }| ) ##NO_TEXT.
     ENDIF.
 
     " Get session id except for initialize
@@ -509,7 +510,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
         WHEN zcl_mcp_session=>session_mode_icf.
           IF session_id <> mcp_server->server-session_id.
             mcp_server->server-http_response->set_status( code   = 404
-                                          reason = 'Not Found' ) ##NO_TEXT.
+                                                          reason = 'Not Found' ) ##NO_TEXT.
             RETURN.
           ENDIF.
         WHEN zcl_mcp_session=>session_mode_mcp.
@@ -522,19 +523,40 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
               CASE session_error->if_t100_message~t100key.
                 WHEN zcx_mcp_server=>session_unknown OR zcx_mcp_server=>session_expired.
                   mcp_server->server-http_response->set_status( code   = 404
-                                                reason = 'Not Found' ) ##NO_TEXT.
+                                                                reason = 'Not Found' ) ##NO_TEXT.
                   RETURN.
                 WHEN zcx_mcp_server=>session_load_error.
-                  logger->error( |Session { session_id } load error for { mcp_server->server-area } { mcp_server->server-server } details: { session_error->get_text( ) }| ) ##NO_TEXT.
+                  logger->error(
+                      |Session { session_id } load error for { mcp_server->server-area } { mcp_server->server-server } details: { session_error->get_text( ) }| ) ##NO_TEXT.
                   mcp_server->server-http_response->set_status( code   = 500
-                                                reason = 'Internal Error' ) ##NO_TEXT.
+                                                                reason = 'Internal Error' ) ##NO_TEXT.
                   RETURN.
               ENDCASE.
               mcp_server->server-http_response->set_status( code   = 500
-                                            reason = 'Internal Error' ) ##NO_TEXT.
+                                                            reason = 'Internal Error' ) ##NO_TEXT.
               RETURN.
           ENDTRY.
       ENDCASE.
+    ENDIF.
+
+    " Handle mcp-protocol-version header except for initialize
+    IF request-method <> 'initialize'.
+      " Determine protocol version from mcp-protocol-version header
+      DATA(protocol_version) = mcp_server->server-http_request->get_header_field( 'Mcp-Protocol-Version' ) ##NO_TEXT.
+      IF protocol_version IS INITIAL.
+        mcp_server->server-protocol_version = zif_mcp_constants=>default_protocol_version.
+      ELSE.
+        SPLIT zif_mcp_constants=>supported_protocol_versions AT `,` INTO TABLE DATA(supported_protocol_versions).
+        IF line_exists( supported_protocol_versions[ table_line = protocol_version ] ).
+          mcp_server->server-protocol_version = protocol_version.
+        ELSE.
+          " Per specification we should use the newest supported version if we cannot fulfill the client request
+          mcp_server->server-protocol_version = zif_mcp_constants=>latest_protocol_version.
+        ENDIF.
+      ENDIF.
+      " Set current protocol version header
+      mcp_server->server-http_response->set_header_field( name  = 'Mcp-Protocol-Version'
+                                                          value = mcp_server->server-protocol_version ) ##NO_TEXT.
     ENDIF.
 
     " Process all requests
@@ -542,7 +564,8 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       CLEAR response.
       mcp_server->server-mcp_request = <request>.
 
-      logger->info( |Processing request { <request>-method } for { mcp_server->server-area } { mcp_server->server-server }| ) ##NO_TEXT.
+      logger->info(
+          |Processing request { <request>-method } for { mcp_server->server-area } { mcp_server->server-server }| ) ##NO_TEXT.
 
       TRY.
           CASE <request>-method.
@@ -593,7 +616,8 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
               response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
               response-error-message = mcp_error->get_text( ).
           ENDCASE.
-          logger->warning( |Error processing request { <request>-method } for { mcp_server->server-area } { mcp_server->server-server } details: { response-error-message }| ) ##NO_TEXT.
+          logger->warning(
+              |Error processing request { <request>-method } for { mcp_server->server-area } { mcp_server->server-server } details: { response-error-message }| ) ##NO_TEXT.
       ENDTRY.
 
       response-id      = request-id.

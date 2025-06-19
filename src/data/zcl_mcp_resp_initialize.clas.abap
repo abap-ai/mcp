@@ -40,19 +40,29 @@ CLASS zcl_mcp_resp_initialize DEFINITION
     METHODS set_instructions
       IMPORTING instructions TYPE instructions.
 
+    METHODS set_protocol_version
+      IMPORTING protocol_version TYPE string.
+
   PRIVATE SECTION.
     DATA int_capabilities   TYPE capabilities.
     DATA int_implementation TYPE implementation.
     DATA int_instructions   TYPE instructions.
+    DATA int_protocol_version TYPE string.
 ENDCLASS.
 
 CLASS zcl_mcp_resp_initialize IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
     result = zcl_mcp_ajson=>create_empty( ).
-    " Protocol version is currently hard coded.
-    " The server implementation ideally should not have to consider it.
-    result->set( iv_path = 'protocolVersion'
-                 iv_val  = zif_mcp_constants=>protocol_version ).
+
+    " The base server logic will handle this but
+    " as fallback we set the latest version as per specification.
+    IF int_protocol_version IS NOT INITIAL.
+      result->set( iv_path = 'protocolVersion'
+                   iv_val  = int_protocol_version ).
+    ELSE.
+      result->set( iv_path = 'protocolVersion'
+                   iv_val  = zif_mcp_constants=>latest_protocol_version ).
+    ENDIF.
 
     result->touch_object( 'capabilities' ).
 
@@ -95,6 +105,10 @@ CLASS zcl_mcp_resp_initialize IMPLEMENTATION.
 
   METHOD set_instructions.
     int_instructions = instructions.
+  ENDMETHOD.
+
+  METHOD set_protocol_version.
+    int_protocol_version = protocol_version.
   ENDMETHOD.
 
 ENDCLASS.

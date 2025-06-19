@@ -88,10 +88,12 @@ ENDCLASS.
 
 CLASS zcl_mcp_server_base IMPLEMENTATION.
   METHOD zif_mcp_server~initialize.
+    response-result = NEW zcl_mcp_resp_initialize( ).
+
     " Handle session logic before handing off to the request handler
     IF server-session_id IS NOT INITIAL.
       server-http_response->set_status( code   = 400
-                                                       reason = 'Bad Request' ) ##NO_TEXT.
+                                        reason = 'Bad Request' ) ##NO_TEXT.
     ENDIF.
 
     IF server-session_mode <> zcl_mcp_session=>session_mode_stateless.
@@ -102,12 +104,12 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
       ENDTRY.
       TRY.
           session = NEW zcl_mcp_session( session_id   = server-session_id
-                                                        session_mode = server-session_mode
-                                                        create_new   = abap_true ).
+                                         session_mode = server-session_mode
+                                         create_new   = abap_true ).
         CATCH zcx_mcp_server INTO DATA(error).
           zif_mcp_server~config->get_logger( )->error( |Failed to create session { error->get_text( ) }| ) ##NO_TEXT.
           server-http_response->set_status( code   = 500
-                                                           reason = 'Internal Server Error' ) ##NO_TEXT.
+                                            reason = 'Internal Server Error' ) ##NO_TEXT.
           RETURN.
       ENDTRY.
     ENDIF.
@@ -116,8 +118,21 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
       server-http_server->set_session_stateful( ).
     ENDIF.
 
-    response-result = NEW zcl_mcp_resp_initialize( ).
-    handle_initialize( EXPORTING request = request CHANGING response = response ).
+    " Determine protocol version
+    SPLIT zif_mcp_constants=>supported_protocol_versions AT `,` INTO TABLE DATA(supported_protocol_versions).
+    IF line_exists( supported_protocol_versions[ table_line = request->get_protocol_version( ) ] ).
+      server-protocol_version = request->get_protocol_version( ).
+    ELSE.
+      " If the requested protocol version is not supported, use the latest supported version
+      server-protocol_version = zif_mcp_constants=>latest_protocol_version.
+    ENDIF.
+    response-result->set_protocol_version( server-protocol_version ).
+    " Set the header for the response
+    server-http_response->set_header_field( name  = 'MCP-Protocol-Version'
+                                            value = server-protocol_version ).
+
+    handle_initialize( EXPORTING request  = request
+                       CHANGING  response = response ).
   ENDMETHOD.
 
   METHOD zif_mcp_server~prompts_get.
