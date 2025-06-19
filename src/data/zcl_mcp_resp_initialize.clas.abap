@@ -40,14 +40,22 @@ CLASS zcl_mcp_resp_initialize DEFINITION
     METHODS set_instructions
       IMPORTING instructions TYPE instructions.
 
+    "! <p class="shorttext synchronized">Set Meta Data</p>
+    "! Optional metadata to attach to response
+    "!
+    "! @parameter meta | <p class="shorttext synchronized">Meta data</p>
+    METHODS set_meta
+      IMPORTING meta TYPE REF TO zif_mcp_ajson.
+
     METHODS set_protocol_version
       IMPORTING protocol_version TYPE string.
 
   PRIVATE SECTION.
-    DATA int_capabilities   TYPE capabilities.
-    DATA int_implementation TYPE implementation.
-    DATA int_instructions   TYPE instructions.
+    DATA int_capabilities     TYPE capabilities.
+    DATA int_implementation   TYPE implementation.
+    DATA int_instructions     TYPE instructions.
     DATA int_protocol_version TYPE string.
+    DATA meta                 TYPE REF TO zif_mcp_ajson.
 ENDCLASS.
 
 CLASS zcl_mcp_resp_initialize IMPLEMENTATION.
@@ -93,6 +101,12 @@ CLASS zcl_mcp_resp_initialize IMPLEMENTATION.
                    iv_ignore_empty = abap_false
                    iv_node_type    = zif_mcp_ajson_types=>node_type-string ).
     ENDIF.
+
+    " Add metadata (optional)
+    IF meta IS BOUND.
+      result->set( iv_path = '/_meta'
+                   iv_val  = meta ).
+    ENDIF.
   ENDMETHOD.
 
   METHOD set_capabilities.
@@ -109,6 +123,10 @@ CLASS zcl_mcp_resp_initialize IMPLEMENTATION.
 
   METHOD set_protocol_version.
     int_protocol_version = protocol_version.
+  ENDMETHOD.
+
+  METHOD set_meta.
+    me->meta = meta.
   ENDMETHOD.
 
 ENDCLASS.
