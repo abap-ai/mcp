@@ -19,6 +19,7 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
              description TYPE string,
              mime_type   TYPE string,
              annotations TYPE annotations,
+             meta        TYPE REF TO zif_mcp_ajson,
            END OF resource_template.
 
     TYPES resource_templates TYPE STANDARD TABLE OF resource_template WITH KEY uritemplate.
@@ -69,7 +70,6 @@ CLASS ZCL_MCP_RESP_LIST_RES_TMPL IMPLEMENTATION.
     int_resource_templates = resource_templates.
   ENDMETHOD.
 
-
   METHOD zif_mcp_internal~generate_json.
     result = zcl_mcp_ajson=>create_empty( ).
     " Create resourceTemplates array
@@ -106,6 +106,13 @@ CLASS ZCL_MCP_RESP_LIST_RES_TMPL IMPLEMENTATION.
       IF <template>-mime_type IS NOT INITIAL.
         result->set( iv_path = |/resourceTemplates/{ template_index }/mimeType|
                      iv_val  = <template>-mime_type ).
+      ENDIF.
+
+      " Add meta data (optional)
+      IF <template>-meta IS BOUND.
+        " Create the '_meta' node in the resulting JSON
+        result->set( iv_path = |/resourceTemplates/{ template_index }/_meta|
+                     iv_val  = <template>-meta ).
       ENDIF.
 
       " Add annotations (optional)

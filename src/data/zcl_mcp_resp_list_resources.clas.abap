@@ -20,6 +20,7 @@ CLASS zcl_mcp_resp_list_resources DEFINITION
              mime_type   TYPE string,
              annotations TYPE annotations,
              size        TYPE i,
+             meta        TYPE REF TO zif_mcp_ajson,
            END OF resource.
 
     TYPES resources   TYPE STANDARD TABLE OF resource WITH KEY uri.
@@ -93,6 +94,13 @@ CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
       IF <resource>-size IS NOT INITIAL.
         result->set( iv_path = |/resources/{ resource_index }/size|
                      iv_val  = <resource>-size ).
+      ENDIF.
+
+      " Add meta (optional)
+      IF <resource>-meta IS BOUND.
+        " Create the '_meta' node in the resulting JSON
+        result->set( iv_path = |/resources/{ resource_index }/_meta|
+                     iv_val  = <resource>-meta ).
       ENDIF.
 
       " Add annotations (optional)

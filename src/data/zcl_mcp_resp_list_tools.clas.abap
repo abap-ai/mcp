@@ -16,11 +16,13 @@ CLASS zcl_mcp_resp_list_tools DEFINITION
            END OF tool_annotations.
 
     TYPES: BEGIN OF tool,
-             name         TYPE string,
-             description  TYPE string,
-             title        TYPE string,
-             input_schema TYPE REF TO zif_mcp_ajson,
-             annotations  TYPE tool_annotations,
+             name          TYPE string,
+             description   TYPE string,
+             title         TYPE string,
+             input_schema  TYPE REF TO zif_mcp_ajson,
+             annotations   TYPE tool_annotations,
+             output_schema TYPE REF TO zif_mcp_ajson,
+             meta          TYPE REF TO zif_mcp_ajson,
            END OF tool.
 
     "! Table of tools
@@ -90,6 +92,18 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
         result->set( iv_path         = |/tools/{ tool_index }/inputSchema/type|
                      iv_val          = 'object'
                      iv_ignore_empty = abap_false ).
+      ENDIF.
+
+      " Add meta (optional)
+      IF <tool>-meta IS BOUND.
+        result->set( iv_path = |/tools/{ tool_index }/_meta|
+                     iv_val  = <tool>-meta ).
+      ENDIF.
+
+      " Add output schema (optional)
+      IF <tool>-output_schema IS BOUND.
+        result->set( iv_path = |/tools/{ tool_index }/outputSchema|
+                     iv_val  = <tool>-output_schema ).
       ENDIF.
 
       " Add annotations (optional)

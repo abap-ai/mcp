@@ -21,6 +21,7 @@ CLASS zcl_mcp_resp_list_prompts DEFINITION
              description TYPE string,
              arguments   TYPE prompt_arguments,
              title       TYPE string,
+             meta        TYPE REF TO zif_mcp_ajson,
            END OF prompt.
 
     TYPES prompts     TYPE STANDARD TABLE OF prompt WITH KEY name.
@@ -113,6 +114,12 @@ CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
         IF <argument>-required = abap_true.
           result->set( iv_path = |/prompts/{ prompt_index }/arguments/{ arg_index }/required|
                        iv_val  = <argument>-required ).
+        ENDIF.
+
+        " Add meta data if available
+        IF <prompt>-meta IS BOUND.
+          result->set( iv_path = |/prompts/{ prompt_index }/arguments/{ arg_index }/_meta|
+                       iv_val  = <prompt>-meta ).
         ENDIF.
       ENDLOOP.
     ENDLOOP.
