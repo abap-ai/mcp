@@ -15,6 +15,7 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
     TYPES: BEGIN OF resource_template,
              uritemplate TYPE string,
              name        TYPE string,
+             title       TYPE string,
              description TYPE string,
              mime_type   TYPE string,
              annotations TYPE annotations,
@@ -49,7 +50,26 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
     DATA int_meta               TYPE REF TO zif_mcp_ajson.
 ENDCLASS.
 
-CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
+
+
+CLASS ZCL_MCP_RESP_LIST_RES_TMPL IMPLEMENTATION.
+
+
+  METHOD set_meta.
+    int_meta = meta.
+  ENDMETHOD.
+
+
+  METHOD set_next_cursor.
+    int_next_cursor = next_cursor.
+  ENDMETHOD.
+
+
+  METHOD set_resource_templates.
+    int_resource_templates = resource_templates.
+  ENDMETHOD.
+
+
   METHOD zif_mcp_internal~generate_json.
     result = zcl_mcp_ajson=>create_empty( ).
     " Create resourceTemplates array
@@ -74,6 +94,12 @@ CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
       IF <template>-description IS NOT INITIAL.
         result->set( iv_path = |/resourceTemplates/{ template_index }/description|
                      iv_val  = <template>-description ).
+      ENDIF.
+
+      " Add title (optional)
+      IF <template>-title IS NOT INITIAL.
+        result->set( iv_path = |/resourceTemplates/{ template_index }/title|
+                     iv_val  = <template>-title ).
       ENDIF.
 
       " Add mimeType (optional)
@@ -114,17 +140,5 @@ CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
       result->set( iv_path = '/_meta'
                    iv_val  = int_meta ).
     ENDIF.
-  ENDMETHOD.
-
-  METHOD set_resource_templates.
-    int_resource_templates = resource_templates.
-  ENDMETHOD.
-
-  METHOD set_next_cursor.
-    int_next_cursor = next_cursor.
-  ENDMETHOD.
-
-  METHOD set_meta.
-    int_meta = meta.
   ENDMETHOD.
 ENDCLASS.

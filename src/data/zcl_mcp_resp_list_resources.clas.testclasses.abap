@@ -42,10 +42,10 @@ CLASS ltcl_resources_response IMPLEMENTATION.
 
   METHOD test_basic_resources.
     " Given
-    DATA(resources) = VALUE zcl_mcp_resp_list_resources=>resources( ( uri  = 'resource:file1'
-                                                                      name = 'File 1' )
-                                                                    ( uri  = 'resource:file2'
-                                                                      name = 'File 2' ) ).
+    DATA(resources) = VALUE zcl_mcp_resp_list_resources=>resources( ( uri   = 'resource:file1'
+                                                                      name  = 'File 1' )
+                                                                    ( uri   = 'resource:file2'
+                                                                      name  = 'File 2' ) ).
 
     cut->set_resources( resources ).
 
@@ -75,7 +75,8 @@ CLASS ltcl_resources_response IMPLEMENTATION.
                                 ( uri         = 'resource:file1'
                                   name        = 'File 1'
                                   description = 'Description of file 1'
-                                  mime_type    = 'application/json'
+                                  mime_type   = 'application/json'
+                                  title       = 'Title of File 1'
                                   size        = 1024
                                   annotations = VALUE #( audience = VALUE #( ( `user` ) ( `assistant` ) )
                                                          priority = '0.8' ) ) ).
@@ -92,6 +93,8 @@ CLASS ltcl_resources_response IMPLEMENTATION.
                                             act = ajson->get_string( '/resources/1/uri' ) ).
         cl_abap_unit_assert=>assert_equals( exp = 'File 1'
                                             act = ajson->get_string( '/resources/1/name' ) ).
+        cl_abap_unit_assert=>assert_equals( exp = 'Title of File 1'
+                                            act = ajson->get_string( '/resources/1/title' ) ).
         cl_abap_unit_assert=>assert_equals( exp = 'Description of file 1'
                                             act = ajson->get_string( '/resources/1/description' ) ).
         cl_abap_unit_assert=>assert_equals( exp = 'application/json'

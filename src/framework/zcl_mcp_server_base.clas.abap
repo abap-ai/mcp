@@ -127,9 +127,6 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
       server-protocol_version = zif_mcp_constants=>latest_protocol_version.
     ENDIF.
     response-result->set_protocol_version( server-protocol_version ).
-    " Set the header for the response
-    server-http_response->set_header_field( name  = 'MCP-Protocol-Version'
-                                            value = server-protocol_version ).
 
     handle_initialize( EXPORTING request  = request
                        CHANGING  response = response ).

@@ -15,6 +15,7 @@ CLASS zcl_mcp_resp_list_resources DEFINITION
     TYPES: BEGIN OF resource,
              uri         TYPE string,
              name        TYPE string,
+             title       TYPE string,
              description TYPE string,
              mime_type   TYPE string,
              annotations TYPE annotations,
@@ -69,6 +70,12 @@ CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
       result->set( iv_path         = |/resources/{ resource_index }/name|
                    iv_val          = <resource>-name
                    iv_ignore_empty = abap_false ).
+
+      " Add title (optional)
+      IF <resource>-title IS NOT INITIAL.
+        result->set( iv_path = |/resources/{ resource_index }/title|
+                     iv_val  = <resource>-title ).
+      ENDIF.
 
       " Add description (optional)
       IF <resource>-description IS NOT INITIAL.

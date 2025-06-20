@@ -31,6 +31,7 @@ CLASS ltcl_tools_response IMPLEMENTATION.
 
         DATA(tools) = VALUE zcl_mcp_resp_list_tools=>tools( ( name         = 'weather_tool'
                                                               description  = 'Get weather information'
+                                                              title        = 'Weather Tool Title'
                                                               input_schema = schema_builder->to_json( )
                                                               annotations  = VALUE #( title        = 'Weather Tool'
                                                                                       readonlyhint = abap_true ) ) ).
@@ -43,6 +44,9 @@ CLASS ltcl_tools_response IMPLEMENTATION.
         " Then
         cl_abap_unit_assert=>assert_equals( exp = 'weather_tool'
                                             act = ajson->get_string( '/tools/1/name' ) ).
+
+        cl_abap_unit_assert=>assert_equals( exp = 'Weather Tool Title'
+                                            act = ajson->get_string( '/tools/1/title' ) ).
 
         cl_abap_unit_assert=>assert_equals(
             exp = 'string'

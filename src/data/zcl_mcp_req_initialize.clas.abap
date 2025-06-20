@@ -6,6 +6,7 @@ CLASS zcl_mcp_req_initialize DEFINITION
     TYPES: BEGIN OF implementation,
              name    TYPE string,
              version TYPE string,
+             title   TYPE string,
            END OF implementation.
 
     TYPES: BEGIN OF roots_capability,
@@ -98,6 +99,7 @@ CLASS zcl_mcp_req_initialize IMPLEMENTATION.
     " Parse client info
     int_client_info-name    = json->get_string( '/clientInfo/name' ).
     int_client_info-version = json->get_string( '/clientInfo/version' ).
+    int_client_info-title   = json->get_string( '/clientInfo/title' ).
 
     " Parse capabilities
     IF json->exists( '/capabilities/roots' ).

@@ -44,6 +44,7 @@ CLASS ltcl_mcp_resp_list_prompts IMPLEMENTATION.
     " Create a prompt with arguments
     prompt-name        = 'Test Prompt'.
     prompt-description = 'A test prompt description'.
+    prompt-title       = 'Test Prompt Title'.
 
     " Add an argument
     argument-name        = 'arg1'.
@@ -56,6 +57,7 @@ CLASS ltcl_mcp_resp_list_prompts IMPLEMENTATION.
     argument-name        = 'arg2'.
     argument-description = 'Second argument'.
     argument-required    = abap_false.
+    argument-title       = 'Optional argument'.
     APPEND argument TO prompt-arguments.
 
     APPEND prompt TO prompts.
@@ -88,6 +90,10 @@ CLASS ltcl_mcp_resp_list_prompts IMPLEMENTATION.
     prompt_desc = json_test_prompt->get_string( '/prompts/1/description' ).
     cl_abap_unit_assert=>assert_equals( exp = 'A test prompt description'
                                         act = prompt_desc ).
+    DATA prompt_title TYPE string.
+    prompt_title = json_test_prompt->get_string( '/prompts/1/title' ).
+    cl_abap_unit_assert=>assert_equals( exp = 'Test Prompt Title'
+                                        act = prompt_title ).
 
     " Check arguments
     DATA arg1_name TYPE string.
@@ -113,6 +119,10 @@ CLASS ltcl_mcp_resp_list_prompts IMPLEMENTATION.
     arg2_desc = json_test_prompt->get_string( '/prompts/1/arguments/2/description' ).
     cl_abap_unit_assert=>assert_equals( exp = 'Second argument'
                                         act = arg2_desc ).
+    DATA arg2_title TYPE string.
+    arg2_title = json_test_prompt->get_string( '/prompts/1/arguments/2/title' ).
+    cl_abap_unit_assert=>assert_equals( exp = 'Optional argument'
+                                        act = arg2_title ).
 
     " Check simple prompt
     DATA simple_name TYPE string.

@@ -514,9 +514,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       " Determine protocol version from mcp-protocol-version header
       DATA(protocol_version) = mcp_server->server-http_request->get_header_field( 'Mcp-Protocol-Version' ) ##NO_TEXT.
       IF protocol_version IS INITIAL.
-        " For backward compatibility we deviate from the specification and use the default protocol version
-        " As per specification we SHOULD assume 2025-06-18 but that means stateless clients will not work
-        mcp_server->server-protocol_version = zif_mcp_constants=>default_protocol_version.
+        mcp_server->server-protocol_version = zif_mcp_constants=>latest_protocol_version.
       ELSE.
         SPLIT zif_mcp_constants=>supported_protocol_versions AT `,` INTO TABLE DATA(supported_protocol_versions).
         IF line_exists( supported_protocol_versions[ table_line = protocol_version ] ).
@@ -528,9 +526,6 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
           RETURN.
         ENDIF.
       ENDIF.
-      " Set current protocol version header
-      mcp_server->server-http_response->set_header_field( name  = 'Mcp-Protocol-Version'
-                                                          value = mcp_server->server-protocol_version ) ##NO_TEXT.
     ENDIF.
 
     " Process all requests
