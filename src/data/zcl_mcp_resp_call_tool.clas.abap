@@ -14,14 +14,6 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
              last_modified TYPE timestamp,
            END OF annotations.
 
-    " Base metadata for resources
-    TYPES: BEGIN OF base_metadata,
-             name        TYPE string,
-             title       TYPE string,
-             description TYPE string,
-             size        TYPE i,
-           END OF base_metadata.
-
     " Resource contents types
     TYPES: BEGIN OF text_resource_contents,
              uri       TYPE string,

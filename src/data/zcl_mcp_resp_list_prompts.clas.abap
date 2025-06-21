@@ -82,6 +82,12 @@ CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
                      iv_val  = <prompt>-title ).
       ENDIF.
 
+      " Add meta data if available
+      IF <prompt>-meta IS BOUND.
+        result->set( iv_path = |/prompts/{ prompt_index }/_meta|
+                     iv_val  = <prompt>-meta ).
+      ENDIF.
+
       " Create arguments array if there are arguments
       IF <prompt>-arguments IS INITIAL.
         CONTINUE.
@@ -114,12 +120,6 @@ CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
         IF <argument>-required = abap_true.
           result->set( iv_path = |/prompts/{ prompt_index }/arguments/{ arg_index }/required|
                        iv_val  = <argument>-required ).
-        ENDIF.
-
-        " Add meta data if available
-        IF <prompt>-meta IS BOUND.
-          result->set( iv_path = |/prompts/{ prompt_index }/arguments/{ arg_index }/_meta|
-                       iv_val  = <prompt>-meta ).
         ENDIF.
       ENDLOOP.
     ENDLOOP.

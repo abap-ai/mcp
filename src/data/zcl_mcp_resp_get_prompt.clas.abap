@@ -62,6 +62,7 @@ CREATE PUBLIC.
              type        TYPE string,
              uri         TYPE string,
              name        TYPE string,
+             title       TYPE string,
              description TYPE string,
              mime_type   TYPE string,
              meta        TYPE REF TO zif_mcp_ajson,
@@ -163,15 +164,17 @@ CREATE PUBLIC.
     "!
     "! @parameter role        | <p class="shorttext synchronized">Role (user or assistant)</p>
     "! @parameter uri         | <p class="shorttext synchronized">Resource URI</p>
-    "! @parameter name        | <p class="shorttext synchronized">Optional resource name</p>
+    "! @parameter name        | <p class="shorttext synchronized">resource name</p>
     "! @parameter description | <p class="shorttext synchronized">Optional resource description</p>
+    "! @parameter title       | <p class="shorttext synchronized">Optional resource title</p>
     "! @parameter mime_type   | <p class="shorttext synchronized">Optional MIME type</p>
     "! @parameter meta        | <p class="shorttext synchronized">Optional meta data</p>
     METHODS add_resource_link_message
       IMPORTING role         TYPE string
                 uri          TYPE string
-                !name        TYPE string               OPTIONAL
+                !name        TYPE string
                 !description TYPE string               OPTIONAL
+                title        TYPE string               OPTIONAL
                 mime_type    TYPE string               OPTIONAL
                 meta         TYPE REF TO zif_mcp_ajson OPTIONAL.
 
@@ -217,6 +220,7 @@ CREATE PUBLIC.
              res_mime     TYPE string,               " For resource messages
              res_name     TYPE string,               " For resource link messages
              res_desc     TYPE string,               " For resource link messages
+             res_title    TYPE string,               " For resource link messages
              annotations  TYPE annotations,          " Annotations for any type
              content_meta TYPE REF TO zif_mcp_ajson, " Meta data for content
            END OF unified_message.
@@ -365,6 +369,11 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
           IF <message>-res_mime IS NOT INITIAL.
             result->set( iv_path = |{ message_path }/content/mimeType|
                          iv_val  = <message>-res_mime ).
+          ENDIF.
+
+          IF <message>-res_title IS NOT INITIAL.
+            result->set( iv_path = |{ message_path }/content/title|
+                         iv_val  = <message>-res_title ).
           ENDIF.
       ENDCASE.
 
@@ -657,6 +666,13 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
             mime_type = <res_mime>.
           ENDIF.
 
+          " TODO: variable is assigned but never used (ABAP cleaner)
+          DATA title TYPE string.
+          ASSIGN COMPONENT 'TITLE' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<title>).
+          IF sy-subrc = 0.
+            title = <title>.
+          ENDIF.
+
           " Add resource link message
           APPEND VALUE unified_message( type         = message_type-resource_link
                                         role         = <input_message>-role
@@ -718,6 +734,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
   METHOD add_resource_link_message.
     APPEND VALUE unified_message( type         = message_type-resource_link
                                   role         = role
+                                  res_title    = title
                                   res_uri      = uri
                                   res_name     = name
                                   res_desc     = description

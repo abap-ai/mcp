@@ -379,6 +379,7 @@ CLASS ltcl_get_prompt_result IMPLEMENTATION.
   METHOD test_resource_link_minimal.
     " Arrange - Test with only required URI field
     cut->add_resource_link_message( role = 'assistant'
+                                    name = 'Minimal Resource Link'
                                     uri  = 'file:///minimal.txt' ).
 
     " Act
@@ -621,6 +622,7 @@ CLASS ltcl_get_prompt_result IMPLEMENTATION.
     " Add resource link with different meta
     cut->add_resource_link_message( role = 'assistant'
                                     uri  = 'file:///answer.pdf'
+                                    name = 'Answer Document'
                                     meta = meta2 ).
 
     " Add image without meta
