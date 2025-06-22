@@ -27,9 +27,16 @@ CLASS zcl_mcp_req_list_prompts DEFINITION
     METHODS has_cursor
       RETURNING VALUE(result) TYPE abap_bool.
 
+    "! <p class="shorttext synchronized">Get _meta fields</p>
+    "!
+    "! @parameter result | <p class="shorttext synchronized">_meta JSON</p>
+    METHODS get_meta
+      RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson.
+
   PRIVATE SECTION.
-    DATA int_cursor TYPE page_cursor.
+    DATA int_cursor     TYPE page_cursor.
     DATA int_has_cursor TYPE abap_bool.
+    DATA int_meta       TYPE REF TO zif_mcp_ajson.
 ENDCLASS.
 
 CLASS zcl_mcp_req_list_prompts IMPLEMENTATION.
@@ -52,6 +59,13 @@ CLASS zcl_mcp_req_list_prompts IMPLEMENTATION.
       int_has_cursor = abap_false.
       CLEAR int_cursor.
     ENDIF.
+
+    " Check for _meta fields
+    IF json->exists( '/_meta' ) IS NOT INITIAL.
+      int_meta = json->slice( '/_meta' ).
+    ELSE.
+      int_meta = zcl_mcp_ajson=>create_empty( ).
+    ENDIF.
   ENDMETHOD.
 
   METHOD get_cursor.
@@ -61,4 +75,9 @@ CLASS zcl_mcp_req_list_prompts IMPLEMENTATION.
   METHOD has_cursor.
     result = int_has_cursor.
   ENDMETHOD.
+
+  METHOD get_meta.
+    result = int_meta.
+  ENDMETHOD.
+
 ENDCLASS.
