@@ -8,8 +8,9 @@ CLASS zcl_mcp_resp_list_resources DEFINITION
     INTERFACES zif_mcp_internal.
 
     TYPES: BEGIN OF annotations,
-             audience TYPE STANDARD TABLE OF string WITH EMPTY KEY,
-             priority TYPE decfloat16,
+             audience      TYPE STANDARD TABLE OF string WITH EMPTY KEY,
+             priority      TYPE decfloat16,
+             last_modified TYPE timestamp,
            END OF annotations.
 
     TYPES: BEGIN OF resource,
@@ -50,6 +51,10 @@ CLASS zcl_mcp_resp_list_resources DEFINITION
     DATA int_resources   TYPE resources.
     DATA int_next_cursor TYPE string.
     DATA int_meta        TYPE REF TO zif_mcp_ajson.
+
+    METHODS convert_timestamp_to_iso8601
+      IMPORTING timestamp     TYPE timestamp
+      RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 
 CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
@@ -104,7 +109,10 @@ CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
       ENDIF.
 
       " Add annotations (optional)
-      IF <resource>-annotations-audience IS NOT INITIAL OR <resource>-annotations-priority IS NOT INITIAL.
+      IF    <resource>-annotations-audience      IS NOT INITIAL
+         OR <resource>-annotations-priority      IS NOT INITIAL
+         OR <resource>-annotations-last_modified IS NOT INITIAL.
+
         " Add audience array if not empty
         IF <resource>-annotations-audience IS NOT INITIAL.
           result->touch_array( |/resources/{ resource_index }/annotations/audience| ).
@@ -119,6 +127,13 @@ CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
         IF <resource>-annotations-priority IS NOT INITIAL.
           result->set( iv_path = |/resources/{ resource_index }/annotations/priority|
                        iv_val  = <resource>-annotations-priority ).
+        ENDIF.
+
+        " Add lastModified if not empty
+        IF <resource>-annotations-last_modified IS NOT INITIAL.
+          DATA(iso_timestamp) = convert_timestamp_to_iso8601( <resource>-annotations-last_modified ).
+          result->set( iv_path = |/resources/{ resource_index }/annotations/lastModified|
+                       iv_val  = iso_timestamp ).
         ENDIF.
       ENDIF.
     ENDLOOP.
@@ -135,6 +150,38 @@ CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
       result->set( iv_path = '/_meta'
                    iv_val  = int_meta ).
     ENDIF.
+  ENDMETHOD.
+
+  METHOD convert_timestamp_to_iso8601.
+    " Convert session timestamp to UTC and format as ISO 8601
+    DATA local_date       TYPE sy-datum.
+    DATA local_time       TYPE sy-uzeit.
+    DATA utc_timestamp    TYPE timestamp.
+    DATA timestamp_string TYPE string.
+
+    " Convert timestamp to string first
+    timestamp_string = |{ timestamp }|.
+
+    " Pad with leading zeros if needed
+    WHILE strlen( timestamp_string ) < 14.
+      timestamp_string = |0{ timestamp_string }|.
+    ENDWHILE.
+
+    " Extract date and time from timestamp string
+    local_date = timestamp_string+0(8).
+    local_time = timestamp_string+8(6).
+
+    " Convert local date/time to UTC timestamp
+    CONVERT DATE local_date TIME local_time INTO TIME STAMP utc_timestamp TIME ZONE sy-zonlo.
+
+    " Convert UTC timestamp back to string for formatting
+    timestamp_string = |{ utc_timestamp }|.
+    WHILE strlen( timestamp_string ) < 14.
+      timestamp_string = |0{ timestamp_string }|.
+    ENDWHILE.
+
+    " Format: YYYYMMDDHHMMSS -> YYYY-MM-DDTHH:MM:SSZ
+    result = |{ timestamp_string+0(4) }-{ timestamp_string+4(2) }-{ timestamp_string+6(2) }T{ timestamp_string+8(2) }:{ timestamp_string+10(2) }:{ timestamp_string+12(2) }Z|.
   ENDMETHOD.
 
   METHOD set_resources.

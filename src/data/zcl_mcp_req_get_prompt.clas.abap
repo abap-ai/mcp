@@ -113,7 +113,7 @@ CLASS zcl_mcp_req_get_prompt IMPLEMENTATION.
     result = int_arguments.
   ENDMETHOD.
 
-   METHOD get_meta.
+  METHOD get_meta.
     result = int_meta.
   ENDMETHOD.
 ENDCLASS.
