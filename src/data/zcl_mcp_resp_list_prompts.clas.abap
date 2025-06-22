@@ -10,6 +10,7 @@ CLASS zcl_mcp_resp_list_prompts DEFINITION
     TYPES: BEGIN OF prompt_argument,
              name        TYPE string,
              description TYPE string,
+             title       TYPE string,
              required    TYPE abap_bool,
            END OF prompt_argument.
 
@@ -19,6 +20,8 @@ CLASS zcl_mcp_resp_list_prompts DEFINITION
              name        TYPE string,
              description TYPE string,
              arguments   TYPE prompt_arguments,
+             title       TYPE string,
+             meta        TYPE REF TO zif_mcp_ajson,
            END OF prompt.
 
     TYPES prompts     TYPE STANDARD TABLE OF prompt WITH KEY name.
@@ -64,13 +67,25 @@ CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
 
       " Add name (required)
       result->set( iv_path         = |/prompts/{ prompt_index }/name|
-                  iv_val          = <prompt>-name
-                  iv_ignore_empty = abap_false ).
+                   iv_val          = <prompt>-name
+                   iv_ignore_empty = abap_false ).
 
       " Add description (optional)
       IF <prompt>-description IS NOT INITIAL.
         result->set( iv_path = |/prompts/{ prompt_index }/description|
-                    iv_val  = <prompt>-description ).
+                     iv_val  = <prompt>-description ).
+      ENDIF.
+
+      " Add title (optional)
+      IF <prompt>-title IS NOT INITIAL.
+        result->set( iv_path = |/prompts/{ prompt_index }/title|
+                     iv_val  = <prompt>-title ).
+      ENDIF.
+
+      " Add meta data if available
+      IF <prompt>-meta IS BOUND.
+        result->set( iv_path = |/prompts/{ prompt_index }/_meta|
+                     iv_val  = <prompt>-meta ).
       ENDIF.
 
       " Create arguments array if there are arguments
@@ -86,19 +101,25 @@ CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
 
         " Add name (required)
         result->set( iv_path         = |/prompts/{ prompt_index }/arguments/{ arg_index }/name|
-                    iv_val          = <argument>-name
-                    iv_ignore_empty = abap_false ).
+                     iv_val          = <argument>-name
+                     iv_ignore_empty = abap_false ).
 
         " Add description (optional)
         IF <argument>-description IS NOT INITIAL.
           result->set( iv_path = |/prompts/{ prompt_index }/arguments/{ arg_index }/description|
-                      iv_val  = <argument>-description ).
+                       iv_val  = <argument>-description ).
+        ENDIF.
+
+        " Add title (optional)
+        IF <argument>-title IS NOT INITIAL.
+          result->set( iv_path = |/prompts/{ prompt_index }/arguments/{ arg_index }/title|
+                       iv_val  = <argument>-title ).
         ENDIF.
 
         " Add required flag (optional)
         IF <argument>-required = abap_true.
           result->set( iv_path = |/prompts/{ prompt_index }/arguments/{ arg_index }/required|
-                      iv_val  = <argument>-required ).
+                       iv_val  = <argument>-required ).
         ENDIF.
       ENDLOOP.
     ENDLOOP.
@@ -106,14 +127,14 @@ CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
     " Add nextCursor (optional)
     IF int_next_cursor IS NOT INITIAL.
       result->set( iv_path = '/nextCursor'
-                  iv_val  = int_next_cursor ).
+                   iv_val  = int_next_cursor ).
     ENDIF.
 
     " Add metadata (optional)
     IF int_meta IS BOUND.
       " Create the '_meta' node in the resulting JSON
       result->set( iv_path = '/_meta'
-                  iv_val  = int_meta ).
+                   iv_val  = int_meta ).
 
     ENDIF.
   ENDMETHOD.

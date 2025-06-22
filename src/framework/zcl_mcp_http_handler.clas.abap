@@ -336,12 +336,11 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                                       reason = 'Not Found' ) ##NO_TEXT.
         continue = abap_false.
       ELSE.
-        mcp_server->server-area             = area.
-        mcp_server->server-server           = servername.
-        mcp_server->server-protocol_version = zif_mcp_constants=>protocol_version.
-        mcp_server->server-http_request     = server->request.
-        mcp_server->server-http_response    = server->response.
-        mcp_server->server-http_server      = server.
+        mcp_server->server-area          = area.
+        mcp_server->server-server        = servername.
+        mcp_server->server-http_request  = server->request.
+        mcp_server->server-http_response = server->response.
+        mcp_server->server-http_server   = server.
       ENDIF.
     ENDIF.
 
@@ -454,31 +453,13 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD process_request.
-    DATA is_batch  TYPE abap_bool.
-    DATA requests  TYPE zcl_mcp_jsonrpc=>requests.
-    DATA responses TYPE zcl_mcp_jsonrpc=>responses.
-    DATA response  TYPE zcl_mcp_jsonrpc=>response.
-    DATA request   TYPE zcl_mcp_jsonrpc=>request.
-    DATA error     TYPE zcl_mcp_jsonrpc=>error.
-
-    " Check if it's a batch request - safely check first character
-    IF strlen( json ) >= 1.
-      DATA(first_char) = substring( val = json
-                                    off = 0
-                                    len = 1 ).
-      is_batch = xsdbool( first_char = '[' ).
-    ENDIF.
+    DATA response TYPE zcl_mcp_jsonrpc=>response.
+    DATA request  TYPE zcl_mcp_jsonrpc=>request.
+    DATA error    TYPE zcl_mcp_jsonrpc=>error.
 
     " Parse the request(s)
     TRY.
-        IF is_batch = abap_true.
-          " Batch processing
-          requests = jsonrpc->parse_batch_request( json ).
-        ELSE.
-          " Single request
-          request = jsonrpc->parse_request( json ).
-          APPEND request TO requests.
-        ENDIF.
+        request = jsonrpc->parse_request( json ).
       CATCH zcx_mcp_ajson_error.
         " JSON parse error
         error-code    = jsonrpc->error_codes-parse_error.
@@ -487,20 +468,10 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                                                    code    = error-code
                                                    message = error-message ).
         result = jsonrpc->serialize_response( response ).
-        logger->warning( |JSON parse error for { mcp_server->server-area } { mcp_server->server-server } details: { error-message }| ) ##NO_TEXT.
+        logger->warning(
+            |JSON parse error for { mcp_server->server-area } { mcp_server->server-server } details: { error-message }| ) ##NO_TEXT.
         RETURN.
     ENDTRY.
-
-    " No initialize as batch allowed
-    READ TABLE requests INTO request INDEX 1.
-    IF sy-subrc = 0 AND request-method = 'initialize' AND is_batch = abap_true.
-      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-      response-error-message = 'initialize in batch not allowed' ##NO_TEXT.
-      response-id      = request-id.
-      response-jsonrpc = request-jsonrpc.
-      result = jsonrpc->serialize_batch_response( responses ).
-      logger->warning( |Batch request with initialize for { mcp_server->server-area } { mcp_server->server-server } details: { response-error-message }| ) ##NO_TEXT.
-    ENDIF.
 
     " Get session id except for initialize
     IF request-method <> 'initialize'.
@@ -509,7 +480,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
         WHEN zcl_mcp_session=>session_mode_icf.
           IF session_id <> mcp_server->server-session_id.
             mcp_server->server-http_response->set_status( code   = 404
-                                          reason = 'Not Found' ) ##NO_TEXT.
+                                                          reason = 'Not Found' ) ##NO_TEXT.
             RETURN.
           ENDIF.
         WHEN zcl_mcp_session=>session_mode_mcp.
@@ -522,94 +493,102 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
               CASE session_error->if_t100_message~t100key.
                 WHEN zcx_mcp_server=>session_unknown OR zcx_mcp_server=>session_expired.
                   mcp_server->server-http_response->set_status( code   = 404
-                                                reason = 'Not Found' ) ##NO_TEXT.
+                                                                reason = 'Not Found' ) ##NO_TEXT.
                   RETURN.
                 WHEN zcx_mcp_server=>session_load_error.
-                  logger->error( |Session { session_id } load error for { mcp_server->server-area } { mcp_server->server-server } details: { session_error->get_text( ) }| ) ##NO_TEXT.
+                  logger->error(
+                      |Session { session_id } load error for { mcp_server->server-area } { mcp_server->server-server } details: { session_error->get_text( ) }| ) ##NO_TEXT.
                   mcp_server->server-http_response->set_status( code   = 500
-                                                reason = 'Internal Error' ) ##NO_TEXT.
+                                                                reason = 'Internal Error' ) ##NO_TEXT.
                   RETURN.
               ENDCASE.
               mcp_server->server-http_response->set_status( code   = 500
-                                            reason = 'Internal Error' ) ##NO_TEXT.
+                                                            reason = 'Internal Error' ) ##NO_TEXT.
               RETURN.
           ENDTRY.
       ENDCASE.
     ENDIF.
 
-    " Process all requests
-    LOOP AT requests ASSIGNING FIELD-SYMBOL(<request>).
-      CLEAR response.
-      mcp_server->server-mcp_request = <request>.
-
-      logger->info( |Processing request { <request>-method } for { mcp_server->server-area } { mcp_server->server-server }| ) ##NO_TEXT.
-
-      TRY.
-          CASE <request>-method.
-            WHEN 'initialize'.
-              DATA(initialize) = mcp_server->initialize( NEW zcl_mcp_req_initialize( <request>-params ) ).
-              response-error  = initialize-error.
-              response-result = initialize-result->zif_mcp_internal~generate_json( ).
-            WHEN 'prompts/list'.
-              DATA(list_prompts) = mcp_server->prompts_list( NEW zcl_mcp_req_list_prompts( <request>-params ) ).
-              response-error  = list_prompts-error.
-              response-result = list_prompts-result->zif_mcp_internal~generate_json( ).
-            WHEN 'prompts/get'.
-              DATA(get_prompt) = mcp_server->prompts_get( NEW zcl_mcp_req_get_prompt( <request>-params ) ).
-              response-error  = get_prompt-error.
-              response-result = get_prompt-result->zif_mcp_internal~generate_json( ).
-            WHEN 'resources/list'.
-              DATA(list_resources) = mcp_server->resources_list( NEW zcl_mcp_req_list_resources( <request>-params ) ).
-              response-error  = list_resources-error.
-              response-result = list_resources-result->zif_mcp_internal~generate_json( ).
-            WHEN 'resources/templates/list'.
-              DATA(list_res_tmpl) = mcp_server->resources_templates_list(
-                                        NEW zcl_mcp_req_list_res_tmpls( <request>-params ) ).
-              response-error  = list_res_tmpl-error.
-              response-result = list_res_tmpl-result->zif_mcp_internal~generate_json( ).
-            WHEN 'resources/read'.
-              DATA(read_resource) = mcp_server->resources_read( NEW zcl_mcp_req_read_resource( <request>-params ) ).
-              response-error  = read_resource-error.
-              response-result = read_resource-result->zif_mcp_internal~generate_json( ).
-            WHEN 'tools/list'.
-              DATA(list_tools) = mcp_server->tools_list( NEW zcl_mcp_req_list_tools( <request>-params ) ).
-              response-error  = list_tools-error.
-              response-result = list_tools-result->zif_mcp_internal~generate_json( ).
-            WHEN 'tools/call'.
-              DATA(call_tool) = mcp_server->tools_call( NEW zcl_mcp_req_call_tool( <request>-params ) ).
-              response-error  = call_tool-error.
-              response-result = call_tool-result->zif_mcp_internal~generate_json( ).
-            WHEN OTHERS.
-              response-error-code    = -32601.
-              response-error-message = |Method { <request>-method } not allowed.| ##NO_TEXT.
-          ENDCASE.
-
-        CATCH zcx_mcp_server INTO DATA(mcp_error).
-          CASE mcp_error->if_t100_message~t100key.
-            WHEN zcx_mcp_server=>invalid_arguments OR zcx_mcp_server=>prompt_name_invalid OR zcx_mcp_server=>required_params.
-              response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-              response-error-message = mcp_error->get_text( ).
-            WHEN OTHERS.
-              response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
-              response-error-message = mcp_error->get_text( ).
-          ENDCASE.
-          logger->warning( |Error processing request { <request>-method } for { mcp_server->server-area } { mcp_server->server-server } details: { response-error-message }| ) ##NO_TEXT.
-      ENDTRY.
-
-      response-id      = request-id.
-      response-jsonrpc = request-jsonrpc.
-      APPEND response TO responses.
-    ENDLOOP.
-
-    " Serialize the response(s)
-    IF is_batch = abap_true.
-      result = jsonrpc->serialize_batch_response( responses ).
-    ELSE.
-      READ TABLE responses INTO response INDEX 1.
-      IF sy-subrc = 0.
-        result = jsonrpc->serialize_response( response ).
+    " Handle mcp-protocol-version header except for initialize
+    IF request-method <> 'initialize'.
+      " Determine protocol version from mcp-protocol-version header
+      DATA(protocol_version) = mcp_server->server-http_request->get_header_field( 'Mcp-Protocol-Version' ) ##NO_TEXT.
+      IF protocol_version IS INITIAL.
+        mcp_server->server-protocol_version = zif_mcp_constants=>latest_protocol_version.
+      ELSE.
+        SPLIT zif_mcp_constants=>supported_protocol_versions AT `,` INTO TABLE DATA(supported_protocol_versions).
+        IF line_exists( supported_protocol_versions[ table_line = protocol_version ] ).
+          mcp_server->server-protocol_version = protocol_version.
+        ELSE.
+          " As per spec we must return a 400 error if we don't support the protocol version
+          mcp_server->server-http_response->set_status( code   = 400
+                                                        reason = 'Bad Request' ) ##NO_TEXT.
+          RETURN.
+        ENDIF.
       ENDIF.
     ENDIF.
+
+    " Process all requests
+    mcp_server->server-mcp_request = request.
+
+    logger->info( |Processing request { request-method } for { mcp_server->server-area } { mcp_server->server-server }| ) ##NO_TEXT.
+
+    TRY.
+        CASE request-method.
+          WHEN 'initialize'.
+            DATA(initialize) = mcp_server->initialize( NEW zcl_mcp_req_initialize( request-params ) ).
+            response-error  = initialize-error.
+            response-result = initialize-result->zif_mcp_internal~generate_json( ).
+          WHEN 'prompts/list'.
+            DATA(list_prompts) = mcp_server->prompts_list( NEW zcl_mcp_req_list_prompts( request-params ) ).
+            response-error  = list_prompts-error.
+            response-result = list_prompts-result->zif_mcp_internal~generate_json( ).
+          WHEN 'prompts/get'.
+            DATA(get_prompt) = mcp_server->prompts_get( NEW zcl_mcp_req_get_prompt( request-params ) ).
+            response-error  = get_prompt-error.
+            response-result = get_prompt-result->zif_mcp_internal~generate_json( ).
+          WHEN 'resources/list'.
+            DATA(list_resources) = mcp_server->resources_list( NEW zcl_mcp_req_list_resources( request-params ) ).
+            response-error  = list_resources-error.
+            response-result = list_resources-result->zif_mcp_internal~generate_json( ).
+          WHEN 'resources/templates/list'.
+            DATA(list_res_tmpl) = mcp_server->resources_templates_list( NEW zcl_mcp_req_list_res_tmpls( request-params ) ).
+            response-error  = list_res_tmpl-error.
+            response-result = list_res_tmpl-result->zif_mcp_internal~generate_json( ).
+          WHEN 'resources/read'.
+            DATA(read_resource) = mcp_server->resources_read( NEW zcl_mcp_req_read_resource( request-params ) ).
+            response-error  = read_resource-error.
+            response-result = read_resource-result->zif_mcp_internal~generate_json( ).
+          WHEN 'tools/list'.
+            DATA(list_tools) = mcp_server->tools_list( NEW zcl_mcp_req_list_tools( request-params ) ).
+            response-error  = list_tools-error.
+            response-result = list_tools-result->zif_mcp_internal~generate_json( ).
+          WHEN 'tools/call'.
+            DATA(call_tool) = mcp_server->tools_call( NEW zcl_mcp_req_call_tool( request-params ) ).
+            response-error  = call_tool-error.
+            response-result = call_tool-result->zif_mcp_internal~generate_json( ).
+          WHEN OTHERS.
+            response-error-code    = -32601.
+            response-error-message = |Method { request-method } not allowed.| ##NO_TEXT.
+        ENDCASE.
+
+      CATCH zcx_mcp_server INTO DATA(mcp_error).
+        CASE mcp_error->if_t100_message~t100key.
+          WHEN zcx_mcp_server=>invalid_arguments OR zcx_mcp_server=>prompt_name_invalid OR zcx_mcp_server=>required_params.
+            response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+            response-error-message = mcp_error->get_text( ).
+          WHEN OTHERS.
+            response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+            response-error-message = mcp_error->get_text( ).
+        ENDCASE.
+        logger->warning(
+            |Error processing request { request-method } for { mcp_server->server-area } { mcp_server->server-server } details: { response-error-message }| ) ##NO_TEXT.
+    ENDTRY.
+
+    response-id      = request-id.
+    response-jsonrpc = request-jsonrpc.
+
+    result = jsonrpc->serialize_response( response ).
   ENDMETHOD.
 
   METHOD handle_options.

@@ -6,6 +6,7 @@ CLASS zcl_mcp_req_initialize DEFINITION
     TYPES: BEGIN OF implementation,
              name    TYPE string,
              version TYPE string,
+             title   TYPE string,
            END OF implementation.
 
     TYPES: BEGIN OF roots_capability,
@@ -72,6 +73,12 @@ CLASS zcl_mcp_req_initialize DEFINITION
     METHODS get_experimental_json
       RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson.
 
+    "! <p class="shorttext synchronized">Get _meta fields</p>
+    "!
+    "! @parameter result | <p class="shorttext synchronized">_meta JSON</p>
+    METHODS get_meta
+      RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson.
+
   PRIVATE SECTION.
     DATA int_protocol_version  TYPE string.
     DATA int_capabilities      TYPE client_capabilities.
@@ -81,6 +88,7 @@ CLASS zcl_mcp_req_initialize DEFINITION
     DATA int_has_experimental  TYPE abap_bool.
     DATA int_sampling_json     TYPE REF TO zif_mcp_ajson.
     DATA int_experimental_json TYPE REF TO zif_mcp_ajson.
+    DATA int_meta              TYPE REF TO zif_mcp_ajson.
 ENDCLASS.
 
 CLASS zcl_mcp_req_initialize IMPLEMENTATION.
@@ -91,6 +99,7 @@ CLASS zcl_mcp_req_initialize IMPLEMENTATION.
     " Parse client info
     int_client_info-name    = json->get_string( '/clientInfo/name' ).
     int_client_info-version = json->get_string( '/clientInfo/version' ).
+    int_client_info-title   = json->get_string( '/clientInfo/title' ).
 
     " Parse capabilities
     IF json->exists( '/capabilities/roots' ).
@@ -109,6 +118,13 @@ CLASS zcl_mcp_req_initialize IMPLEMENTATION.
     IF json->exists( '/capabilities/experimental' ).
       int_has_experimental = abap_true.
       int_experimental_json = json->slice( '/capabilities/experimental' ).
+    ENDIF.
+
+    " Check for _meta fields
+    IF json->exists( '/_meta' ).
+      int_meta = json->slice( '/_meta' ).
+    ELSE.
+      int_meta = zcl_mcp_ajson=>create_empty( ).
     ENDIF.
   ENDMETHOD.
 
@@ -142,5 +158,9 @@ CLASS zcl_mcp_req_initialize IMPLEMENTATION.
 
   METHOD get_experimental_json.
     result = int_experimental_json.
+  ENDMETHOD.
+
+  METHOD get_meta.
+    result = int_meta.
   ENDMETHOD.
 ENDCLASS.

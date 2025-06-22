@@ -11,12 +11,14 @@ CLASS zcl_mcp_resp_read_resource DEFINITION
              uri       TYPE string,
              mime_type TYPE string,
              text      TYPE string,
+             meta      TYPE REF TO zif_mcp_ajson,
            END OF text_resource_contents.
 
     TYPES: BEGIN OF blob_resource_contents,
              uri       TYPE string,
              mime_type TYPE string,
              blob      TYPE string,
+             meta      TYPE REF TO zif_mcp_ajson,
            END OF blob_resource_contents.
 
     TYPES: BEGIN OF resource_content_wrapper,
@@ -31,20 +33,24 @@ CLASS zcl_mcp_resp_read_resource DEFINITION
     "! @parameter uri       | <p class="shorttext synchronized">URI of the resource</p>
     "! @parameter text      | <p class="shorttext synchronized">Text content</p>
     "! @parameter mime_type | <p class="shorttext synchronized">Optional MIME type</p>
+    "! @parameter meta      | <p class="shorttext synchronized">Optional metadata</p>
     METHODS add_text_resource
       IMPORTING uri       TYPE string
                 !text     TYPE string
-                mime_type TYPE string OPTIONAL.
+                mime_type TYPE string OPTIONAL
+                meta      TYPE REF TO zif_mcp_ajson OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Blob Resource</p>
     "!
     "! @parameter uri       | <p class="shorttext synchronized">URI of the resource</p>
     "! @parameter blob      | <p class="shorttext synchronized">Base64-encoded blob data</p>
     "! @parameter mime_type | <p class="shorttext synchronized">Optional MIME type</p>
+    "! @parameter meta      | <p class="shorttext synchronized">Optional metadata</p>
     METHODS add_blob_resource
       IMPORTING uri       TYPE string
                 !blob     TYPE string
-                mime_type TYPE string OPTIONAL.
+                mime_type TYPE string OPTIONAL
+                meta      TYPE REF TO zif_mcp_ajson OPTIONAL.
 
     "! <p class="shorttext synchronized">Set Resource Contents</p>
     "!
@@ -77,12 +83,14 @@ CLASS zcl_mcp_resp_read_resource DEFINITION
              uri       TYPE string,
              text      TYPE string,
              mime_type TYPE string,
+             meta      TYPE REF TO zif_mcp_ajson,
            END OF text_resource_entry.
 
     TYPES: BEGIN OF blob_resource_entry,
              uri       TYPE string,
              blob      TYPE string,
              mime_type TYPE string,
+             meta      TYPE REF TO zif_mcp_ajson,
            END OF blob_resource_entry.
 
     " Resource order tracking
@@ -132,6 +140,12 @@ CLASS zcl_mcp_resp_read_resource IMPLEMENTATION.
             result->set( iv_path         = |{ content_path }/text|
                          iv_val          = <text>-text
                          iv_ignore_empty = abap_false ).
+
+            " Set metadata if present
+            IF <text>-meta IS BOUND.
+              result->set( iv_path = |{ content_path }/_meta|
+                           iv_val  = <text>-meta ).
+            ENDIF.
           ENDIF.
 
         WHEN resource_type-blob.
@@ -153,11 +167,17 @@ CLASS zcl_mcp_resp_read_resource IMPLEMENTATION.
             result->set( iv_path         = |{ content_path }/blob|
                          iv_val          = <blob>-blob
                          iv_ignore_empty = abap_false ).
+
+            " Set metadata if present
+            IF <blob>-meta IS BOUND.
+              result->set( iv_path = |{ content_path }/_meta|
+                           iv_val  = <blob>-meta ).
+            ENDIF.
           ENDIF.
       ENDCASE.
     ENDLOOP.
 
-    " Add metadata (optional)
+    " Add response-level metadata (optional)
     IF meta IS BOUND.
       result->set( iv_path = '/_meta'
                    iv_val  = meta ).
@@ -169,6 +189,7 @@ CLASS zcl_mcp_resp_read_resource IMPLEMENTATION.
       uri       = uri
       text      = text
       mime_type = mime_type
+      meta      = meta
     ) TO text_resources.
 
     " Track order
@@ -183,6 +204,7 @@ CLASS zcl_mcp_resp_read_resource IMPLEMENTATION.
       uri       = uri
       blob      = blob
       mime_type = mime_type
+      meta      = meta
     ) TO blob_resources.
 
     " Track order
@@ -214,6 +236,7 @@ CLASS zcl_mcp_resp_read_resource IMPLEMENTATION.
                 uri       = text_resource->uri
                 text      = text_resource->text
                 mime_type = text_resource->mime_type
+                meta      = text_resource->meta
               ) TO text_resources.
 
               " Track order
@@ -236,6 +259,7 @@ CLASS zcl_mcp_resp_read_resource IMPLEMENTATION.
                 uri       = blob_resource->uri
                 blob      = blob_resource->blob
                 mime_type = blob_resource->mime_type
+                meta      = blob_resource->meta
               ) TO blob_resources.
 
               " Track order

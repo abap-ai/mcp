@@ -4,8 +4,12 @@
 
 ## Overview
 
-ABAP implementation of the [Model Context Protocol](https://modelcontextprotocol.io/introduction) based on version [2025-03-26](https://modelcontextprotocol.io/specification/2025-03-26). \
+ABAP implementation of the [Model Context Protocol](https://modelcontextprotocol.io/introduction) based on version [2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18). \
 **Note** that this is only a server implementation as I currently see no realistic way to support SSE streaming which is mandatory for the client.
+
+Supported protocol versions: 2025-03-28, 2025-06-18
+
+Note that old protocol versions might be dropped after a while especially if they increaase maintenance effort.
 
 ## Documentation
 
@@ -35,12 +39,13 @@ Not implemented:
 
 - Sampling - considered for the future, open an issue if you have a use case that would benefit from it
 - Completions - questionable from a performance point of view with ABAP
+- Elicitation - without SSE I see no proper way to implement this
 - Roots - likely irrelevant for ABAP
 - Further notifications not relevant without SSE: Cancellation, Ping, Progress, Logging
 
 ## Authorization
 
-Implement the standard [Authorization](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization) in ABAP via custom code is not feasible, we have to rely on ABAP features. \
+Implement the standard [Authorization](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization) in ABAP via custom code is not feasible, we have to rely on ABAP features. \
 An overview of likely options is outlined in [Authentication Documentation](./docs/Authentication.md).
 
 ## Autentication
@@ -66,4 +71,4 @@ Feel free to:
 
 ## GenAI Notice
 
-Part of the coding was generated using AI, mostly with Sonnet 3.7 and GitHub Copilot. Detailed documentation is largely AI generated - only high-level reviewed.
+Part of the coding was generated using AI, mostly with Sonnet 3.7/4 and GitHub Copilot. Detailed documentation is largely AI generated - only high-level reviewed.

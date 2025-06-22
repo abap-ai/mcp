@@ -19,6 +19,8 @@ CLASS ltcl_mcp_req_initialize IMPLEMENTATION.
                       iv_val  = '1.0' ).
     json->set_string( iv_path = '/clientInfo/name'
                       iv_val  = 'TestClient' ).
+    json->set_string( iv_path = '/clientInfo/title'
+                      iv_val  = 'Just a test client' ).
     json->set_string( iv_path = '/clientInfo/version'
                       iv_val  = '1.5.0' ).
   ENDMETHOD.
@@ -41,6 +43,8 @@ CLASS ltcl_mcp_req_initialize IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( exp = '1.5.0'
                                         act = client_info-version ).
+    cl_abap_unit_assert=>assert_equals( exp = 'Just a test client'
+                                        act = client_info-title ).
 
     cl_abap_unit_assert=>assert_false( req->has_roots_capability( ) ).
     cl_abap_unit_assert=>assert_false( req->has_sampling_capability( ) ).

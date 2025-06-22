@@ -4,22 +4,11 @@ This documentation explains how to implement and use prompts in the Model Contex
 
 ## Table of Contents
 
-- [MCP Server SDK: Prompts](#mcp-server-sdk-prompts)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Prompt Request Classes](#prompt-request-classes)
-    - [List Prompts Request](#list-prompts-request)
-    - [Get Prompt Request](#get-prompt-request)
-  - [Prompt Response Classes](#prompt-response-classes)
-    - [Get Prompt Response](#get-prompt-response)
-    - [Message Types](#message-types)
-  - [Implementing Prompt Handlers](#implementing-prompt-handlers)
-    - [Handling List Prompts](#handling-list-prompts)
-    - [Handling Get Prompt](#handling-get-prompt)
-  - [Examples](#examples)
-    - [Simple Text Prompts](#simple-text-prompts)
-    - [Prompts with Images](#prompts-with-images)
-    - [Resource-based Prompts](#resource-based-prompts)
+- [Overview](#overview)
+- [Prompt Request Classes](#prompt-request-classes)
+- [Prompt Response Classes](#prompt-response-classes)
+- [Implementing Prompt Handlers](#implementing-prompt-handlers)
+- [Examples](#examples)
 
 ## Overview
 
@@ -27,7 +16,7 @@ Prompts in the MCP protocol are pre-defined conversation templates that can be r
 
 - Standardized ways to invoke specific capabilities
 - Parameterized templates (with arguments)
-- Multi-modal content (text, images, resources)
+- Multi-modal content (text, images, audio, resources)
 - Consistent conversation patterns
 
 Prompts are identified by a unique name and can accept arguments to customize their behavior.
@@ -39,112 +28,58 @@ Prompts are identified by a unique name and can accept arguments to customize th
 The `ZCL_MCP_REQ_LIST_PROMPTS` class handles requests to list available prompts on the server.
 
 Key methods:
-
 - `get_cursor()`: Retrieves the pagination cursor if provided
 - `has_cursor()`: Checks if a pagination cursor was provided
-
-Example:
-
-```abap
-METHOD handle_list_prompts.
-  " Check if pagination is being used
-  IF request->has_cursor( ).
-    " Handle pagination with the cursor
-    DATA(cursor) = request->get_cursor( ).
-    " Use cursor to determine which page of prompts to return
-  ENDIF
-  
-  " Set up response...
-ENDMETHOD.
-```
 
 ### Get Prompt Request
 
 The `ZCL_MCP_REQ_GET_PROMPT` class handles requests to retrieve a specific prompt with arguments.
 
 Key methods:
-
 - `get_name()`: Retrieves the requested prompt name
 - `has_arguments()`: Checks if arguments were provided
 - `get_arguments()`: Retrieves the arguments as a table of key-value pairs
-
-Example:
-
-```abap
-METHOD handle_get_prompt.
-  " Get the requested prompt name
-  DATA(prompt_name) = request->get_name( ).
-  
-  " Check for arguments
-  IF request->has_arguments( ).
-    " Access the provided arguments
-    DATA(arguments) = request->get_arguments( ).
-    
-    " Loop through arguments
-    LOOP AT arguments ASSIGNING FIELD-SYMBOL(<arg>).
-      " Use <arg>-key and <arg>-value
-    ENDLOOP.
-  ENDIF
-  
-  " Generate the prompt response...
-ENDMETHOD.
-```
 
 ## Prompt Response Classes
 
 ### Get Prompt Response
 
-The `ZCL_MCP_RESP_GET_PROMPT` class builds the response for a prompt request, allowing you to:
+The `ZCL_MCP_RESP_GET_PROMPT` class builds the response for a prompt request, supporting various content types and annotations.
 
-- Set a description for the prompt
-- Add conversation messages with different content types
-- Assign roles to messages (user/assistant)
-
-Key methods:
+**Key methods:**
 
 - `set_description()`: Sets the prompt description
+- `set_messages()`: Sets complete message list
+- `set_meta()`: Sets metadata for the prompt
+
+**Content methods:**
+
 - `add_text_message()`: Adds a simple text message
-- `add_image_message()`: Adds an image message
-- `add_text_resource_message()`: Adds a text resource message
-- `add_blob_resource_message()`: Adds a binary resource message
+- `add_image_message()`: Adds an image message (Base64-encoded)
+- `add_audio_message()`: Adds an audio message (Base64-encoded)
+- `add_text_resource_message()`: Adds embedded text resource
+- `add_blob_resource_message()`: Adds embedded binary resource
+- `add_resource_link_message()`: Adds a resource link reference
 
-### Message Types
-
-The class supports several content types for prompt messages:
+**Content Types:**
 
 1. **Text Content**: Simple text messages
+2. **Image Content**: Base64-encoded images with MIME type
+3. **Audio Content**: Base64-encoded audio with MIME type
+4. **Text Resource**: Embedded text resources with URI
+5. **Blob Resource**: Embedded binary resources with URI
+6. **Resource Links**: References to external resources
 
-   ```abap
-   add_text_message(
-     role = zif_mcp_server=>role_user
-     text = 'Please analyze this data'
-   )
-   ```
+**Annotations Support:**
 
-2. **Image Content**: Base64-encoded images
-
-   ```abap
-   add_image_message(
-     role = zif_mcp_server=>role_user
-     data = lv_base64_image
-     mime_type = 'image/png'
-   )
-   ```
-
-3. **Resource Content**: References to text or binary resources
-
-   ```abap
-   add_text_resource_message(
-     role = zif_mcp_server=>role_user
-     uri = 'file://documents/report.txt'
-     text = lv_document_text
-     mime_type = 'text/plain'
-   )
-   ```
+All content types support optional annotations:
+- `audience`: Target audience list
+- `priority`: Priority level (decimal)
+- `last_modified`: Timestamp of last modification
 
 ## Implementing Prompt Handlers
 
-To implement prompts in your MCP server, you need to override the following methods:
+Override these methods in your MCP server:
 
 ```abap
 METHODS handle_list_prompts REDEFINITION.
@@ -153,11 +88,8 @@ METHODS handle_get_prompt REDEFINITION.
 
 ### Handling List Prompts
 
-The `handle_list_prompts` method should return a list of available prompts with their descriptions and arguments:
-
 ```abap
 METHOD handle_list_prompts.
-  " Create list of available prompts
   response-result->set_prompts(
     VALUE #(
       ( name = 'greeting'
@@ -168,14 +100,6 @@ METHOD handle_list_prompts.
             required = abap_true )
         )
       )
-      ( name = 'analyze_code'
-        description = 'Analyze provided ABAP code'
-        arguments = VALUE #(
-          ( name = 'code'
-            description = 'ABAP code to analyze'
-            required = abap_true )
-        )
-      )
     )
   ).
 ENDMETHOD.
@@ -183,17 +107,12 @@ ENDMETHOD.
 
 ### Handling Get Prompt
 
-The `handle_get_prompt` method should generate the actual prompt content based on the name and arguments:
-
 ```abap
 METHOD handle_get_prompt.
-  " Get the prompt name
   DATA(prompt_name) = request->get_name( ).
   
-  " Handle different prompts
   CASE prompt_name.
     WHEN 'greeting'.
-      " Handle greeting prompt
       IF request->has_arguments( ).
         DATA(arguments) = request->get_arguments( ).
         READ TABLE arguments INTO DATA(name_arg) WITH KEY key = 'name'.
@@ -203,19 +122,10 @@ METHOD handle_get_prompt.
             role = zif_mcp_server=>role_user
             text = |Hello { name_arg-value }, nice to meet you!|
           ).
-        ELSE.
-          " Missing required argument
-          response-error-code = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-          response-error-message = 'Missing required argument: name'.
         ENDIF.
       ENDIF.
       
-    WHEN 'analyze_code'.
-      " Handle code analysis prompt
-      " Similar implementation for other prompts
-      
     WHEN OTHERS.
-      " Unknown prompt
       response-error-code = zcl_mcp_jsonrpc=>error_codes-invalid_params.
       response-error-message = |Prompt { prompt_name } not found|.
   ENDCASE.
@@ -224,103 +134,73 @@ ENDMETHOD.
 
 ## Examples
 
-### Simple Text Prompts
+### Multi-Modal Prompt
 
 ```abap
 METHOD handle_get_prompt.
   CASE request->get_name( ).
-    WHEN 'introduce_yourself'.
-      response-result->set_description( 'Introduction prompt' ).
+    WHEN 'analyze_media'.
+      response-result->set_description( 'Analyze multiple media types' ).
       
-      " First message (user)
+      " Text instruction
       response-result->add_text_message(
         role = zif_mcp_server=>role_user
-        text = 'Please introduce yourself briefly and tell me how you can help with ABAP development.'
+        text = 'Please analyze the following media files:'
       ).
       
-      " Second message with example response (assistant)
-      response-result->add_text_message(
-        role = zif_mcp_server=>role_assistant
-        text = 'Hello! I''m an AI assistant specialized in ABAP development...'
+      " Image content
+      response-result->add_image_message(
+        role = zif_mcp_server=>role_user
+        data = get_base64_image( )
+        mime_type = 'image/png'
+        annotations = VALUE #( priority = '1.0' )
       ).
       
-    WHEN OTHERS.
-      " Handle unknown prompt
+      " Audio content
+      response-result->add_audio_message(
+        role = zif_mcp_server=>role_user
+        data = get_base64_audio( )
+        mime_type = 'audio/mp3'
+      ).
+      
+      " Resource link
+      response-result->add_resource_link_message(
+        role = zif_mcp_server=>role_user
+        uri = 'https://example.com/document.pdf'
+        name = 'Analysis Document'
+        description = 'Supporting documentation'
+        mime_type = 'application/pdf'
+      ).
   ENDCASE.
 ENDMETHOD.
 ```
 
-### Prompts with Images
-
-```abap
-METHOD handle_get_prompt.
-  CASE request->get_name( ).
-    WHEN 'analyze_image'.
-      " Get image data from arguments
-      DATA(arguments) = request->get_arguments( ).
-      READ TABLE arguments INTO DATA(image_arg) WITH KEY key = 'image_id'.
-      IF sy-subrc = 0.
-        " Get the image data from your system
-        DATA(image_data) = get_image_as_base64( image_arg-value ).
-        
-        response-result->set_description( 'Image analysis prompt' ).
-        
-        " Add text instruction
-        response-result->add_text_message(
-          role = zif_mcp_server=>role_user
-          text = 'Please analyze the following image and describe what you see:'
-        ).
-        
-        " Add the image
-        response-result->add_image_message(
-          role = zif_mcp_server=>role_user
-          data = image_data
-          mime_type = 'image/jpeg'
-        ).
-      ENDIF.
-      
-    WHEN OTHERS.
-      " Handle unknown prompt
-  ENDCASE.
-ENDMETHOD.
-```
-
-### Resource-based Prompts
+### Resource-Based Prompt
 
 ```abap
 METHOD handle_get_prompt.
   CASE request->get_name( ).
     WHEN 'review_code'.
-      " Get code ID from arguments
       DATA(arguments) = request->get_arguments( ).
-      READ TABLE arguments INTO DATA(code_arg) WITH KEY key = 'class_name'.
+      READ TABLE arguments INTO DATA(class_arg) WITH KEY key = 'class_name'.
+      
       IF sy-subrc = 0.
-        " Get the source code
-        DATA(source_code) = get_class_source( code_arg-value ).
+        DATA(source_code) = get_class_source( class_arg-value ).
         
-        response-result->set_description( 'Code review prompt' ).
+        response-result->set_description( 'ABAP code review prompt' ).
         
-        " Add instruction
-        response-result->add_text_message(
-          role = zif_mcp_server=>role_user
-          text = |Please review the following ABAP class ({ code_arg-value }) and suggest improvements:|
-        ).
-        
-        " Add the source code as a resource
+        " Add embedded text resource
         response-result->add_text_resource_message(
           role = zif_mcp_server=>role_user
-          uri = |abap://classes/{ code_arg-value }|
+          uri = |abap://classes/{ class_arg-value }|
           text = source_code
           mime_type = 'text/x-abap'
+          annotations = VALUE #( 
+            audience = VALUE #( ( 'developers' ) ( 'architects' ) )
+            priority = '0.8'
+          )
         ).
       ENDIF.
-      
-    WHEN OTHERS.
-      " Handle unknown prompt
   ENDCASE.
 ENDMETHOD.
 ```
-
----
-
-By implementing prompts in your MCP server, you provide AI assistants with pre-defined conversation templates that ensure consistent, high-quality interactions with specific features of your ABAP systems.

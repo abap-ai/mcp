@@ -250,7 +250,7 @@ Interface defining all required MCP server methods. The main methods include:
 
 ### Schema Builder
 
-`ZCL_MCP_SCHEMA_BUILDER` creates JSON Schema definitions for tool input validation with a fluent, chainable API:
+`ZCL_MCP_SCHEMA_BUILDER` creates JSON Schema definitions for tool input validation and output schemas with a fluent, chainable API:
 
 ```abap
 DATA(schema) = NEW zcl_mcp_schema_builder( ).

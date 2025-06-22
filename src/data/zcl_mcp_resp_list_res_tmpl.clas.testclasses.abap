@@ -60,8 +60,9 @@ CLASS ltcl_list_resource_templates IMPLEMENTATION.
 
     template-uritemplate = '/api/documents/{type}/{id}'.
     template-name        = 'Document Template'.
+    template-title       = 'Document Title'.
     template-description = 'Templates for various document types'.
-    template-mime_type    = 'application/pdf'.
+    template-mime_type   = 'application/pdf'.
     template-annotations-audience = audiences.
     template-annotations-priority = '0.8'.
 
@@ -88,6 +89,8 @@ CLASS ltcl_list_resource_templates IMPLEMENTATION.
                         value = 'assistant' ).
     assert_path_equals( path  = '/resourceTemplates/1/annotations/priority'
                         value = '0.8' ).
+    assert_path_equals( path  = '/resourceTemplates/1/title'
+                        value = 'Document Title' ).
   ENDMETHOD.
 
   METHOD test_with_next_cursor.
