@@ -89,10 +89,14 @@ ENDCLASS.
 CLASS zcl_mcp_server_base IMPLEMENTATION.
   METHOD zif_mcp_server~initialize.
           DATA error TYPE REF TO zcx_mcp_server.
+    DATA supported_protocol_versions TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
+    DATA temp1 LIKE sy-subrc.
+    CREATE OBJECT response-result TYPE zcl_mcp_resp_initialize.
+
     " Handle session logic before handing off to the request handler
     IF server-session_id IS NOT INITIAL.
       server-http_response->set_status( code   = 400
-                                                       reason = 'Bad Request' ) ##NO_TEXT.
+                                        reason = 'Bad Request' ) ##NO_TEXT.
     ENDIF.
 
     IF server-session_mode <> zcl_mcp_session=>session_mode_stateless.
@@ -107,7 +111,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
         CATCH zcx_mcp_server INTO error.
           zif_mcp_server~config->get_logger( )->error( |Failed to create session { error->get_text( ) }| ) ##NO_TEXT.
           server-http_response->set_status( code   = 500
-                                                           reason = 'Internal Server Error' ) ##NO_TEXT.
+                                            reason = 'Internal Server Error' ) ##NO_TEXT.
           RETURN.
       ENDTRY.
     ENDIF.
@@ -116,8 +120,22 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
       server-http_server->set_session_stateful( ).
     ENDIF.
 
-    CREATE OBJECT response-result TYPE zcl_mcp_resp_initialize.
-    handle_initialize( EXPORTING request = request CHANGING response = response ).
+    " Determine protocol version
+    
+    SPLIT zif_mcp_constants=>supported_protocol_versions AT `,` INTO TABLE supported_protocol_versions.
+    
+    READ TABLE supported_protocol_versions WITH KEY table_line = request->get_protocol_version( ) TRANSPORTING NO FIELDS.
+    temp1 = sy-subrc.
+    IF temp1 = 0.
+      server-protocol_version = request->get_protocol_version( ).
+    ELSE.
+      " If the requested protocol version is not supported, use the latest supported version
+      server-protocol_version = zif_mcp_constants=>latest_protocol_version.
+    ENDIF.
+    response-result->set_protocol_version( server-protocol_version ).
+
+    handle_initialize( EXPORTING request  = request
+                       CHANGING  response = response ).
   ENDMETHOD.
 
   METHOD zif_mcp_server~prompts_get.
@@ -223,15 +241,15 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
     DATA hex_chars TYPE string VALUE '0123456789ABCDEF'.
     DATA char_idx  TYPE i.
     DATA hex_char  TYPE c LENGTH 1.
-    DATA temp1 TYPE i.
+    DATA temp2 TYPE i.
 
     " Get timestamp for uniqueness
     GET TIME STAMP FIELD timestamp.
 
     " Create random object with timestamp seed
     
-    temp1 = timestamp.
-    random = cl_abap_random=>create( temp1 ).
+    temp2 = timestamp.
+    random = cl_abap_random=>create( temp2 ).
 
     " Generate 32 random hex characters
     DO 32 TIMES.

@@ -12,6 +12,12 @@
    </PROGDIR>
    <TPOOL>
     <item>
+     <ID>I</ID>
+     <KEY>001</KEY>
+     <ENTRY>Deleted sessions:</ENTRY>
+     <LENGTH>27</LENGTH>
+    </item>
+    <item>
      <ID>R</ID>
      <ENTRY>Delete Expired MCP Sessions</ENTRY>
      <LENGTH>27</LENGTH>

@@ -7,23 +7,24 @@ CLASS zcl_mcp_demo_server_stateless DEFINITION
 
   PUBLIC SECTION.
   PROTECTED SECTION.
-    METHODS handle_initialize REDEFINITION.
-    METHODS handle_list_prompts REDEFINITION.
-    METHODS handle_get_prompt REDEFINITION.
+    METHODS handle_initialize     REDEFINITION.
+    METHODS handle_list_prompts   REDEFINITION.
+    METHODS handle_get_prompt     REDEFINITION.
     METHODS handle_list_resources REDEFINITION.
     METHODS handle_list_res_tmpls REDEFINITION.
     METHODS handle_resources_read REDEFINITION.
-    METHODS handle_list_tools REDEFINITION.
-    METHODS handle_call_tool REDEFINITION.
-    METHODS: get_session_mode REDEFINITION.
+    METHODS handle_list_tools     REDEFINITION.
+    METHODS handle_call_tool      REDEFINITION.
+    METHODS get_session_mode      REDEFINITION.
 
   PRIVATE SECTION.
-
     "! <p class="shorttext synchronized">Retrieves current server time</p>
     "! Fetches the system date and time and returns it in internal format
     "!
     "! @parameter response | <p class="shorttext synchronized">Response object to be filled with server time</p>
-    METHODS get_server_time CHANGING !response TYPE zif_mcp_server=>call_tool_response.
+    METHODS get_server_time CHANGING !response TYPE zif_mcp_server=>call_tool_response
+                            RAISING
+                                     zcx_mcp_ajson_error.
 
     "! <p class="shorttext synchronized">Fetches flight connection details</p>
     "! Retrieves information about a specific flight connection based on airline code and flight number
@@ -31,7 +32,9 @@ CLASS zcl_mcp_demo_server_stateless DEFINITION
     "! @parameter request  | <p class="shorttext synchronized">Request object containing airline code and flight number</p>
     "! @parameter response | <p class="shorttext synchronized">Response object to be filled with flight details</p>
     METHODS get_flight_conn_details IMPORTING !request  TYPE REF TO zcl_mcp_req_call_tool
-                                    CHANGING  !response TYPE zif_mcp_server=>call_tool_response.
+                                    CHANGING  !response TYPE zif_mcp_server=>call_tool_response
+                                    RAISING
+                                              zcx_mcp_ajson_error.
 
     "! <p class="shorttext synchronized">Creates schema for flight connection query</p>
     "! Builds a schema definition that validates flight connection query parameters
@@ -58,7 +61,9 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     temp2-name = `Demo MCP Server`.
     temp2-version = `1.0.0`.
     response-result->set_implementation( temp2 ) ##NO_TEXT.
-    response-result->set_instructions( `Use the features provided by this server only if explicitely requested. If not sure ask the user!` ) ##NO_TEXT.
+    " TODO: check spelling: explicitely (typo) -> explicitly (ABAP cleaner)
+    response-result->set_instructions(
+        `Use the features provided by this server only if explicitely requested. If not sure ask the user!` ) ##NO_TEXT.
   ENDMETHOD.
 
   METHOD handle_list_prompts.
@@ -74,23 +79,27 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     
     temp4-name = `greet`.
     temp4-description = `Asks the LLM to greet someone.`.
+    temp4-title = `greet someone`.
     
     CLEAR temp1.
     
     temp2-name = `name`.
     temp2-description = `Name of the person to greet`.
     temp2-required = abap_true.
+    temp2-title = `Name to greet`.
     INSERT temp2 INTO TABLE temp1.
     temp4-arguments = temp1.
     INSERT temp4 INTO TABLE temp3.
     temp4-name = `joke`.
     temp4-description = `Asks the LLM to tell a joke about a specific topic`.
+    temp4-title = `Tell a joke`.
     
     CLEAR temp5.
     
     temp6-name = `topic`.
     temp6-description = `Topic to joke about`.
     temp6-required = abap_true.
+    temp6-title = `Joke topic`.
     INSERT temp6 INTO TABLE temp5.
     temp4-arguments = temp5.
     INSERT temp4 INTO TABLE temp3.
@@ -146,8 +155,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     temp6-description = `Demo Class`.
     temp6-mime_type = `text/x-abap`.
     INSERT temp6 INTO TABLE temp5.
-    response-result->set_resources(
-        temp5 ) ##NO_TEXT.
+    response-result->set_resources( temp5 ) ##NO_TEXT.
   ENDMETHOD.
 
   METHOD handle_list_res_tmpls.
@@ -163,8 +171,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     temp8-description = `Receipts for Sales Order`.
     temp8-mime_type = `application/pdf`.
     INSERT temp8 INTO TABLE temp7.
-    response-result->set_resource_templates(
-        temp7 ) ##NO_TEXT.
+    response-result->set_resource_templates( temp7 ) ##NO_TEXT.
   ENDMETHOD.
 
   METHOD handle_resources_read.
@@ -195,24 +202,73 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
 
   METHOD handle_list_tools.
     DATA tools TYPE zcl_mcp_resp_list_tools=>tools.
-
-    " Demo Tool without any input parameter
-    DATA temp9 TYPE zcl_mcp_resp_list_tools=>tool.
+        DATA output_schema_servertime TYPE REF TO zcl_mcp_schema_builder.
+        DATA temp9 TYPE zcl_mcp_resp_list_tools=>tool.
+        DATA schema_error TYPE REF TO zcx_mcp_ajson_error.
+        DATA output_schema_flight_conn TYPE REF TO zcl_mcp_schema_builder.
         DATA temp10 TYPE zcl_mcp_resp_list_tools=>tool.
         DATA error TYPE REF TO zcx_mcp_ajson_error.
-    CLEAR temp9.
-    temp9-name = `get_server_time`.
-    temp9-description = `Get the current server date and time in internal format.`.
-    APPEND temp9 TO tools ##NO_TEXT.
+
+    " Demo Tool without any input parameter
+    TRY.
+        
+        CREATE OBJECT output_schema_servertime TYPE zcl_mcp_schema_builder.
+        output_schema_servertime->add_string( name        = `server_date`
+                                              description = `Current server date, format YYYY-MM-DD`
+                                              required    = abap_true ) ##NO_TEXT.
+
+        output_schema_servertime->add_string( name        = `server_time`
+                                              description = `Current server time, format HH:MM:SS`
+                                              required    = abap_true ) ##NO_TEXT.
+
+        
+        CLEAR temp9.
+        temp9-name = `get_server_time`.
+        temp9-title = `Get Server Time`.
+        temp9-description = `Get the current server date and time in internal format.`.
+        temp9-output_schema = output_schema_servertime->to_json( ).
+        APPEND temp9 TO tools ##NO_TEXT.
+        
+      CATCH zcx_mcp_ajson_error INTO schema_error.
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+        response-error-message = schema_error->get_text( ).
+        RETURN.
+    ENDTRY.
 
     " Demo tool with input parameters
-    " Note: The schema is defined in the get_flight_conn_schema method
+    " Note: The input schema is defined in the get_flight_conn_schema method
     TRY.
+        
+        CREATE OBJECT output_schema_flight_conn TYPE zcl_mcp_schema_builder.
+        output_schema_flight_conn->begin_array( description = `Flights Table`
+                                                name        = `Flights` ) ##NO_TEXT.
+        output_schema_flight_conn->add_string( name        = `carrid`
+                                               description = `Airline Code`
+                                               required    = abap_true ) ##NO_TEXT.
+        output_schema_flight_conn->add_string( name        = `connid`
+                                               description = `Flight Connection ID`
+                                               required    = abap_true ) ##NO_TEXT.
+        output_schema_flight_conn->add_string( name        = `fldate`
+                                               description = `Flight Date (YYYY-MM-DD)`
+                                               required    = abap_true ) ##NO_TEXT.
+        output_schema_flight_conn->add_number( name        = `price`
+                                               description = `Flight Price`
+                                               required    = abap_true ) ##NO_TEXT.
+        output_schema_flight_conn->add_string( name        = `currency`
+                                               description = `Currency Code`
+                                               required    = abap_true ) ##NO_TEXT.
+        output_schema_flight_conn->add_string( name        = `planetype`
+                                               description = `Type of Plane`
+                                               required    = abap_true ) ##NO_TEXT.
+        output_schema_flight_conn->end_array( ).
+
         
         CLEAR temp10.
         temp10-name = `get_flight_conn_details`.
         temp10-description = `Get details of one specific flight connection`.
+        temp10-title = `Get Flight Connection Details`.
         temp10-input_schema = get_flight_conn_schema( )->to_json( ).
+        temp10-output_schema = output_schema_flight_conn->to_json( ).
         APPEND temp10
                TO tools ##NO_TEXT.
         
@@ -225,15 +281,23 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD handle_call_tool.
-    CASE request->get_name( ).
-      WHEN `get_server_time`.
-        get_server_time( CHANGING response = response ).
-      WHEN `get_flight_conn_details`.
-        get_flight_conn_details( EXPORTING request = request CHANGING response = response ).
-      WHEN OTHERS.
-        response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-        response-error-message = |Tool { request->get_name( ) } not found.| ##NO_TEXT.
-    ENDCASE.
+        DATA error TYPE REF TO zcx_mcp_ajson_error.
+    TRY.
+        CASE request->get_name( ).
+          WHEN `get_server_time`.
+            get_server_time( CHANGING response = response ).
+          WHEN `get_flight_conn_details`.
+            get_flight_conn_details( EXPORTING request  = request
+                                     CHANGING  response = response ).
+          WHEN OTHERS.
+            response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+            response-error-message = |Tool { request->get_name( ) } not found.| ##NO_TEXT.
+        ENDCASE.
+        
+      CATCH zcx_mcp_ajson_error INTO error.
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+        response-error-message = error->get_text( ).
+    ENDTRY.
   ENDMETHOD.
 
   METHOD get_flight_conn_details.
@@ -256,6 +320,7 @@ TYPES END OF temp11.
     DATA flights TYPE STANDARD TABLE OF temp11 WITH DEFAULT KEY.
     DATA markdown TYPE string.
     FIELD-SYMBOLS <flight> LIKE LINE OF flights.
+    DATA structured_content TYPE REF TO zcl_mcp_ajson.
     input = request->get_arguments( ).
 
     " Validate input parameter via schema validator class
@@ -320,11 +385,29 @@ TYPES END OF temp11.
       markdown = |{ markdown }\| No flights found for airline { airline_code } and connection { connid } \|\n| ##NO_TEXT.
     ENDIF.
 
+    " Add structed content based on the output schema. Do not add text content as we already have markdown above.
+    
+    structured_content = zcl_mcp_ajson=>create_empty( ).
+    structured_content->set( iv_path = `Flights`
+                             iv_val  = flights ) ##NO_TEXT.
+    response-result->set_structured_content( structured_content = structured_content
+                                             add_text_content   = abap_false ).
+
     response-result->add_text_content( markdown ).
   ENDMETHOD.
 
   METHOD get_server_time.
+    DATA structured_content TYPE REF TO zcl_mcp_ajson.
     response-result->add_text_content( |Current Server Date: { sy-datum } Time: { sy-uzeit } in internal format.| ) ##NO_TEXT.
+    
+    structured_content = zcl_mcp_ajson=>create_empty( ).
+    structured_content->set( iv_path = `server_date`
+                             iv_val  = sy-datum ).
+    structured_content->set( iv_path = `server_time`
+                             iv_val  = sy-uzeit ).
+    " As we manually create an alternative text content above, we disable automatic text content generation
+    response-result->set_structured_content( structured_content = structured_content
+                                             add_text_content   = abap_false ).
   ENDMETHOD.
 
   METHOD get_flight_conn_schema.
@@ -346,7 +429,6 @@ TYPES END OF temp11.
                          maximum     = 9999
                          required    = abap_true ) ##NO_TEXT.
     result = schema.
-
   ENDMETHOD.
 
   METHOD get_session_mode.

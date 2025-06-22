@@ -16,10 +16,13 @@ CLASS zcl_mcp_resp_list_tools DEFINITION
            END OF tool_annotations.
 
     TYPES: BEGIN OF tool,
-             name         TYPE string,
-             description  TYPE string,
-             input_schema TYPE REF TO zif_mcp_ajson,
-             annotations  TYPE tool_annotations,
+             name          TYPE string,
+             description   TYPE string,
+             title         TYPE string,
+             input_schema  TYPE REF TO zif_mcp_ajson,
+             annotations   TYPE tool_annotations,
+             output_schema TYPE REF TO zif_mcp_ajson,
+             meta          TYPE REF TO zif_mcp_ajson,
            END OF tool.
 
     "! Table of tools
@@ -69,24 +72,42 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
 
       " Add name (required)
       result->set( iv_path         = |/tools/{ tool_index }/name|
-                  iv_val          = <tool>-name
-                  iv_ignore_empty = abap_false ).
+                   iv_val          = <tool>-name
+                   iv_ignore_empty = abap_false ).
 
       " Add description (optional)
       IF <tool>-description IS NOT INITIAL.
         result->set( iv_path = |/tools/{ tool_index }/description|
-                    iv_val  = <tool>-description ).
+                     iv_val  = <tool>-description ).
+      ENDIF.
+
+      " Add title (optional)
+      IF <tool>-title IS NOT INITIAL.
+        result->set( iv_path = |/tools/{ tool_index }/title|
+                     iv_val  = <tool>-title ).
       ENDIF.
 
       " Add input schema (required)
       IF <tool>-input_schema IS BOUND.
         result->set( iv_path = |/tools/{ tool_index }/inputSchema|
-                    iv_val  = <tool>-input_schema ).
+                     iv_val  = <tool>-input_schema ).
       ELSE.
         " Create a minimal schema if none provided
         result->set( iv_path         = |/tools/{ tool_index }/inputSchema/type|
-                    iv_val          = 'object'
-                    iv_ignore_empty = abap_false ).
+                     iv_val          = 'object'
+                     iv_ignore_empty = abap_false ).
+      ENDIF.
+
+      " Add meta (optional)
+      IF <tool>-meta IS BOUND.
+        result->set( iv_path = |/tools/{ tool_index }/_meta|
+                     iv_val  = <tool>-meta ).
+      ENDIF.
+
+      " Add output schema (optional)
+      IF <tool>-output_schema IS BOUND.
+        result->set( iv_path = |/tools/{ tool_index }/outputSchema|
+                     iv_val  = <tool>-output_schema ).
       ENDIF.
 
       " Add annotations (optional)
@@ -99,31 +120,31 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
         " Add title if not empty
         IF <tool>-annotations-title IS NOT INITIAL.
           result->set( iv_path = |/tools/{ tool_index }/annotations/title|
-                      iv_val  = <tool>-annotations-title ).
+                       iv_val  = <tool>-annotations-title ).
         ENDIF.
 
         " Add readOnlyHint if true
         IF <tool>-annotations-readonlyhint = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/readOnlyHint|
-                      iv_val  = <tool>-annotations-readonlyhint ).
+                       iv_val  = <tool>-annotations-readonlyhint ).
         ENDIF.
 
         " Add destructiveHint if true
         IF <tool>-annotations-destructivehint = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/destructiveHint|
-                      iv_val  = <tool>-annotations-destructivehint ).
+                       iv_val  = <tool>-annotations-destructivehint ).
         ENDIF.
 
         " Add idempotentHint if true
         IF <tool>-annotations-idempotenthint = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/idempotentHint|
-                      iv_val  = <tool>-annotations-idempotenthint ).
+                       iv_val  = <tool>-annotations-idempotenthint ).
         ENDIF.
 
         " Add openWorldHint if true
         IF <tool>-annotations-openworldhint = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/openWorldHint|
-                      iv_val  = <tool>-annotations-openworldhint ).
+                       iv_val  = <tool>-annotations-openworldhint ).
         ENDIF.
       ENDIF.
     ENDLOOP.
@@ -131,14 +152,14 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
     " Add nextCursor (optional)
     IF int_next_cursor IS NOT INITIAL.
       result->set( iv_path = '/nextCursor'
-                  iv_val  = int_next_cursor ).
+                   iv_val  = int_next_cursor ).
     ENDIF.
 
     " Add metadata (optional)
     IF int_meta IS BOUND.
       " Create the '_meta' node in the resulting JSON
       result->set( iv_path = '/_meta'
-                  iv_val  = int_meta ).
+                   iv_val  = int_meta ).
     ENDIF.
   ENDMETHOD.
 
