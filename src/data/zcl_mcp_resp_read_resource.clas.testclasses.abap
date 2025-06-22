@@ -54,8 +54,8 @@ CLASS ltcl_read_resource_result IMPLEMENTATION.
                                         act = result->get( '/contents/1/mimeType' ) ).
 
     " Ensure no metadata is present
-    cl_abap_unit_assert=>assert_false( act = result->exists( '/contents/1/_meta' ) ).
-    cl_abap_unit_assert=>assert_false( act = result->exists( '/_meta' ) ).
+    cl_abap_unit_assert=>assert_false( result->exists( '/contents/1/_meta' ) ).
+    cl_abap_unit_assert=>assert_false( result->exists( '/_meta' ) ).
   ENDMETHOD.
 
   METHOD test_single_blob_resource.
@@ -66,23 +66,23 @@ CLASS ltcl_read_resource_result IMPLEMENTATION.
 
     " When
     json = cut->zif_mcp_internal~generate_json( ).
-    DATA(lv_json_string) = json->stringify( ).
+    DATA(json_string) = json->stringify( ).
 
     " Then
-    DATA(lo_result) = zcl_mcp_ajson=>parse( lv_json_string ).
+    DATA(result) = zcl_mcp_ajson=>parse( json_string ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'https://example.com/image.jpg'
-                                        act = lo_result->get( '/contents/1/uri' ) ).
+                                        act = result->get( '/contents/1/uri' ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'SGVsbG8gV29ybGQ='
-                                        act = lo_result->get( '/contents/1/blob' ) ).
+                                        act = result->get( '/contents/1/blob' ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'image/jpeg'
-                                        act = lo_result->get( '/contents/1/mimeType' ) ).
+                                        act = result->get( '/contents/1/mimeType' ) ).
 
     " Ensure no metadata is present
-    cl_abap_unit_assert=>assert_false( act = lo_result->exists( '/contents/1/_meta' ) ).
-    cl_abap_unit_assert=>assert_false( act = lo_result->exists( '/_meta' ) ).
+    cl_abap_unit_assert=>assert_false( result->exists( '/contents/1/_meta' ) ).
+    cl_abap_unit_assert=>assert_false( result->exists( '/_meta' ) ).
   ENDMETHOD.
 
   METHOD test_multiple_resources.
@@ -266,15 +266,15 @@ CLASS ltcl_read_resource_result IMPLEMENTATION.
     DATA(result) = zcl_mcp_ajson=>parse( json_string ).
 
     " First resource - has metadata
-    cl_abap_unit_assert=>assert_true( act = result->exists( '/contents/1/_meta' ) ).
+    cl_abap_unit_assert=>assert_true( result->exists( '/contents/1/_meta' ) ).
     cl_abap_unit_assert=>assert_equals( exp = 'documentation'
                                         act = result->get( '/contents/1/_meta/category' ) ).
 
     " Second resource - no metadata
-    cl_abap_unit_assert=>assert_false( act = result->exists( '/contents/2/_meta' ) ).
+    cl_abap_unit_assert=>assert_false( result->exists( '/contents/2/_meta' ) ).
 
     " Third resource - has metadata
-    cl_abap_unit_assert=>assert_true( act = result->exists( '/contents/3/_meta' ) ).
+    cl_abap_unit_assert=>assert_true( result->exists( '/contents/3/_meta' ) ).
     cl_abap_unit_assert=>assert_equals( exp = 12345
                                         act = result->get( '/contents/3/_meta/size' ) ).
   ENDMETHOD.
@@ -436,13 +436,13 @@ CLASS ltcl_read_resource_result IMPLEMENTATION.
                                         act = result->get( '/contents/1/uri' ) ).
     cl_abap_unit_assert=>assert_equals( exp = 'Document without MIME type'
                                         act = result->get( '/contents/1/text' ) ).
-    cl_abap_unit_assert=>assert_false( act = result->exists( '/contents/1/mimeType' ) ).
+    cl_abap_unit_assert=>assert_false( result->exists( '/contents/1/mimeType' ) ).
 
     " Blob resource without MIME type
     cl_abap_unit_assert=>assert_equals( exp = 'https://example.com/file.bin'
                                         act = result->get( '/contents/2/uri' ) ).
     cl_abap_unit_assert=>assert_equals( exp = 'SGVsbG8gV29ybGQ='
                                         act = result->get( '/contents/2/blob' ) ).
-    cl_abap_unit_assert=>assert_false( act = result->exists( '/contents/2/mimeType' ) ).
+    cl_abap_unit_assert=>assert_false( result->exists( '/contents/2/mimeType' ) ).
   ENDMETHOD.
 ENDCLASS.

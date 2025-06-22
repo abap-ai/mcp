@@ -49,7 +49,7 @@ CLASS zcl_mcp_req_list_resources IMPLEMENTATION.
       CLEAR int_cursor.
     ENDIF.
 
-        " Check for _meta fields
+    " Check for _meta fields
     IF json->exists( '/_meta' ).
       int_meta = json->slice( '/_meta' ).
     ELSE.
@@ -66,7 +66,7 @@ CLASS zcl_mcp_req_list_resources IMPLEMENTATION.
     result = int_has_cursor.
   ENDMETHOD.
 
-    METHOD get_meta.
+  METHOD get_meta.
     result = int_meta.
   ENDMETHOD.
 

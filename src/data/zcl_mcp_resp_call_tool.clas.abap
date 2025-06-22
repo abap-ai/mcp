@@ -464,10 +464,10 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
       TRY.
           " Convert structured content to string for text representation
           DATA(text_repr) = structured_content->stringify( ).
-          add_text_content( text = text_repr ).
+          add_text_content( text_repr ).
         CATCH zcx_mcp_ajson_error.
           " If conversion fails, add a generic message
-          add_text_content( text = 'Structured content provided' ).
+          add_text_content( 'Structured content provided' ) ##NO_TEXT.
       ENDTRY.
     ENDIF.
   ENDMETHOD.

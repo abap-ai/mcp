@@ -666,7 +666,6 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
             mime_type = <res_mime>.
           ENDIF.
 
-          " TODO: variable is assigned but never used (ABAP cleaner)
           DATA title TYPE string.
           ASSIGN COMPONENT 'TITLE' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<title>).
           IF sy-subrc = 0.
@@ -680,6 +679,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                                         res_name     = name
                                         res_desc     = description
                                         res_mime     = mime_type
+                                        res_title    = title
                                         content_meta = content_meta ) TO me->messages.
       ENDCASE.
     ENDLOOP.

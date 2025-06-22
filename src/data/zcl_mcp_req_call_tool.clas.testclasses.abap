@@ -40,12 +40,11 @@ CLASS ltcl_call_tool_request IMPLEMENTATION.
     DATA(json) = zcl_mcp_ajson=>parse( json_string ).
 
     TRY.
-        " TODO: variable is assigned but never used (ABAP cleaner)
         DATA(request) = NEW zcl_mcp_req_call_tool( json ).
         cl_abap_unit_assert=>fail( 'Expected exception for missing name' ).
-      CATCH zcx_mcp_server INTO DATA(lx_server). " TODO: variable is assigned but never used (ABAP cleaner)
+      CATCH zcx_mcp_server.
         " Expected exception
-    ENDTRY.
+    ENDTRY ##NO_HANDLER.
   ENDMETHOD.
 
   METHOD test_empty_name.
@@ -53,12 +52,11 @@ CLASS ltcl_call_tool_request IMPLEMENTATION.
     DATA(json) = zcl_mcp_ajson=>parse( json_string ).
 
     TRY.
-        " TODO: variable is assigned but never used (ABAP cleaner)
         DATA(request) = NEW zcl_mcp_req_call_tool( json ).
         cl_abap_unit_assert=>fail( 'Expected exception for empty name' ).
-      CATCH zcx_mcp_server INTO DATA(lx_server). " TODO: variable is assigned but never used (ABAP cleaner)
+      CATCH zcx_mcp_server.
         " Expected exception
-    ENDTRY.
+    ENDTRY ##NO_HANDLER.
   ENDMETHOD.
 
   METHOD test_no_arguments.
@@ -173,11 +171,10 @@ CLASS ltcl_call_tool_request IMPLEMENTATION.
                                         act = lines( members )
                                         msg = 'Should have 2 meta keys' ).
 
-    READ TABLE members TRANSPORTING NO FIELDS WITH KEY table_line = 'api.example.com/version'.
-    cl_abap_unit_assert=>assert_subrc( exp = 0
-                                       act = sy-subrc
-                                       msg = 'Slash key should be in members list' ).
+    IF NOT ( line_exists( members[ table_line = 'api.example.com/version' ] ) ).
+      cl_abap_unit_assert=>fail( 'Slash key should be in members list' ).
 
+    ENDIF.
     " Access slash key via internal tree
     LOOP AT meta->mt_json_tree INTO DATA(node) WHERE path = '/' AND name = 'api.example.com/version'.
       cl_abap_unit_assert=>assert_equals( exp = 'v2'

@@ -265,7 +265,7 @@ CLASS ltcl_call_tool_result IMPLEMENTATION.
         cl_abap_unit_assert=>assert_initial( content_type ).
       CATCH zcx_mcp_ajson_error.
         " Expected - no content should exist
-    ENDTRY.
+    ENDTRY ##NO_HANDLER.
   ENDMETHOD.
 
   METHOD test_content_meta.

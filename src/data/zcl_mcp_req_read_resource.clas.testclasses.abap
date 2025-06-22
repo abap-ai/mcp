@@ -36,6 +36,6 @@ CLASS ltcl_mcp_req_read_resource IMPLEMENTATION.
         cl_abap_unit_assert=>fail( 'Expected exception for missing URI' ).
       CATCH zcx_mcp_server.
         " Expected
-    ENDTRY.
+    ENDTRY ##NO_HANDLER.
   ENDMETHOD.
 ENDCLASS.
