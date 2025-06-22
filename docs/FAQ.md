@@ -13,3 +13,7 @@ This class is not fully downwards compatible, exclude the sub-package OAuth or d
 ## Syntax error after pull from branch 702
 
 Somehow abapgit sometimes does not recognize changes, probably due to the unusual coding structure after downport. Make sure to update all code and not just changed if this issue happens. If this does not solve it and you confirmed there is a real error in the code by checking GitHub sources (if possible) feel free to open an issue with details. Due to me not having a system < 7.50 it might be challenging to fix but I will have a look and do my best.
+
+## Accessing _meta data
+
+As per the specification there will be prefixes and therefore slashed in the keys of _meta data. You can use JSON Pointer notation to access those, e.g. "prefix/keyname" would be "prefix~1keyname", basicall replacing slash with ~1. This works for retrieving and setting those values.
