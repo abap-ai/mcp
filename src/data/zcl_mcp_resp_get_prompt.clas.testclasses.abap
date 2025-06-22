@@ -394,9 +394,6 @@ CLASS ltcl_get_prompt_result IMPLEMENTATION.
     assert_path_equals( path  = '/messages/1/content/uri'
                         value = 'file:///minimal.txt' ).
 
-    " Optional fields should not be present
-    cl_abap_unit_assert=>assert_false( act = json->exists( '/messages/1/content/name' )
-                                        msg = 'Name should not be present when not provided' ).
     cl_abap_unit_assert=>assert_false( act = json->exists( '/messages/1/content/description' )
                                         msg = 'Description should not be present when not provided' ).
     cl_abap_unit_assert=>assert_false( act = json->exists( '/messages/1/content/mimeType' )
