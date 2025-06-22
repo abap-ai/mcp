@@ -8,8 +8,9 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
     INTERFACES zif_mcp_internal.
 
     TYPES: BEGIN OF annotations,
-             audience TYPE STANDARD TABLE OF string WITH EMPTY KEY,
-             priority TYPE decfloat16,
+             audience      TYPE STANDARD TABLE OF string WITH EMPTY KEY,
+             priority      TYPE decfloat16,
+             last_modified TYPE timestamp,
            END OF annotations.
 
     TYPES: BEGIN OF resource_template,
@@ -49,11 +50,15 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
     DATA int_resource_templates TYPE resource_templates.
     DATA int_next_cursor        TYPE string.
     DATA int_meta               TYPE REF TO zif_mcp_ajson.
+
+    METHODS convert_timestamp_to_iso8601
+      IMPORTING timestamp     TYPE timestamp
+      RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 
 
 
-CLASS ZCL_MCP_RESP_LIST_RES_TMPL IMPLEMENTATION.
+CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
 
 
   METHOD set_meta.
@@ -68,6 +73,38 @@ CLASS ZCL_MCP_RESP_LIST_RES_TMPL IMPLEMENTATION.
 
   METHOD set_resource_templates.
     int_resource_templates = resource_templates.
+  ENDMETHOD.
+
+  METHOD convert_timestamp_to_iso8601.
+    " Convert session timestamp to UTC and format as ISO 8601
+    DATA local_date       TYPE sy-datum.
+    DATA local_time       TYPE sy-uzeit.
+    DATA utc_timestamp    TYPE timestamp.
+    DATA timestamp_string TYPE string.
+
+    " Convert timestamp to string first
+    timestamp_string = |{ timestamp }|.
+
+    " Pad with leading zeros if needed
+    WHILE strlen( timestamp_string ) < 14.
+      timestamp_string = |0{ timestamp_string }|.
+    ENDWHILE.
+
+    " Extract date and time from timestamp string
+    local_date = timestamp_string+0(8).
+    local_time = timestamp_string+8(6).
+
+    " Convert local date/time to UTC timestamp
+    CONVERT DATE local_date TIME local_time INTO TIME STAMP utc_timestamp TIME ZONE sy-zonlo.
+
+    " Convert UTC timestamp back to string for formatting
+    timestamp_string = |{ utc_timestamp }|.
+    WHILE strlen( timestamp_string ) < 14.
+      timestamp_string = |0{ timestamp_string }|.
+    ENDWHILE.
+
+    " Format: YYYYMMDDHHMMSS -> YYYY-MM-DDTHH:MM:SSZ
+    result = |{ timestamp_string+0(4) }-{ timestamp_string+4(2) }-{ timestamp_string+6(2) }T{ timestamp_string+8(2) }:{ timestamp_string+10(2) }:{ timestamp_string+12(2) }Z|.
   ENDMETHOD.
 
   METHOD zif_mcp_internal~generate_json.
@@ -116,7 +153,10 @@ CLASS ZCL_MCP_RESP_LIST_RES_TMPL IMPLEMENTATION.
       ENDIF.
 
       " Add annotations (optional)
-      IF <template>-annotations-audience IS NOT INITIAL OR <template>-annotations-priority IS NOT INITIAL.
+      IF     <template>-annotations-audience      IS NOT INITIAL
+         OR  <template>-annotations-priority      IS NOT INITIAL
+         OR  <template>-annotations-last_modified IS NOT INITIAL.
+
         " Add audience array if not empty
         IF <template>-annotations-audience IS NOT INITIAL.
           result->touch_array( |/resourceTemplates/{ template_index }/annotations/audience| ).
@@ -131,6 +171,13 @@ CLASS ZCL_MCP_RESP_LIST_RES_TMPL IMPLEMENTATION.
         IF <template>-annotations-priority IS NOT INITIAL.
           result->set( iv_path = |/resourceTemplates/{ template_index }/annotations/priority|
                        iv_val  = <template>-annotations-priority ).
+        ENDIF.
+
+        " Add lastModified if not empty
+        IF <template>-annotations-last_modified IS NOT INITIAL.
+          DATA(iso_timestamp) = convert_timestamp_to_iso8601( <template>-annotations-last_modified ).
+          result->set( iv_path = |/resourceTemplates/{ template_index }/annotations/lastModified|
+                       iv_val  = iso_timestamp ).
         ENDIF.
       ENDIF.
     ENDLOOP.
