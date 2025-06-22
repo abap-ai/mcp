@@ -200,7 +200,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
         output_schema_flight_conn->add_string( name        = `planetype`
                                                description = `Type of Plane`
                                                required    = abap_true ) ##NO_TEXT.
-        output_schema_flight_conn->end_array( ) ##NO_TEXT.
+        output_schema_flight_conn->end_array( ).
 
         APPEND VALUE #( name          = `get_flight_conn_details`
                         description   = `Get details of one specific flight connection`
