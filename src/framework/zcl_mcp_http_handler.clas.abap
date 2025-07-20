@@ -6,6 +6,7 @@ CLASS zcl_mcp_http_handler DEFINITION
   PUBLIC SECTION.
     INTERFACES if_http_extension.
 
+protected section.
   PRIVATE SECTION.
     "! JSON-RPC parser instance
     DATA jsonrpc TYPE REF TO zcl_mcp_jsonrpc.
@@ -108,7 +109,10 @@ CLASS zcl_mcp_http_handler DEFINITION
     DATA mcp_server TYPE REF TO zif_mcp_server.
 ENDCLASS.
 
-CLASS zcl_mcp_http_handler IMPLEMENTATION.
+
+
+CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
+
 
   METHOD classify_message.
     DATA first_char TYPE c LENGTH 1.
@@ -148,6 +152,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
         " Invalid JSON - will be handled by caller
     ENDTRY.
   ENDMETHOD.
+
 
   METHOD handle_delete.
     " Check if sessions are enabled
@@ -204,6 +209,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
     response->set_header_field( name  = 'Allow'
                                 value = 'POST' ) ##NO_TEXT.
   ENDMETHOD.
+
 
   METHOD handle_post.
     DATA content_type  TYPE string.
@@ -277,6 +283,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       response->set_cdata( response_text ).
     ENDIF.
   ENDMETHOD.
+
 
   METHOD if_http_extension~handle_request.
     DATA path       TYPE string.
@@ -452,6 +459,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
+
   METHOD process_request.
     DATA response TYPE zcl_mcp_jsonrpc=>response.
     DATA request  TYPE zcl_mcp_jsonrpc=>request.
@@ -539,6 +547,10 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
             DATA(initialize) = mcp_server->initialize( NEW zcl_mcp_req_initialize( request-params ) ).
             response-error  = initialize-error.
             response-result = initialize-result->zif_mcp_internal~generate_json( ).
+          WHEN 'ping'.  " see: https://modelcontextprotocol.io/specification/2025-06-18/basic/utilities/ping
+            CLEAR: response-error.
+            response-result = zcl_mcp_ajson=>create_empty( ).
+            response-result->touch_object( '' ).
           WHEN 'prompts/list'.
             DATA(list_prompts) = mcp_server->prompts_list( NEW zcl_mcp_req_list_prompts( request-params ) ).
             response-error  = list_prompts-error.
@@ -591,6 +603,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
     result = jsonrpc->serialize_response( response ).
   ENDMETHOD.
 
+
   METHOD handle_options.
     DATA(origin) = request->get_header_field( 'Origin' ) ##NO_TEXT.
     DATA fields TYPE tihttpnvp.
@@ -624,6 +637,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
     response->set_header_field( name = 'Access-Control-Max-Age' value = '86400' ) ##NO_TEXT.
   ENDMETHOD.
 
+
   METHOD origin_allowed.
     DATA(origins) = mcp_server->config->get_allowed_origins( ).
     result = abap_false.
@@ -634,5 +648,4 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
-
 ENDCLASS.
