@@ -29,16 +29,6 @@
      <DESCRIPT>Create a success response</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
-     <CMPNAME>IS_BATCH</CMPNAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Check if JSON string is a batch array</DESCRIPT>
-    </SEOCOMPOTX>
-    <SEOCOMPOTX>
-     <CMPNAME>SERIALIZE_BATCH_RESPONSE</CMPNAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Serialize multiple responses to JSON format</DESCRIPT>
-    </SEOCOMPOTX>
-    <SEOCOMPOTX>
      <CMPNAME>SERIALIZE_REQUEST</CMPNAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Serialize a request to JSON format</DESCRIPT>
@@ -103,30 +93,6 @@
      <SCONAME>RESULT</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Generated success response object</DESCRIPT>
-    </SEOSUBCOTX>
-    <SEOSUBCOTX>
-     <CMPNAME>IS_BATCH</CMPNAME>
-     <SCONAME>JSON</SCONAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>JSON string to check</DESCRIPT>
-    </SEOSUBCOTX>
-    <SEOSUBCOTX>
-     <CMPNAME>IS_BATCH</CMPNAME>
-     <SCONAME>RESULT</SCONAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>True if JSON represents an array</DESCRIPT>
-    </SEOSUBCOTX>
-    <SEOSUBCOTX>
-     <CMPNAME>SERIALIZE_BATCH_RESPONSE</CMPNAME>
-     <SCONAME>RESPONSES</SCONAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Table of response objects to serialize</DESCRIPT>
-    </SEOSUBCOTX>
-    <SEOSUBCOTX>
-     <CMPNAME>SERIALIZE_BATCH_RESPONSE</CMPNAME>
-     <SCONAME>RESULT</SCONAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>JSON array of responses</DESCRIPT>
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>SERIALIZE_REQUEST</CMPNAME>

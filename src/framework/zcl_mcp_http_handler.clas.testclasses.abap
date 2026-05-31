@@ -13,6 +13,7 @@ CLASS ltcl_mcp_http_handler DEFINITION FINAL FOR TESTING
     METHODS test_valid_mcp_path    FOR TESTING.
     METHODS test_invalid_mcp_paths FOR TESTING.
     METHODS test_classify_batch    FOR TESTING.
+    METHODS test_classify_id_zero  FOR TESTING.
 ENDCLASS.
 
 CLASS ltcl_mcp_http_handler IMPLEMENTATION.
@@ -94,31 +95,43 @@ CLASS ltcl_mcp_http_handler IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD test_classify_batch.
-    DATA: has_requests  TYPE abap_bool,
-          has_responses TYPE abap_bool,
-          has_notifs    TYPE abap_bool.
+    DATA has_requests  TYPE abap_bool.
+    DATA has_responses TYPE abap_bool.
+    DATA has_notifs    TYPE abap_bool.
 
-    " Batch of requests
+    " JSON-RPC batch arrays are intentionally unsupported by the MCP HTTP handler.
     cut->classify_message(
       EXPORTING
-        json = '[{"jsonrpc":"2.0","method":"method1","id":"1"},{"jsonrpc":"2.0","method":"method2","id":"2"}]'
+        json          = '[{"jsonrpc":"2.0","method":"method1","id":"1"},{"jsonrpc":"2.0","method":"method2","id":"2"}]'
       IMPORTING
-        has_requests = has_requests
+        has_requests  = has_requests
         has_responses = has_responses
-        has_notifs = has_notifs
-    ).
+        has_notifs    = has_notifs ).
+
+    cl_abap_unit_assert=>assert_false( act = has_requests
+                                       msg = 'Batch array must not be classified as request' ).
+
+    cl_abap_unit_assert=>assert_false( act = has_responses
+                                       msg = 'Batch array must not be classified as response' ).
+
+    cl_abap_unit_assert=>assert_false( act = has_notifs
+                                       msg = 'Batch array must not be classified as notification' ).
+  ENDMETHOD.
+
+  METHOD test_classify_id_zero.
+    DATA has_requests  TYPE abap_bool.
+    DATA has_responses TYPE abap_bool.
+    DATA has_notifs    TYPE abap_bool.
+
+    cut->classify_message( EXPORTING json          = '{"jsonrpc":"2.0","method":"ping","id":0}'
+                           IMPORTING has_requests  = has_requests
+                                     has_responses = has_responses
+                                     has_notifs    = has_notifs ).
 
     cl_abap_unit_assert=>assert_true( act = has_requests
-                                      msg = 'Batch array should be classified as containing requests' ).
+                                      msg = 'id 0 is a valid JSON-RPC request id' ).
 
-    cl_abap_unit_assert=>assert_false(
-      act = has_responses
-      msg = 'Batch of requests should not be classified as responses'
-    ).
-
-    cl_abap_unit_assert=>assert_false(
-      act = has_notifs
-      msg = 'Batch of requests should not be classified as notifications'
-    ).
+    cl_abap_unit_assert=>assert_false( has_responses ).
+    cl_abap_unit_assert=>assert_false( has_notifs ).
   ENDMETHOD.
 ENDCLASS.

@@ -224,12 +224,12 @@ CLASS ltcl_get_prompt_result IMPLEMENTATION.
 
   METHOD test_message_with_annotations.
     " Arrange
-    DATA audiences TYPE zcl_mcp_resp_get_prompt=>annotations-audience.
+    DATA audiences TYPE zif_mcp_types=>annotations-audience.
 
     APPEND 'user' TO audiences.
     APPEND 'assistant' TO audiences.
 
-    DATA annotations TYPE zcl_mcp_resp_get_prompt=>annotations.
+    DATA annotations TYPE zif_mcp_types=>annotations.
     annotations-audience = audiences.
     annotations-priority = '0.75'.
 
@@ -313,11 +313,11 @@ CLASS ltcl_get_prompt_result IMPLEMENTATION.
     " Arrange
     DATA audio_data TYPE string VALUE 'SGVsbG8gdGhpcyBpcyBhIHRlc3QgYXVkaW8gZmlsZQ=='.
 
-    DATA audiences  TYPE zcl_mcp_resp_get_prompt=>annotations-audience.
+    DATA audiences  TYPE zif_mcp_types=>annotations-audience.
 
     APPEND 'user' TO audiences.
 
-    DATA annotations TYPE zcl_mcp_resp_get_prompt=>annotations.
+    DATA annotations TYPE zif_mcp_types=>annotations.
     annotations-audience = audiences.
     annotations-priority = '0.9'.
 

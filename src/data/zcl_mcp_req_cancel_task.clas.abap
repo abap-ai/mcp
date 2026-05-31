@@ -1,0 +1,59 @@
+CLASS zcl_mcp_req_cancel_task DEFINITION
+  PUBLIC FINAL
+  CREATE PUBLIC.
+
+  PUBLIC SECTION.
+    "! <p class="shorttext synchronized">Constructor</p>
+    "! Parses the tasks/get request params
+    "!
+    "! @parameter json | <p class="shorttext synchronized">JSON params</p>
+    METHODS constructor
+      IMPORTING json TYPE REF TO zif_mcp_ajson
+      RAISING   zcx_mcp_ajson_error
+                zcx_mcp_server.
+
+    "! <p class="shorttext synchronized">Get task ID</p>
+    "!
+    "! @parameter result | <p class="shorttext synchronized">Task ID</p>
+    METHODS get_task_id
+      RETURNING VALUE(result) TYPE string.
+
+    "! <p class="shorttext synchronized">Get _meta fields</p>
+    "!
+    "! @parameter result | <p class="shorttext synchronized">_meta JSON</p>
+    METHODS get_meta
+      RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson.
+
+  PRIVATE SECTION.
+    DATA int_task_id TYPE string.
+    DATA int_meta    TYPE REF TO zif_mcp_ajson.
+ENDCLASS.
+
+CLASS zcl_mcp_req_cancel_task IMPLEMENTATION.
+  METHOD constructor.
+    IF json->exists( '/taskId' ).
+      int_task_id = json->get_string( '/taskId' ).
+      IF int_task_id IS INITIAL.
+        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
+                                            msgv1  = 'taskId' ).
+      ENDIF.
+    ELSE.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
+                                          msgv1  = 'taskId' ).
+    ENDIF.
+
+    IF json->exists( '/_meta' ).
+      int_meta = json->slice( '/_meta' ).
+    ELSE.
+      int_meta = zcl_mcp_ajson=>create_empty( ).
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD get_task_id.
+    result = int_task_id.
+  ENDMETHOD.
+
+  METHOD get_meta.
+    result = int_meta.
+  ENDMETHOD.
+ENDCLASS.

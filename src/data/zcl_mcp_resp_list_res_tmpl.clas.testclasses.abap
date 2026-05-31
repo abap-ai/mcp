@@ -12,6 +12,7 @@ CLASS ltcl_list_resource_templates DEFINITION FINAL FOR TESTING
     METHODS test_with_next_cursor         FOR TESTING RAISING zcx_mcp_ajson_error.
     METHODS test_with_meta                FOR TESTING RAISING zcx_mcp_ajson_error.
     METHODS test_empty_templates          FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS test_template_icons           FOR TESTING RAISING zcx_mcp_ajson_error.
 
     METHODS assert_path_exists
       IMPORTING !path TYPE string.
@@ -183,5 +184,45 @@ CLASS ltcl_list_resource_templates IMPLEMENTATION.
       act = json->get( path )
       exp = value
       msg = |Path { path } should equal expected value| ).
+  ENDMETHOD.
+
+  METHOD test_template_icons.
+    DATA icon1 TYPE zif_mcp_types=>icon.
+    icon1-src       = 'https://example.com/tmpl-icon.png'.
+    icon1-mime_type = 'image/png'.
+    icon1-theme     = 'light'.
+    APPEND '48x48' TO icon1-sizes.
+
+    DATA icon2 TYPE zif_mcp_types=>icon.
+    icon2-src = 'https://example.com/tmpl-icon.svg'.
+    APPEND 'any' TO icon2-sizes.
+
+    DATA template TYPE zcl_mcp_resp_list_res_tmpl=>resource_template.
+    template-uritemplate = '/api/resources/{id}'.
+    template-name        = 'Iconic Template'.
+    APPEND icon1 TO template-icons.
+    APPEND icon2 TO template-icons.
+
+    DATA templates TYPE zcl_mcp_resp_list_res_tmpl=>resource_templates.
+    APPEND template TO templates.
+    cut->set_resource_templates( templates ).
+
+    json = cut->zif_mcp_internal~generate_json( ).
+
+    assert_path_exists( '/resourceTemplates/1/icons' ).
+    assert_path_equals( path  = '/resourceTemplates/1/icons/1/src'
+                        value = 'https://example.com/tmpl-icon.png' ).
+    assert_path_equals( path  = '/resourceTemplates/1/icons/1/mimeType'
+                        value = 'image/png' ).
+    assert_path_equals( path  = '/resourceTemplates/1/icons/1/theme'
+                        value = 'light' ).
+    assert_path_equals( path  = '/resourceTemplates/1/icons/1/sizes/1'
+                        value = '48x48' ).
+    assert_path_equals( path  = '/resourceTemplates/1/icons/2/src'
+                        value = 'https://example.com/tmpl-icon.svg' ).
+    cl_abap_unit_assert=>assert_false( act = json->exists( '/resourceTemplates/1/icons/2/mimeType' )
+                                       msg = 'mimeType absent when not set' ).
+    cl_abap_unit_assert=>assert_false( act = json->exists( '/resourceTemplates/1/icons/2/theme' )
+                                       msg = 'theme absent when not set' ).
   ENDMETHOD.
 ENDCLASS.

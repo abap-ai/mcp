@@ -136,6 +136,15 @@ public section.
       attr3 type scx_attrname value '',
       attr4 type scx_attrname value '',
     end of SESSION_SAVE_ERROR .
+  constants:
+    begin of TASK_NOT_FOUND,
+      msgid type symsgid value 'ZLLM_MCP',
+      msgno type symsgno value '015',
+      attr1 type scx_attrname value 'MSGV1',
+      attr2 type scx_attrname value '',
+      attr3 type scx_attrname value '',
+      attr4 type scx_attrname value '',
+    end of TASK_NOT_FOUND .
   data MSGV1 type SYMSGV .
   data MSGV2 type SYMSGV .
   data MSGV3 type SYMSGV .

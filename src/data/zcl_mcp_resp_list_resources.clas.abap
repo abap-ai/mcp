@@ -19,13 +19,14 @@ CLASS zcl_mcp_resp_list_resources DEFINITION
              title       TYPE string,
              description TYPE string,
              mime_type   TYPE string,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
              size        TYPE i,
+             icons       TYPE zif_mcp_types=>icon_list,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF resource.
 
     TYPES resources   TYPE STANDARD TABLE OF resource WITH KEY uri.
-    TYPES next_cursor TYPE string.
+    TYPES next_cursor TYPE zif_mcp_types=>page_cursor.
 
     "! <p class="shorttext synchronized">Set Resources</p>
     "!
@@ -49,7 +50,7 @@ CLASS zcl_mcp_resp_list_resources DEFINITION
 
   PRIVATE SECTION.
     DATA int_resources   TYPE resources.
-    DATA int_next_cursor TYPE string.
+    DATA int_next_cursor TYPE zif_mcp_types=>page_cursor.
     DATA int_meta        TYPE REF TO zif_mcp_ajson.
 
     METHODS convert_timestamp_to_iso8601
@@ -106,6 +107,31 @@ CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
         " Create the '_meta' node in the resulting JSON
         result->set( iv_path = |/resources/{ resource_index }/_meta|
                      iv_val  = <resource>-meta ).
+      ENDIF.
+
+      " Add icons (optional, new in MCP 2025-11-25)
+      IF <resource>-icons IS NOT INITIAL.
+        result->touch_array( |/resources/{ resource_index }/icons| ).
+        LOOP AT <resource>-icons ASSIGNING FIELD-SYMBOL(<icon>).
+          DATA(icon_path) = |/resources/{ resource_index }/icons/{ sy-tabix }|.
+          result->set( iv_path = |{ icon_path }/src|
+                       iv_val  = <icon>-src ).
+          IF <icon>-mime_type IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/mimeType|
+                         iv_val  = <icon>-mime_type ).
+          ENDIF.
+          IF <icon>-sizes IS NOT INITIAL.
+            result->touch_array( |{ icon_path }/sizes| ).
+            LOOP AT <icon>-sizes ASSIGNING FIELD-SYMBOL(<size>).
+              result->set( iv_path = |{ icon_path }/sizes/{ sy-tabix }|
+                           iv_val  = <size> ).
+            ENDLOOP.
+          ENDIF.
+          IF <icon>-theme IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/theme|
+                         iv_val  = <icon>-theme ).
+          ENDIF.
+        ENDLOOP.
       ENDIF.
 
       " Add annotations (optional)

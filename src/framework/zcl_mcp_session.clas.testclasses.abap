@@ -6,6 +6,7 @@ CLASS ltcl_mcp_session DEFINITION FINAL FOR TESTING
     CONSTANTS:
       session_id_valid   TYPE sysuuid_c32 VALUE '100000000000000000000000000000AA',
       session_id_expired TYPE sysuuid_c32 VALUE '100000000000000000000000000000BB',
+      session_id_foreign TYPE sysuuid_c32 VALUE '100000000000000000000000000000DD',
       session_id_unknown TYPE sysuuid_c32 VALUE '100000000000000000000000000000CC'.
 
 
@@ -46,7 +47,12 @@ CLASS ltcl_mcp_session DEFINITION FINAL FOR TESTING
       test_save_non_mcp_mode FOR TESTING RAISING zcx_mcp_server,
       test_delete FOR TESTING RAISING zcx_mcp_server,
       test_delete_nonexistent FOR TESTING RAISING zcx_mcp_server,
-      test_delete_outdated_sessions FOR TESTING RAISING zcx_mcp_server.
+      test_delete_outdated_sessions FOR TESTING RAISING zcx_mcp_server,
+
+      " User tests
+      test_constructor_foreign_user      FOR TESTING RAISING zcx_mcp_server,
+      test_save_stores_created_by        FOR TESTING RAISING zcx_mcp_server,
+      test_constructor_own_user_expl FOR TESTING RAISING zcx_mcp_server.
 ENDCLASS.
 
 CLASS ltcl_mcp_session IMPLEMENTATION.
@@ -67,12 +73,14 @@ CLASS ltcl_mcp_session IMPLEMENTATION.
     " Prepare test data for valid session
     DATA valid_session TYPE zmcp_sessions.
     valid_session-session_id = session_id_valid.
+    valid_session-created_by = sy-uname.
     valid_session-data = '[{"key":"KEY1","value":"VALUE1"},{"key":"KEY2","value":"VALUE2"}]'.
     GET TIME STAMP FIELD valid_session-updated.
 
     " Prepare test data for expired session
     DATA expired_session TYPE zmcp_sessions.
     expired_session-session_id = session_id_expired.
+    expired_session-created_by = sy-uname.
     expired_session-data = '[{"key":"KEY1","value":"VALUE1"},{"key":"KEY2","value":"VALUE2"}]'.
     " Set timestamp to be older than session_validity (3600 seconds)
     DATA outdated_timestamp TYPE timestamp.
@@ -83,10 +91,18 @@ CLASS ltcl_mcp_session IMPLEMENTATION.
     ).
     expired_session-updated = outdated_timestamp.
 
+    " Prepare test data for session owned by a different user
+    DATA foreign_session TYPE zmcp_sessions.
+    foreign_session-session_id  = session_id_foreign.
+    foreign_session-created_by  = 'OTHER_USER'.
+    foreign_session-data        = '[{"key":"SECRET","value":"SHOULD_NOT_SEE"}]'.
+    GET TIME STAMP FIELD foreign_session-updated.
+
     " Create a table of test data
     DATA test_data TYPE TABLE OF zmcp_sessions.
     APPEND valid_session TO test_data.
     APPEND expired_session TO test_data.
+    APPEND foreign_session TO test_data.
 
     " Insert test data into mock table
     sql_doubles->insert_test_data( test_data ).
@@ -518,8 +534,75 @@ CLASS ltcl_mcp_session IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals(
       act = remaining_count
-      exp = 1
-      msg = 'Only 1 valid session should remain'
+      exp = 2
+      msg = 'Valid and foreign sessions should remain, only outdated ones deleted'
+    ).
+  ENDMETHOD.
+
+  METHOD test_constructor_foreign_user.
+    " A session that exists in DB but belongs to a different user
+    " must be rejected - indistinguishable from unknown to avoid enumeration.
+    TRY.
+        session = NEW #(
+          session_id   = session_id_foreign
+          session_mode = zcl_mcp_session=>session_mode_mcp
+        ).
+        cl_abap_unit_assert=>fail( 'Exception for foreign session expected' ).
+      CATCH zcx_mcp_server INTO DATA(exception).
+        cl_abap_unit_assert=>assert_bound(
+          act = exception
+          msg = 'Foreign session must raise an exception'
+        ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD test_constructor_own_user_expl.
+    " Sanity check: loading own session still works after adding user checks.
+    session = NEW #(
+      session_id   = session_id_valid
+      session_mode = zcl_mcp_session=>session_mode_mcp
+    ).
+
+    cl_abap_unit_assert=>assert_equals(
+      act = lines( session->get_all( ) )
+      exp = 2
+      msg = 'Own session should load normally'
+    ).
+
+    " Confirm no data from the foreign session bled through
+    DATA entry TYPE zcl_mcp_session=>session_entry.
+    entry = session->get( 'SECRET' ).
+    cl_abap_unit_assert=>assert_initial(
+      act = entry
+      msg = 'Foreign session data must not be accessible'
+    ).
+  ENDMETHOD.
+
+  METHOD test_save_stores_created_by.
+    " Save must stamp created_by = sy-uname so future loads can enforce ownership.
+    session = NEW #(
+      session_id   = session_id_valid
+      session_mode = zcl_mcp_session=>session_mode_mcp
+      create_new   = abap_true
+    ).
+
+    session->add( VALUE #( key = 'OWNER_KEY' value = 'OWNER_VAL' ) ).
+    session->save( ).
+
+    SELECT SINGLE created_by FROM zmcp_sessions
+      WHERE session_id = @session_id_valid
+      INTO @DATA(saved_user).
+
+    cl_abap_unit_assert=>assert_subrc(
+      act = sy-subrc
+      exp = 0
+      msg = 'Session must exist in DB after save'
+    ).
+
+    cl_abap_unit_assert=>assert_equals(
+      act = saved_user
+      exp = sy-uname
+      msg = 'Saved session must be stamped with current user'
     ).
   ENDMETHOD.
 

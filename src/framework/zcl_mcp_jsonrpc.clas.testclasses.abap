@@ -23,16 +23,16 @@ CLASS ltcl_mcp_jsonrpc DEFINITION FINAL FOR TESTING
     METHODS serialize_response             FOR TESTING RAISING zcx_mcp_ajson_error.
     METHODS parse_response                 FOR TESTING RAISING zcx_mcp_ajson_error.
 
-    " Test methods for batch operations
-    METHODS parse_batch_request            FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS serialize_batch_response       FOR TESTING RAISING zcx_mcp_ajson_error.
-
     " Test different ID formats
     METHODS parse_request_id_leading_zeros FOR TESTING RAISING zcx_mcp_ajson_error.
     METHODS parse_request_alphanumeric_id  FOR TESTING RAISING zcx_mcp_ajson_error.
     METHODS parse_request_uuid_id          FOR TESTING RAISING zcx_mcp_ajson_error.
     METHODS serialize_request_id_formats   FOR TESTING RAISING zcx_mcp_ajson_error.
     METHODS serialize_response_id_formats  FOR TESTING RAISING zcx_mcp_ajson_error.
+
+    METHODS parse_notification             FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS parse_request_bad_version      FOR TESTING.
+    METHODS parse_request_missing_method   FOR TESTING.
 
     " Helper methods
     METHODS assert_json_equals
@@ -60,6 +60,7 @@ CLASS ltcl_mcp_jsonrpc IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( exp = '123'
                                         act = request-id ).
+    cl_abap_unit_assert=>assert_true( request-id_present ).
   ENDMETHOD.
 
   METHOD create_notification.
@@ -74,6 +75,7 @@ CLASS ltcl_mcp_jsonrpc IMPLEMENTATION.
                                         act = request-method ).
 
     cl_abap_unit_assert=>assert_initial( request-id ).
+    cl_abap_unit_assert=>assert_false( request-id_present ).
   ENDMETHOD.
 
   METHOD serialize_request.
@@ -116,6 +118,7 @@ CLASS ltcl_mcp_jsonrpc IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( exp = 'value'
                                         act = request-params->get_string( '/name' ) ).
+    cl_abap_unit_assert=>assert_true( request-id_present ).
   ENDMETHOD.
 
   METHOD parse_request_numeric_id.
@@ -128,6 +131,7 @@ CLASS ltcl_mcp_jsonrpc IMPLEMENTATION.
     " Assert - check ID is parsed correctly
     cl_abap_unit_assert=>assert_equals( exp = '123'
                                         act = request-id ).
+    cl_abap_unit_assert=>assert_true( request-id_present ).
   ENDMETHOD.
 
   METHOD create_success_response.
@@ -219,52 +223,6 @@ CLASS ltcl_mcp_jsonrpc IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( exp = 'success'
                                         act = response-result->get_string( '/status' ) ).
-  ENDMETHOD.
-
-  METHOD parse_batch_request.
-    " Arrange - JSON batch request string
-    DATA(json) = `[{"jsonrpc":"2.0","method":"method1","id":1},{"jsonrpc":"2.0","method":"method2","id":2}]`.
-
-    " Act - parse the JSON to a batch of request objects
-    DATA(requests) = cut->parse_batch_request( json ).
-
-    " Assert - check parsed values
-    cl_abap_unit_assert=>assert_equals( exp = 2
-                                        act = lines( requests ) ).
-
-    cl_abap_unit_assert=>assert_equals( exp = 'method1'
-                                        act = requests[ 1 ]-method ).
-
-    cl_abap_unit_assert=>assert_equals( exp = 'method2'
-                                        act = requests[ 2 ]-method ).
-  ENDMETHOD.
-
-  METHOD serialize_batch_response.
-    " Arrange - create multiple responses
-    DATA(result1) = zcl_mcp_ajson=>create_empty( ).
-    result1->set_string( iv_path = '/status'
-                         iv_val  = 'success1' ).
-
-    DATA(result2) = zcl_mcp_ajson=>create_empty( ).
-    result2->set_string( iv_path = '/status'
-                         iv_val  = 'success2' ).
-
-    DATA(response1) = cut->create_success_response( id     = '1'
-                                                    result = result1 ).
-
-    DATA(response2) = cut->create_success_response( id     = '2'
-                                                    result = result2 ).
-
-    DATA(responses) = VALUE zcl_mcp_jsonrpc=>responses( ( response1 )
-                                                        ( response2 ) ).
-
-    " Act - serialize the batch response
-    DATA(json) = cut->serialize_batch_response( responses ).
-
-    " Assert - check JSON structure
-    assert_json_equals(
-        actual   = json
-        expected = '[{"jsonrpc":"2.0","result":{"status":"success1"},"id":1},{"jsonrpc":"2.0","result":{"status":"success2"},"id":2}]' ).
   ENDMETHOD.
 
   METHOD assert_json_equals.
@@ -391,5 +349,34 @@ CLASS ltcl_mcp_jsonrpc IMPLEMENTATION.
     DATA(json3) = cut->serialize_response( response3 ).
     assert_json_equals( actual   = json3
                         expected = '{"jsonrpc":"2.0","result":{"status":"success"},"id":"abc123"}' ).
+  ENDMETHOD.
+
+  METHOD parse_notification.
+    DATA(json) = `{"jsonrpc":"2.0","method":"notifications/initialized"}`.
+
+    DATA(request) = cut->parse_request( json ).
+
+    cl_abap_unit_assert=>assert_equals( exp = '2.0'
+                                        act = request-jsonrpc ).
+    cl_abap_unit_assert=>assert_equals( exp = 'notifications/initialized'
+                                        act = request-method ).
+    cl_abap_unit_assert=>assert_false( request-id_present ).
+    cl_abap_unit_assert=>assert_initial( request-id ).
+  ENDMETHOD.
+
+  METHOD parse_request_bad_version.
+    TRY.
+        cut->parse_request( `{"jsonrpc":"1.0","method":"test.method","id":1}` ).
+        cl_abap_unit_assert=>fail( 'Expected zcx_mcp_ajson_error for invalid JSON-RPC version' ).
+      CATCH zcx_mcp_ajson_error ##NO_HANDLER.
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD parse_request_missing_method.
+    TRY.
+        cut->parse_request( `{"jsonrpc":"2.0","id":1}` ).
+        cl_abap_unit_assert=>fail( 'Expected zcx_mcp_ajson_error for missing method' ).
+      CATCH zcx_mcp_ajson_error ##NO_HANDLER.
+    ENDTRY.
   ENDMETHOD.
 ENDCLASS.

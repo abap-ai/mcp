@@ -9,6 +9,7 @@ CLASS ltcl_resources_response DEFINITION FINAL FOR TESTING
     METHODS test_full_resources  FOR TESTING RAISING cx_static_check.
     METHODS test_next_cursor     FOR TESTING RAISING cx_static_check.
     METHODS test_meta_data       FOR TESTING RAISING cx_static_check.
+    METHODS test_resource_icons  FOR TESTING RAISING cx_static_check.
 
     DATA cut TYPE REF TO zcl_mcp_resp_list_resources.
 ENDCLASS.
@@ -167,6 +168,49 @@ CLASS ltcl_resources_response IMPLEMENTATION.
                                             act = ajson->get_string( '/_meta/version' ) ).
         cl_abap_unit_assert=>assert_equals( exp = 'ABAP'
                                             act = ajson->get_string( '/_meta/provider' ) ).
+
+      CATCH zcx_mcp_ajson_error INTO DATA(error).
+        cl_abap_unit_assert=>fail( error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD test_resource_icons.
+    DATA icon1 TYPE zif_mcp_types=>icon.
+    icon1-src       = 'https://example.com/res-icon.png'.
+    icon1-mime_type = 'image/png'.
+    icon1-theme     = 'dark'.
+    APPEND '96x96' TO icon1-sizes.
+
+    DATA icon2 TYPE zif_mcp_types=>icon.
+    icon2-src = 'https://example.com/res-icon.svg'.
+    APPEND 'any' TO icon2-sizes.
+
+    DATA(resources) = VALUE zcl_mcp_resp_list_resources=>resources(
+                        ( uri   = 'resource:file1'
+                          name  = 'File 1'
+                          icons = VALUE #( ( icon1 ) ( icon2 ) ) ) ).
+
+    cut->set_resources( resources ).
+
+    TRY.
+        DATA(ajson) = cut->zif_mcp_internal~generate_json( ).
+
+        cl_abap_unit_assert=>assert_true( act = ajson->exists( '/resources/1/icons' )
+                                          msg = 'icons array should exist' ).
+        cl_abap_unit_assert=>assert_equals( exp = 'https://example.com/res-icon.png'
+                                            act = ajson->get_string( '/resources/1/icons/1/src' ) ).
+        cl_abap_unit_assert=>assert_equals( exp = 'image/png'
+                                            act = ajson->get_string( '/resources/1/icons/1/mimeType' ) ).
+        cl_abap_unit_assert=>assert_equals( exp = 'dark'
+                                            act = ajson->get_string( '/resources/1/icons/1/theme' ) ).
+        cl_abap_unit_assert=>assert_equals( exp = '96x96'
+                                            act = ajson->get_string( '/resources/1/icons/1/sizes/1' ) ).
+        cl_abap_unit_assert=>assert_equals( exp = 'https://example.com/res-icon.svg'
+                                            act = ajson->get_string( '/resources/1/icons/2/src' ) ).
+        cl_abap_unit_assert=>assert_false( act = ajson->exists( '/resources/1/icons/2/mimeType' )
+                                           msg = 'mimeType absent when not set' ).
+        cl_abap_unit_assert=>assert_false( act = ajson->exists( '/resources/1/icons/2/theme' )
+                                           msg = 'theme absent when not set' ).
 
       CATCH zcx_mcp_ajson_error INTO DATA(error).
         cl_abap_unit_assert=>fail( error->get_text( ) ).

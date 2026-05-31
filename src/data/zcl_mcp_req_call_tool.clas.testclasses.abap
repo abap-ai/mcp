@@ -19,6 +19,14 @@ CLASS ltcl_call_tool_request DEFINITION FINAL FOR TESTING
     METHODS test_meta_nested        FOR TESTING RAISING cx_static_check.
     METHODS test_meta_special_chars FOR TESTING RAISING cx_static_check.
     METHODS test_meta_roundtrip     FOR TESTING RAISING cx_static_check.
+
+    "! Test task field functionality (MCP 2025-11-25)
+    METHODS test_no_task            FOR TESTING RAISING cx_static_check.
+    METHODS test_task_no_ttl        FOR TESTING RAISING cx_static_check.
+    METHODS test_task_with_ttl      FOR TESTING RAISING cx_static_check.
+    METHODS test_task_zero_ttl      FOR TESTING RAISING cx_static_check.
+    METHODS test_task_with_args     FOR TESTING RAISING cx_static_check.
+    METHODS test_task_with_meta     FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 CLASS ltcl_call_tool_request IMPLEMENTATION.
@@ -173,8 +181,8 @@ CLASS ltcl_call_tool_request IMPLEMENTATION.
 
     IF NOT ( line_exists( members[ table_line = 'api.example.com/version' ] ) ).
       cl_abap_unit_assert=>fail( 'Slash key should be in members list' ).
-
     ENDIF.
+
     " Access slash key via internal tree
     LOOP AT meta->mt_json_tree INTO DATA(node) WHERE path = '/' AND name = 'api.example.com/version'.
       cl_abap_unit_assert=>assert_equals( exp = 'v2'
@@ -236,15 +244,110 @@ CLASS ltcl_call_tool_request IMPLEMENTATION.
     " Stringify and verify slash key is preserved
     DATA(meta_json) = meta->stringify( ).
 
-    " Simple contains checks instead of matchers
     cl_abap_unit_assert=>assert_true( act = boolc( meta_json CS 'api.v1/endpoint' )
                                       msg = 'Stringified JSON should preserve slash keys' ).
-
     cl_abap_unit_assert=>assert_true( act = boolc( meta_json CS 'users' )
                                       msg = 'Stringified JSON should preserve slash key values' ).
-
     cl_abap_unit_assert=>assert_true( act = boolc( meta_json CS 'normal' )
                                       msg = 'Stringified JSON should preserve normal keys' ).
+  ENDMETHOD.
+
+  " task field tests (MCP 2025-11-25)
+
+  METHOD test_no_task.
+    " Absent task field: has_task false, ttl 0
+    DATA(json_string) = `{"name":"test_tool","arguments":{"p":"v"}}`.
+    DATA(json) = zcl_mcp_ajson=>parse( json_string ).
+
+    DATA(request) = NEW zcl_mcp_req_call_tool( json ).
+
+    cl_abap_unit_assert=>assert_false( act = request->has_task( )
+                                       msg = 'has_task should be false when task field is absent' ).
+    cl_abap_unit_assert=>assert_equals( exp = 0
+                                        act = request->get_task_ttl( )
+                                        msg = 'get_task_ttl should return 0 when task field is absent' ).
+  ENDMETHOD.
+
+  METHOD test_task_no_ttl.
+    " task field present but ttl omitted: has_task true, ttl 0
+    DATA(json_string) = `{"name":"test_tool","task":{}}`.
+    DATA(json) = zcl_mcp_ajson=>parse( json_string ).
+
+    DATA(request) = NEW zcl_mcp_req_call_tool( json ).
+
+    cl_abap_unit_assert=>assert_true( act = request->has_task( )
+                                      msg = 'has_task should be true when task field is present' ).
+    cl_abap_unit_assert=>assert_equals( exp = 0
+                                        act = request->get_task_ttl( )
+                                        msg = 'get_task_ttl should return 0 when ttl is absent' ).
+  ENDMETHOD.
+
+  METHOD test_task_with_ttl.
+    " task field with explicit ttl value
+    DATA(json_string) = `{"name":"test_tool","task":{"ttl":30000}}`.
+    DATA(json) = zcl_mcp_ajson=>parse( json_string ).
+
+    DATA(request) = NEW zcl_mcp_req_call_tool( json ).
+
+    cl_abap_unit_assert=>assert_true( act = request->has_task( )
+                                      msg = 'has_task should be true when task field is present' ).
+    cl_abap_unit_assert=>assert_equals( exp = 30000
+                                        act = request->get_task_ttl( )
+                                        msg = 'get_task_ttl should return the specified ttl' ).
+  ENDMETHOD.
+
+  METHOD test_task_zero_ttl.
+    " Explicit ttl of 0 is a valid client-supplied value and must round-trip correctly.
+    " The parser must not conflate it with an absent ttl.
+    " (Distinguish via has_task, not the ttl value itself.)
+    DATA(json_string) = `{"name":"test_tool","task":{"ttl":0}}`.
+    DATA(json) = zcl_mcp_ajson=>parse( json_string ).
+
+    DATA(request) = NEW zcl_mcp_req_call_tool( json ).
+
+    cl_abap_unit_assert=>assert_true( act = request->has_task( )
+                                      msg = 'has_task should be true even when ttl is 0' ).
+    cl_abap_unit_assert=>assert_equals( exp = 0
+                                        act = request->get_task_ttl( )
+                                        msg = 'get_task_ttl should return 0 as supplied' ).
+  ENDMETHOD.
+
+  METHOD test_task_with_args.
+    " task and arguments coexist correctly
+    DATA(json_string) = `{"name":"test_tool","arguments":{"param1":"value1"},"task":{"ttl":5000}}`.
+    DATA(json) = zcl_mcp_ajson=>parse( json_string ).
+
+    DATA(request) = NEW zcl_mcp_req_call_tool( json ).
+
+    cl_abap_unit_assert=>assert_true( act = request->has_task( )
+                                      msg = 'has_task should be true' ).
+    cl_abap_unit_assert=>assert_equals( exp = 5000
+                                        act = request->get_task_ttl( )
+                                        msg = 'get_task_ttl should return 5000' ).
+    cl_abap_unit_assert=>assert_true( act = request->has_arguments( )
+                                      msg = 'has_arguments should still be true' ).
+    cl_abap_unit_assert=>assert_equals( exp = 'value1'
+                                        act = request->get_arguments( )->get_string( '/param1' )
+                                        msg = 'Arguments should be unaffected by task field' ).
+  ENDMETHOD.
+
+  METHOD test_task_with_meta.
+    " task and _meta coexist correctly; progressToken is a typical _meta companion to task
+    DATA(json_string) = `{"name":"test_tool","task":{"ttl":10000},"_meta":{"progressToken":"tok-42"}}`.
+    DATA(json) = zcl_mcp_ajson=>parse( json_string ).
+
+    DATA(request) = NEW zcl_mcp_req_call_tool( json ).
+
+    cl_abap_unit_assert=>assert_true( act = request->has_task( )
+                                      msg = 'has_task should be true' ).
+    cl_abap_unit_assert=>assert_equals( exp = 10000
+                                        act = request->get_task_ttl( )
+                                        msg = 'get_task_ttl should return 10000' ).
+    cl_abap_unit_assert=>assert_false( act = request->get_meta( )->is_empty( )
+                                       msg = '_meta should not be empty' ).
+    cl_abap_unit_assert=>assert_equals( exp = 'tok-42'
+                                        act = request->get_meta( )->get_string( '/progressToken' )
+                                        msg = 'progressToken should be readable from _meta' ).
   ENDMETHOD.
 
 ENDCLASS.

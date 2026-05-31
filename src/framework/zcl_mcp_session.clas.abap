@@ -95,11 +95,19 @@ CLASS zcl_mcp_session IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    SELECT SINGLE * FROM zmcp_sessions WHERE session_id = @session_id INTO @DATA(session).
+    SELECT SINGLE * FROM zmcp_sessions
+  WHERE session_id = @session_id
+  INTO @DATA(session).
     IF sy-subrc <> 0.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown msgv1 = CONV #( session_id ) ).
+    ENDIF.
+
+    " *** ADD: user isolation check ***
+    IF session-created_by <> sy-uname.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown
                                           msgv1  = CONV #( session_id ) ).
     ENDIF.
+    " Use session_unknown (not a dedicated "forbidden") to avoid user enumeration
 
     " Verify if the session is still valid
     DATA current_timestamp TYPE timestamp.
@@ -123,7 +131,7 @@ CLASS zcl_mcp_session IMPLEMENTATION.
 
   METHOD remove.
     DELETE session_data WHERE key = key.
-    IF sy-subrc <> 0. "#EC EMPTY_IF_BRANCH
+    IF sy-subrc <> 0.                              "#EC EMPTY_IF_BRANCH
       " Ignored, if it does not exist we cannot delete id.
       " Additional exception handling is not relevant.
     ENDIF.
@@ -158,6 +166,7 @@ CLASS zcl_mcp_session IMPLEMENTATION.
     DATA db_session TYPE zmcp_sessions.
     db_session-session_id = session_id.
     db_session-data       = value.
+    db_session-created_by = sy-uname.
     GET TIME STAMP FIELD db_session-updated.
 
     MODIFY zmcp_sessions FROM @db_session.

@@ -11,6 +11,7 @@ CLASS ltcl_mcp_resp_list_prompts DEFINITION FINAL FOR TESTING
     METHODS test_with_next_cursor FOR TESTING RAISING zcx_mcp_ajson_error.
     METHODS test_with_meta        FOR TESTING RAISING zcx_mcp_ajson_error.
     METHODS test_with_all_fields  FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS test_with_prompt_icons FOR TESTING RAISING zcx_mcp_ajson_error.
 
 ENDCLASS.
 
@@ -270,6 +271,49 @@ CLASS ltcl_mcp_resp_list_prompts IMPLEMENTATION.
     api_version = json_result->get_string( '/_meta/apiVersion' ).
     cl_abap_unit_assert=>assert_equals( exp = '2.0'
                                         act = api_version ).
+  ENDMETHOD.
+
+  METHOD test_with_prompt_icons.
+    DATA prompts TYPE zcl_mcp_resp_list_prompts=>prompts.
+    DATA prompt  TYPE zcl_mcp_resp_list_prompts=>prompt.
+
+    prompt-name  = 'Iconic Prompt'.
+    prompt-title = 'Prompt with icons'.
+
+    DATA icon1 TYPE zif_mcp_types=>icon.
+    icon1-src       = 'https://example.com/prompt-icon.png'.
+    icon1-mime_type = 'image/png'.
+    icon1-theme     = 'light'.
+    APPEND '48x48' TO icon1-sizes.
+    APPEND icon1 TO prompt-icons.
+
+    DATA icon2 TYPE zif_mcp_types=>icon.
+    icon2-src = 'https://example.com/prompt-icon.svg'.
+    APPEND 'any' TO icon2-sizes.
+    APPEND icon2 TO prompt-icons.
+
+    APPEND prompt TO prompts.
+    cut->set_prompts( prompts ).
+
+    DATA(json) = zcl_mcp_ajson=>parse(
+                   cut->zif_mcp_internal~generate_json( )->stringify( ) ).
+
+    cl_abap_unit_assert=>assert_true( act = json->exists( '/prompts/1/icons' )
+                                      msg = 'icons array should exist' ).
+    cl_abap_unit_assert=>assert_equals( exp = 'https://example.com/prompt-icon.png'
+                                        act = json->get_string( '/prompts/1/icons/1/src' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 'image/png'
+                                        act = json->get_string( '/prompts/1/icons/1/mimeType' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 'light'
+                                        act = json->get_string( '/prompts/1/icons/1/theme' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = '48x48'
+                                        act = json->get_string( '/prompts/1/icons/1/sizes/1' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 'https://example.com/prompt-icon.svg'
+                                        act = json->get_string( '/prompts/1/icons/2/src' ) ).
+    cl_abap_unit_assert=>assert_false( act = json->exists( '/prompts/1/icons/2/mimeType' )
+                                       msg = 'mimeType absent when not set' ).
+    cl_abap_unit_assert=>assert_false( act = json->exists( '/prompts/1/icons/2/theme' )
+                                       msg = 'theme absent when not set' ).
   ENDMETHOD.
 
 ENDCLASS.

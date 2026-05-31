@@ -19,12 +19,13 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
              title       TYPE string,
              description TYPE string,
              mime_type   TYPE string,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
+             icons       TYPE zif_mcp_types=>icon_list,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF resource_template.
 
     TYPES resource_templates TYPE STANDARD TABLE OF resource_template WITH KEY uritemplate.
-    TYPES next_cursor        TYPE string.
+    TYPES next_cursor        TYPE zif_mcp_types=>page_cursor.
 
     "! <p class="shorttext synchronized">Set Resource Templates</p>
     "!
@@ -48,7 +49,7 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
 
   PRIVATE SECTION.
     DATA int_resource_templates TYPE resource_templates.
-    DATA int_next_cursor        TYPE string.
+    DATA int_next_cursor        TYPE zif_mcp_types=>page_cursor.
     DATA int_meta               TYPE REF TO zif_mcp_ajson.
 
     METHODS convert_timestamp_to_iso8601
@@ -58,22 +59,8 @@ ENDCLASS.
 
 
 
-CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
+CLASS ZCL_MCP_RESP_LIST_RES_TMPL IMPLEMENTATION.
 
-
-  METHOD set_meta.
-    int_meta = meta.
-  ENDMETHOD.
-
-
-  METHOD set_next_cursor.
-    int_next_cursor = next_cursor.
-  ENDMETHOD.
-
-
-  METHOD set_resource_templates.
-    int_resource_templates = resource_templates.
-  ENDMETHOD.
 
   METHOD convert_timestamp_to_iso8601.
     " Convert session timestamp to UTC and format as ISO 8601
@@ -106,6 +93,22 @@ CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
     " Format: YYYYMMDDHHMMSS -> YYYY-MM-DDTHH:MM:SSZ
     result = |{ timestamp_string+0(4) }-{ timestamp_string+4(2) }-{ timestamp_string+6(2) }T{ timestamp_string+8(2) }:{ timestamp_string+10(2) }:{ timestamp_string+12(2) }Z|.
   ENDMETHOD.
+
+
+  METHOD set_meta.
+    int_meta = meta.
+  ENDMETHOD.
+
+
+  METHOD set_next_cursor.
+    int_next_cursor = next_cursor.
+  ENDMETHOD.
+
+
+  METHOD set_resource_templates.
+    int_resource_templates = resource_templates.
+  ENDMETHOD.
+
 
   METHOD zif_mcp_internal~generate_json.
     result = zcl_mcp_ajson=>create_empty( ).
@@ -150,6 +153,31 @@ CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
         " Create the '_meta' node in the resulting JSON
         result->set( iv_path = |/resourceTemplates/{ template_index }/_meta|
                      iv_val  = <template>-meta ).
+      ENDIF.
+
+      " Add icons (optional, new in MCP 2025-11-25)
+      IF <template>-icons IS NOT INITIAL.
+        result->touch_array( |/resourceTemplates/{ template_index }/icons| ).
+        LOOP AT <template>-icons ASSIGNING FIELD-SYMBOL(<icon>).
+          DATA(icon_path) = |/resourceTemplates/{ template_index }/icons/{ sy-tabix }|.
+          result->set( iv_path = |{ icon_path }/src|
+                       iv_val  = <icon>-src ).
+          IF <icon>-mime_type IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/mimeType|
+                         iv_val  = <icon>-mime_type ).
+          ENDIF.
+          IF <icon>-sizes IS NOT INITIAL.
+            result->touch_array( |{ icon_path }/sizes| ).
+            LOOP AT <icon>-sizes ASSIGNING FIELD-SYMBOL(<size>).
+              result->set( iv_path = |{ icon_path }/sizes/{ sy-tabix }|
+                           iv_val  = <size> ).
+            ENDLOOP.
+          ENDIF.
+          IF <icon>-theme IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/theme|
+                         iv_val  = <icon>-theme ).
+          ENDIF.
+        ENDLOOP.
       ENDIF.
 
       " Add annotations (optional)
