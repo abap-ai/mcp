@@ -1,3 +1,25 @@
+2026-05-31 v0.3
+-----------------
+
+ + Support for 2025-11-25 protocol version
+ + Tasks: full background task lifecycle (create, list, get, result, cancel)
+     - ZCL_MCP_TASKS manages task persistence in new ZMCP_TASKS table
+     - ZIF_MCP_TASK_EXECUTOR interface to connect tools to background jobs/RFCs
+     - Task status transitions enforced: working → completed / failed / cancelled / input_required
+     - ZMCP_CLEAR_MCP_TASKS report for scheduled cleanup of expired task records
+ + Completions: completions/complete endpoint for prompt and resource argument autocomplete
+ + DDIC Schema Builder: ZCL_MCP_SCHEMA_BUILDER_DDIC auto-generates JSON schemas from DDIC structures
+ + ZIF_MCP_TYPES: new shared interface for annotations, icons, pagination cursor, and task types
+ + Tools: optional output_schema declaration and task_support execution mode on tool definitions
+ + New demo: ZCL_MCP_DEMO_SERVER_DDIC and ZMCP_DEMO_BG_TASK background task demo report
+ + ZCL_MCP_UTIL: new utility class with shared helper methods
+ + ZCX_MCP_SCHEMA_DDIC_ERROR: dedicated exception for DDIC schema builder errors
+
+ ! BREAKING: MCP sessions are now bound to the creating user (new CREATED_BY column in ZMCP_SESSIONS).
+   Existing session records will have an empty CREATED_BY after table conversion and will be rejected.
+   Run ZMCP_CLEAR_MCP_SESSIONS before activating the new code to prevent unexpected session errors
+   for connected clients.
+
 2025-06-22 v0.2
 -----------------
 

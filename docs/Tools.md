@@ -42,6 +42,9 @@ Key methods:
 - `get_name()`: Retrieves the requested tool name
 - `has_arguments()`: Checks if arguments were provided
 - `get_arguments()`: Retrieves the arguments as a JSON object
+- `get_meta()`: Retrieves optional `_meta` data
+- `has_task()`: Checks whether the client requested task-augmented execution
+- `get_task_ttl()`: Retrieves the requested task TTL in milliseconds, or `0` if absent
 
 Example:
 
@@ -80,15 +83,23 @@ TYPES: BEGIN OF tool,
          input_schema  TYPE REF TO zif_mcp_ajson, " JSON Schema for inputs
          output_schema TYPE REF TO zif_mcp_ajson, " JSON Schema for outputs (optional)
          annotations   TYPE tool_annotations, " Additional properties
+         execution     TYPE execution, " Task support metadata (optional)
+         icons         TYPE zif_mcp_types=>icon_list, " Tool icons (optional)
          meta          TYPE REF TO zif_mcp_ajson, " Tool metadata (optional)
        END OF tool.
+
+TYPES: BEGIN OF execution,
+         task_support TYPE string, " forbidden / optional / required
+       END OF execution.
 
 TYPES: BEGIN OF tool_annotations,
          title           TYPE string,     " Annotation title
          readonlyhint    TYPE abap_bool, " Tool only reads data
          destructivehint TYPE abap_bool, " Tool modifies/deletes data
+         destructivehint_set TYPE abap_bool, " Emit explicit destructiveHint value
          idempotenthint  TYPE abap_bool, " Tool can be called multiple times safely
          openworldhint   TYPE abap_bool, " Tool accepts additional parameters
+         openworldhint_set TYPE abap_bool, " Emit explicit openWorldHint value
        END OF tool_annotations.
 ```
 
@@ -142,8 +153,12 @@ The `ZCL_MCP_RESP_CALL_TOOL` class builds the response for tool execution result
 Key methods:
 - `add_text_content()`: Adds text output from the tool
 - `add_image_content()`: Adds image output from the tool
+- `add_audio_content()`: Adds audio output from the tool
 - `add_text_resource()`: Adds text resource output from the tool
 - `add_blob_resource()`: Adds binary resource output from the tool
+- `add_resource_link()`: Adds a resource link output
+- `set_structured_content()`: Adds machine-readable JSON output, optionally with an auto-generated text item
+- `set_task_result()`: Returns a task object for task-augmented execution
 - `set_error()`: Indicates that the tool execution resulted in an error
 
 ## Implementing Tool Handlers
@@ -293,9 +308,11 @@ Tools can return multiple content types:
 Annotations provide hints about tool behavior:
 
 - `readonlyhint`: Tool only reads data
-- `destructivehint`: Tool modifies or deletes data  
+- `destructivehint`: Tool modifies or deletes data
 - `idempotenthint`: Tool can be called multiple times safely
 - `openworldhint`: Tool accepts additional parameters
+
+The MCP defaults for `destructiveHint` and `openWorldHint` are `true`. Set `destructivehint_set = abap_true` or `openworldhint_set = abap_true` when you need to emit an explicit `abap_false` value.
 
 ```abap
 APPEND VALUE #(
@@ -308,6 +325,44 @@ APPEND VALUE #(
     )
 ) TO tools.
 ```
+
+## Output Schemas
+
+Tools can optionally declare an `output_schema` so clients know the structure of the JSON result. Use `ZCL_MCP_SCHEMA_BUILDER` to define it:
+
+```abap
+DATA(output) = NEW zcl_mcp_schema_builder( ).
+output->add_string( name = 'status'  description = 'Result status' required = abap_true )
+      ->add_string( name = 'message' description = 'Details'       required = abap_false ).
+
+APPEND VALUE #(
+    name          = 'process_order'
+    description   = 'Process a sales order'
+    input_schema  = input->to_json( )
+    output_schema = output->to_json( )
+) TO tools.
+```
+
+## Background Task Support
+
+Tools can signal that they support (or require) asynchronous execution via `execution-task_support`. When set, `handle_call_tool` can create a task via `get_tasks( )->create_task`, start a background job, and return the task object with `response-result->set_task_result( task )` instead of returning normal content directly.
+
+```abap
+APPEND VALUE #(
+    name          = 'start_long_export'
+    description   = 'Export large dataset — runs as a background task'
+    input_schema  = input->to_json( )
+    execution     = VALUE #( task_support = zcl_mcp_resp_list_tools=>task_support-optional )
+) TO tools.
+```
+
+| `task_support` constant  | Meaning |
+| ------------------------ | ------- |
+| `task_support-forbidden` | Tool does not support task-augmented execution (the default when `execution` is omitted) |
+| `task_support-optional`  | Client may poll for a task; a synchronous result is also acceptable |
+| `task_support-required`  | Tool requires task-augmented execution and returns a task object |
+
+See [Tasks](Tasks.md) for the full task lifecycle API.
 
 ## Examples
 

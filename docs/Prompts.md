@@ -77,6 +77,8 @@ All content types support optional annotations:
 - `priority`: Priority level (decimal)
 - `last_modified`: Timestamp of last modification
 
+Prompt list entries and prompt arguments also support optional `title` fields. Prompt entries additionally support `icons` and `meta` metadata.
+
 ## Implementing Prompt Handlers
 
 Override these methods in your MCP server:

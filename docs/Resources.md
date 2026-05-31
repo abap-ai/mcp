@@ -44,6 +44,7 @@ Key methods:
 
 - `get_cursor()`: Retrieves the pagination cursor if provided
 - `has_cursor()`: Checks if a pagination cursor was provided
+- `get_meta()`: Retrieves the optional `_meta` object from the request
 
 Example:
 
@@ -68,6 +69,7 @@ Key methods:
 
 - `get_cursor()`: Retrieves the pagination cursor if provided
 - `has_cursor()`: Checks if a pagination cursor was provided
+- `get_meta()`: Retrieves the optional `_meta` object from the request
 
 ### Read Resource Request
 
@@ -76,6 +78,7 @@ The `ZCL_MCP_REQ_READ_RESOURCE` class handles requests to read specific resource
 Key methods:
 
 - `get_uri()`: Retrieves the URI of the requested resource
+- `get_meta()`: Retrieves the optional `_meta` object from the request
 
 Example:
 
@@ -114,10 +117,13 @@ Resource structure:
 TYPES: BEGIN OF resource,
          uri         TYPE string,  " Unique identifier/path for the resource
          name        TYPE string,  " Display name for the resource
+         title       TYPE string,  " Human-readable title (optional)
          description TYPE string,  " Description of the resource
          mime_type   TYPE string,  " MIME type (e.g., text/x-abap, application/pdf)
-         annotations TYPE annotations, " Optional annotations (audience, priority)
+         annotations TYPE zif_mcp_types=>annotations, " Optional annotations
          size        TYPE i,       " Optional size in bytes
+         icons       TYPE zif_mcp_types=>icon_list, " Optional icons
+         meta        TYPE REF TO zif_mcp_ajson, " Optional metadata
        END OF resource.
 ```
 
@@ -163,9 +169,12 @@ Resource template structure:
 TYPES: BEGIN OF resource_template,
          uritemplate TYPE string,  " Template with placeholders (e.g., 'orders/{order_id}')
          name        TYPE string,  " Display name for the template
+         title       TYPE string,  " Human-readable title (optional)
          description TYPE string,  " Description of the template
          mime_type   TYPE string,  " MIME type of generated resources
-         annotations TYPE annotations, " Optional annotations
+         annotations TYPE zif_mcp_types=>annotations, " Optional annotations
+         icons       TYPE zif_mcp_types=>icon_list, " Optional icons
+         meta        TYPE REF TO zif_mcp_ajson, " Optional metadata
        END OF resource_template.
 ```
 

@@ -4,10 +4,10 @@
 
 ## Overview
 
-ABAP implementation of the [Model Context Protocol](https://modelcontextprotocol.io/introduction) based on version [2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18). \
+ABAP implementation of the [Model Context Protocol](https://modelcontextprotocol.io/introduction), supporting up to version [2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25). \
 **Note** that this is only a server implementation as I currently see no realistic way to support SSE streaming which is mandatory for the client.
 
-Supported protocol versions: 2025-03-28, 2025-06-18
+Supported protocol versions: 2025-03-26, 2025-06-18, 2025-11-25
 
 Note that old protocol versions might be dropped after a while especially if they increaase maintenance effort.
 
@@ -31,14 +31,16 @@ Currently implemented:
 
 - Prompts
 - Resources
-- Tools
+- Tools (incl. optional output schemas and task-augmented execution)
+- Tasks - long-running background work with client polling
+- Completions - autocomplete for prompt and resource-template arguments
+- DDIC-based schema generation plus a JSON schema builder and validator
 
 No SSE support --> no notifications and therefore no support of listChanged, subscribe and logging.\
 
 Not implemented:
 
 - Sampling - considered for the future, open an issue if you have a use case that would benefit from it
-- Completions - questionable from a performance point of view with ABAP
 - Elicitation - without SSE I see no proper way to implement this
 - Roots - likely irrelevant for ABAP
 - Further notifications not relevant without SSE: Cancellation, Ping, Progress, Logging
