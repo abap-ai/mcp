@@ -38,7 +38,6 @@ INTERFACE zif_mcp_types
 
   CONSTANTS: BEGIN OF task_states,
                working        TYPE zif_mcp_types=>task_state VALUE 'working',
-               input_required TYPE zif_mcp_types=>task_state VALUE 'input_required',
                completed      TYPE zif_mcp_types=>task_state VALUE 'completed',
                failed         TYPE zif_mcp_types=>task_state VALUE 'failed',
                cancelled      TYPE zif_mcp_types=>task_state VALUE 'cancelled',

@@ -341,7 +341,6 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-
   METHOD if_http_extension~handle_request.
     DATA path       TYPE string.
     DATA method     TYPE string.
@@ -390,6 +389,11 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       IF mcp_server IS NOT BOUND.
         server->response->set_status( code   = 400
                                       reason = 'Bad Request' ) ##NO_TEXT.
+        server->response->set_header_field( name  = 'Content-Type'
+                                            value = 'application/json' ) ##NO_TEXT.
+        server->response->set_cdata( create_error_json( code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                                        message = 'Invalid or expired MCP session'
+                                                        json    = server->request->get_cdata( ) ) ) ##NO_TEXT.
         continue = abap_false.
       ENDIF.
     ELSE.
@@ -588,6 +592,12 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       IF mcp_server->server-session_mode <> zcl_mcp_session=>session_mode_stateless AND session_id IS INITIAL.
         mcp_server->server-http_response->set_status( code   = 400
                                                       reason = 'Bad Request' ) ##NO_TEXT.
+        response = jsonrpc->create_error_response( id      = request-id
+                                                   code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                                   message = 'Missing Mcp-Session-Id' ) ##NO_TEXT.
+        response-id_present = request-id_present.
+        response-jsonrpc    = request-jsonrpc.
+        result = jsonrpc->serialize_response( response ).
         RETURN.
       ENDIF.
       CASE mcp_server->server-session_mode.
@@ -595,6 +605,12 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
           IF session_id <> mcp_server->server-session_id.
             mcp_server->server-http_response->set_status( code   = 404
                                                           reason = 'Not Found' ) ##NO_TEXT.
+            response = jsonrpc->create_error_response( id      = request-id
+                                                       code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                                       message = 'Invalid or expired MCP session' ) ##NO_TEXT.
+            response-id_present = request-id_present.
+            response-jsonrpc    = request-jsonrpc.
+            result = jsonrpc->serialize_response( response ).
             RETURN.
           ENDIF.
         WHEN zcl_mcp_session=>session_mode_mcp.
@@ -608,16 +624,34 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                 WHEN zcx_mcp_server=>session_unknown OR zcx_mcp_server=>session_expired.
                   mcp_server->server-http_response->set_status( code   = 404
                                                                 reason = 'Not Found' ) ##NO_TEXT.
+                  response = jsonrpc->create_error_response( id      = request-id
+                                                             code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                                             message = 'Invalid or expired MCP session' ) ##NO_TEXT.
+                  response-id_present = request-id_present.
+                  response-jsonrpc    = request-jsonrpc.
+                  result = jsonrpc->serialize_response( response ).
                   RETURN.
                 WHEN zcx_mcp_server=>session_load_error.
                   logger->error(
                       |Session { session_id } load error for { mcp_server->server-area } { mcp_server->server-server } details: { session_error->get_text( ) }| ) ##NO_TEXT.
                   mcp_server->server-http_response->set_status( code   = 500
                                                                 reason = 'Internal Error' ) ##NO_TEXT.
+                  response = jsonrpc->create_error_response( id      = request-id
+                                                             code    = zcl_mcp_jsonrpc=>error_codes-internal_error
+                                                             message = session_error->get_text( ) ).
+                  response-id_present = request-id_present.
+                  response-jsonrpc    = request-jsonrpc.
+                  result = jsonrpc->serialize_response( response ).
                   RETURN.
               ENDCASE.
               mcp_server->server-http_response->set_status( code   = 500
                                                             reason = 'Internal Error' ) ##NO_TEXT.
+              response = jsonrpc->create_error_response( id      = request-id
+                                                         code    = zcl_mcp_jsonrpc=>error_codes-internal_error
+                                                         message = session_error->get_text( ) ).
+              response-id_present = request-id_present.
+              response-jsonrpc    = request-jsonrpc.
+              result = jsonrpc->serialize_response( response ).
               RETURN.
           ENDTRY.
       ENDCASE.
@@ -651,6 +685,12 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
           " As per spec we must return a 400 error if we don't support the protocol version
           mcp_server->server-http_response->set_status( code   = 400
                                                         reason = 'Bad Request' ) ##NO_TEXT.
+          response = jsonrpc->create_error_response( id      = request-id
+                                                     code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                                     message = |Unsupported Mcp-Protocol-Version { protocol_version }| ) ##NO_TEXT.
+          response-id_present = request-id_present.
+          response-jsonrpc    = request-jsonrpc.
+          result = jsonrpc->serialize_response( response ).
           RETURN.
         ENDIF.
       ENDIF.

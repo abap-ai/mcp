@@ -44,8 +44,7 @@ CLASS ltcl_tasks DEFINITION FINAL FOR TESTING
     METHODS test_list_scoped_to_user       FOR TESTING RAISING cx_static_check.
     METHODS test_class_methods_ignore_ownr FOR TESTING RAISING cx_static_check.
     METHODS test_create_with_ttl_exact     FOR TESTING RAISING cx_static_check.
-    METHODS test_input_required_complete   FOR TESTING RAISING cx_static_check.
-    METHODS test_input_required_fail       FOR TESTING RAISING cx_static_check.
+    METHODS test_delete_ttl_crosses_hour FOR TESTING RAISING cx_static_check.
 
     METHODS make_id RETURNING VALUE(result) TYPE sysuuid_c32
                     RAISING   cx_static_check.
@@ -273,13 +272,13 @@ CLASS ltcl_tasks IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD test_update_sets_message.
-    " working --> input_required carries a status message
+    " working --> failed carries a status message
     DATA(task_id) = cut->create_task( tool_name = 'my_tool' ).
     zcl_mcp_tasks=>update_status( task_id = task_id
-                                  status  = zcl_mcp_tasks=>status_input_required
-                                  message = 'Please provide additional parameters' ).
+                                  status  = zcl_mcp_tasks=>status_failed
+                                  message = 'Something went wrong' ).
     DATA(task) = cut->get( task_id ).
-    cl_abap_unit_assert=>assert_equals( exp = 'Please provide additional parameters'
+    cl_abap_unit_assert=>assert_equals( exp = 'Something went wrong'
                                         act = task-status_message ).
   ENDMETHOD.
 
@@ -457,46 +456,21 @@ CLASS ltcl_tasks IMPLEMENTATION.
                                         act = task-ttl ).
   ENDMETHOD.
 
-  METHOD test_input_required_complete.
-    DATA(task_id) = cut->create_task( tool_name = 'my_tool' ).
+  METHOD test_delete_ttl_crosses_hour.
+    DATA(task_id) = make_id( ).
+    insert_task( task_id      = task_id
+                 status       = zcl_mcp_tasks=>status_completed
+                 created_at   = '20250101003000'
+                 last_updated = '20250101003000'
+                 ttl          = 3600 ).
 
-    zcl_mcp_tasks=>update_status( task_id = task_id
-                                  status  = zcl_mcp_tasks=>status_input_required
-                                  message = 'Need input' ).
+    DATA(deleted) = zcl_mcp_tasks=>delete_outdated_tasks( ).
+    cl_abap_unit_assert=>assert_true( xsdbool( deleted > 0 ) ).
 
-    DATA(task_result) = NEW zcl_mcp_resp_task_payload( ).
-    task_result->add_text_content( 'Completed after input' ).
-
-    TRY.
-        zcl_mcp_tasks=>complete( task_id = task_id
-                                 result  = task_result ).
-      CATCH zcx_mcp_server INTO DATA(error).
-        cl_abap_unit_assert=>fail( |input_required -> completed must be valid: { error->get_text( ) }| ).
-    ENDTRY.
-
-    DATA(task) = cut->get( task_id ).
-    cl_abap_unit_assert=>assert_equals( exp = zcl_mcp_tasks=>status_completed
-                                        act = task-status ).
+    SELECT SINGLE task_id FROM zmcp_tasks
+      WHERE task_id = @task_id
+      INTO @DATA(check).
+    cl_abap_unit_assert=>assert_initial( check ).
   ENDMETHOD.
 
-  METHOD test_input_required_fail.
-    DATA(task_id) = cut->create_task( tool_name = 'my_tool' ).
-
-    zcl_mcp_tasks=>update_status( task_id = task_id
-                                  status  = zcl_mcp_tasks=>status_input_required
-                                  message = 'Need input' ).
-
-    TRY.
-        zcl_mcp_tasks=>fail( task_id = task_id
-                             message = 'Input rejected' ).
-      CATCH zcx_mcp_server INTO DATA(error).
-        cl_abap_unit_assert=>fail( |input_required -> failed must be valid: { error->get_text( ) }| ).
-    ENDTRY.
-
-    DATA(task) = cut->get( task_id ).
-    cl_abap_unit_assert=>assert_equals( exp = zcl_mcp_tasks=>status_failed
-                                        act = task-status ).
-    cl_abap_unit_assert=>assert_equals( exp = 'Input rejected'
-                                        act = task-status_message ).
-  ENDMETHOD.
 ENDCLASS.

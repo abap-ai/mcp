@@ -79,7 +79,6 @@ CLASS ltcl_resp_get_task IMPLEMENTATION.
 
     DATA statuses TYPE STANDARD TABLE OF zif_mcp_types=>task_state WITH EMPTY KEY.
     APPEND zif_mcp_types=>task_states-working        TO statuses.
-    APPEND zif_mcp_types=>task_states-input_required TO statuses.
     APPEND zif_mcp_types=>task_states-completed      TO statuses.
     APPEND zif_mcp_types=>task_states-failed         TO statuses.
     APPEND zif_mcp_types=>task_states-cancelled      TO statuses.

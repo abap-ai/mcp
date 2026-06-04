@@ -244,26 +244,23 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
                 ajson TYPE REF TO zif_mcp_ajson
       RAISING   zcx_mcp_ajson_error.
 
-    METHODS convert_timestamp_to_iso8601
-      IMPORTING !timestamp    TYPE timestamp
-      RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 
 CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
     result = zcl_mcp_ajson=>create_empty( ).
 
-    " Task-deferred response - emit task object plus any content provided
-    " (content array required by spec even if empty)
+  " Task-deferred response: tools/call returns CreateTaskResult.
+  " The actual CallToolResult payload is retrieved later via tasks/result.
     IF int_task-task_id IS NOT INITIAL.
       result->set( iv_path = 'task/taskId'
                    iv_val  = int_task-task_id ).
       result->set( iv_path = 'task/status'
                    iv_val  = int_task-status ).
       result->set( iv_path = 'task/createdAt'
-                   iv_val  = convert_timestamp_to_iso8601( int_task-created_at ) ).
+                   iv_val  = zcl_mcp_util=>timestamp_to_iso8601( int_task-created_at ) ).
       result->set( iv_path = 'task/lastUpdatedAt'
-                   iv_val  = convert_timestamp_to_iso8601( int_task-last_updated ) ).
+                   iv_val  = zcl_mcp_util=>timestamp_to_iso8601( int_task-last_updated ) ).
       IF int_task-poll_interval > 0.
         result->set( iv_path = 'task/pollInterval'
                      iv_val  = int_task-poll_interval ).
@@ -465,7 +462,7 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
 
     " Add lastModified if not empty
     IF annotations-last_modified IS NOT INITIAL.
-      DATA(iso_timestamp) = convert_timestamp_to_iso8601( annotations-last_modified ).
+      DATA(iso_timestamp) = zcl_mcp_util=>timestamp_to_iso8601( annotations-last_modified ).
       ajson->set( iv_path = |{ path }/annotations/lastModified|
                   iv_val  = iso_timestamp ).
     ENDIF.
@@ -477,38 +474,6 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
       ajson->set( iv_path = |{ path }/_meta|
                   iv_val  = meta ).
     ENDIF.
-  ENDMETHOD.
-
-  METHOD convert_timestamp_to_iso8601.
-    " Convert session timestamp to UTC and format as ISO 8601
-    DATA local_date       TYPE sy-datum.
-    DATA local_time       TYPE sy-uzeit.
-    DATA utc_timestamp    TYPE timestamp.
-    DATA timestamp_string TYPE string.
-
-    " Convert timestamp to string first
-    timestamp_string = |{ timestamp }|.
-
-    " Pad with leading zeros if needed
-    WHILE strlen( timestamp_string ) < 14.
-      timestamp_string = |0{ timestamp_string }|.
-    ENDWHILE.
-
-    " Extract date and time from timestamp string
-    local_date = timestamp_string+0(8).
-    local_time = timestamp_string+8(6).
-
-    " Convert local date/time to UTC timestamp
-    CONVERT DATE local_date TIME local_time INTO TIME STAMP utc_timestamp TIME ZONE sy-zonlo.
-
-    " Convert UTC timestamp back to string for formatting
-    timestamp_string = |{ utc_timestamp }|.
-    WHILE strlen( timestamp_string ) < 14.
-      timestamp_string = |0{ timestamp_string }|.
-    ENDWHILE.
-
-    " Format: YYYYMMDDHHMMSS -> YYYY-MM-DDTHH:MM:SSZ
-    result = |{ timestamp_string+0(4) }-{ timestamp_string+4(2) }-{ timestamp_string+6(2) }T{ timestamp_string+8(2) }:{ timestamp_string+10(2) }:{ timestamp_string+12(2) }Z|.
   ENDMETHOD.
 
   METHOD set_error.

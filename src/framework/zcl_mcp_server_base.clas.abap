@@ -361,13 +361,9 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
             response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
             response-error-message = |Task { task_id } was cancelled| ##NO_TEXT.
 
-          WHEN zcl_mcp_tasks=>status_working OR zcl_mcp_tasks=>status_input_required.
-            response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-            response-error-message = |Task { task_id } is not complete. Poll tasks/get until the task reaches a terminal status before calling tasks/result.| ##NO_TEXT.
-
           WHEN OTHERS.
             response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-            response-error-message = |Task { task_id } has unsupported status { task-status }| ##NO_TEXT.
+            response-error-message = |Task { task_id } is not complete; poll tasks/get and retry tasks/result once completed| ##NO_TEXT.
         ENDCASE.
 
       CATCH zcx_mcp_server INTO DATA(error).
@@ -447,21 +443,17 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD enforce_tool_task_negotiation.
-    DATA(task_support) = get_tool_task_support( request->get_name( ) ).
-
-    IF     request->has_task( ) = abap_true
-       AND task_support         = zcl_mcp_resp_list_tools=>task_support-forbidden.
-
-      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_request.
-      response-error-message = |Tool { request->get_name( ) } does not support task execution| ##NO_TEXT.
+    " Fast path: ordinary synchronous tools/call.
+    " Avoid rebuilding the tool catalogue just to check whether a tool is task-required.
+    IF request->has_task( ) = abap_false.
       RETURN.
     ENDIF.
 
-    IF     request->has_task( ) = abap_false
-       AND task_support         = zcl_mcp_resp_list_tools=>task_support-required.
+    DATA(task_support) = get_tool_task_support( request->get_name( ) ).
 
-      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_request.
-      response-error-message = |Tool { request->get_name( ) } requires task execution| ##NO_TEXT.
+    IF task_support = zcl_mcp_resp_list_tools=>task_support-forbidden.
+      response-error-code    = zcl_mcp_jsonrpc=>error_codes-method_not_found.
+      response-error-message = |Tool { request->get_name( ) } does not support task execution| ##NO_TEXT.
       RETURN.
     ENDIF.
   ENDMETHOD.
