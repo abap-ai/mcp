@@ -12,6 +12,12 @@
    </PROGDIR>
    <TPOOL>
     <item>
+     <ID>I</ID>
+     <KEY>001</KEY>
+     <ENTRY>Deleted tasks:</ENTRY>
+     <LENGTH>24</LENGTH>
+    </item>
+    <item>
      <ID>R</ID>
      <ENTRY>Cleanup outdated MCP tasks</ENTRY>
      <LENGTH>26</LENGTH>

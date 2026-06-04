@@ -1,82 +1,75 @@
-class ZCX_MCP_SCHEMA_DDIC_ERROR definition
-  public
-  inheriting from CX_STATIC_CHECK
-  final
-  create public .
+CLASS zcx_mcp_schema_ddic_error DEFINITION
+  PUBLIC
+  INHERITING FROM cx_static_check FINAL
+  CREATE PUBLIC.
 
-public section.
+  PUBLIC SECTION.
+    INTERFACES if_t100_message.
 
-  interfaces IF_T100_MESSAGE .
+    CONSTANTS:
+      BEGIN OF structure_not_found,
+        msgid TYPE symsgid      VALUE 'ZMCP',
+        msgno TYPE symsgno      VALUE '200',
+        attr1 TYPE scx_attrname VALUE 'STRUCTURE_NAME',
+        attr2 TYPE scx_attrname VALUE '',
+        attr3 TYPE scx_attrname VALUE '',
+        attr4 TYPE scx_attrname VALUE '',
+      END OF structure_not_found.
+    CONSTANTS:
+      BEGIN OF invalid_override,
+        msgid TYPE symsgid      VALUE 'ZMCP',
+        msgno TYPE symsgno      VALUE '201',
+        attr1 TYPE scx_attrname VALUE 'FIELD_PATH',
+        attr2 TYPE scx_attrname VALUE 'REASON',
+        attr3 TYPE scx_attrname VALUE '',
+        attr4 TYPE scx_attrname VALUE '',
+      END OF invalid_override.
+    CONSTANTS:
+      BEGIN OF processing_error,
+        msgid TYPE symsgid      VALUE 'ZMCP',
+        msgno TYPE symsgno      VALUE '202',
+        attr1 TYPE scx_attrname VALUE 'STRUCTURE_NAME',
+        attr2 TYPE scx_attrname VALUE 'FIELD_NAME',
+        attr3 TYPE scx_attrname VALUE 'REASON',
+        attr4 TYPE scx_attrname VALUE '',
+      END OF processing_error.
 
-  constants:
-    begin of STRUCTURE_NOT_FOUND,
-      msgid type symsgid value 'ZMCP',
-      msgno type symsgno value '200',
-      attr1 type scx_attrname value 'STRUCTURE_NAME',
-      attr2 type scx_attrname value '',
-      attr3 type scx_attrname value '',
-      attr4 type scx_attrname value '',
-    end of STRUCTURE_NOT_FOUND .
-  constants:
-    begin of INVALID_OVERRIDE,
-      msgid type symsgid value 'ZMCP',
-      msgno type symsgno value '201',
-      attr1 type scx_attrname value 'FIELD_PATH',
-      attr2 type scx_attrname value 'REASON',
-      attr3 type scx_attrname value '',
-      attr4 type scx_attrname value '',
-    end of INVALID_OVERRIDE .
-  constants:
-    begin of PROCESSING_ERROR,
-      msgid type symsgid value 'ZMCP',
-      msgno type symsgno value '202',
-      attr1 type scx_attrname value 'STRUCTURE_NAME',
-      attr2 type scx_attrname value 'FIELD_NAME',
-      attr3 type scx_attrname value 'REASON',
-      attr4 type scx_attrname value '',
-    end of PROCESSING_ERROR .
-  data STRUCTURE_NAME type STRING read-only .
-  data FIELD_NAME type STRING read-only .
-  data FIELD_PATH type STRING read-only .
-  data REASON type STRING read-only .
+    DATA structure_name TYPE string READ-ONLY.
+    DATA field_name     TYPE string READ-ONLY.
+    DATA field_path     TYPE string READ-ONLY.
+    DATA reason         TYPE string READ-ONLY.
 
     "! <p class="shorttext synchronized">Raise exception for structure not found</p>
-  class-methods RAISE_STRUCTURE_NOT_FOUND
-    importing
-      !STRUCTURE_NAME type STRING
-    raising
-      ZCX_MCP_SCHEMA_DDIC_ERROR .
+    CLASS-METHODS raise_structure_not_found
+      IMPORTING structure_name TYPE string
+      RAISING   zcx_mcp_schema_ddic_error.
+
     "! <p class="shorttext synchronized">Raise exception for invalid override</p>
-  class-methods RAISE_INVALID_OVERRIDE
-    importing
-      !FIELD_PATH type STRING
-      !REASON type STRING
-    raising
-      ZCX_MCP_SCHEMA_DDIC_ERROR .
+    CLASS-METHODS raise_invalid_override
+      IMPORTING field_path TYPE string
+                reason     TYPE string
+      RAISING   zcx_mcp_schema_ddic_error.
+
     "! <p class="shorttext synchronized">Raise exception for processing error</p>
-  class-methods RAISE_PROCESSING_ERROR
-    importing
-      !STRUCTURE_NAME type STRING
-      !FIELD_NAME type STRING optional
-      !REASON type STRING
-    raising
-      ZCX_MCP_SCHEMA_DDIC_ERROR .
+    CLASS-METHODS raise_processing_error
+      IMPORTING structure_name TYPE string
+                field_name     TYPE string OPTIONAL
+                reason         TYPE string
+      RAISING   zcx_mcp_schema_ddic_error.
+
     "! <p class="shorttext synchronized">Constructor</p>
-  methods CONSTRUCTOR
-    importing
-      !TEXTID like IF_T100_MESSAGE=>T100KEY optional
-      !PREVIOUS like PREVIOUS optional
-      !STRUCTURE_NAME type STRING optional
-      !FIELD_NAME type STRING optional
-      !FIELD_PATH type STRING optional
-      !REASON type STRING optional .
+    METHODS constructor
+      IMPORTING textid         LIKE if_t100_message=>t100key OPTIONAL
+                !previous      LIKE previous                 OPTIONAL
+                structure_name TYPE string                   OPTIONAL
+                field_name     TYPE string                   OPTIONAL
+                field_path     TYPE string                   OPTIONAL
+                reason         TYPE string                   OPTIONAL.
 ENDCLASS.
 
 
 
 CLASS ZCX_MCP_SCHEMA_DDIC_ERROR IMPLEMENTATION.
-
-
   METHOD constructor ##ADT_SUPPRESS_GENERATION.
     super->constructor( previous = previous ).
 
@@ -93,27 +86,21 @@ CLASS ZCX_MCP_SCHEMA_DDIC_ERROR IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-
   METHOD raise_invalid_override.
-    RAISE EXCEPTION TYPE zcx_mcp_schema_ddic_error
-      EXPORTING textid     = invalid_override
-                field_path = field_path
-                reason     = reason.
+    RAISE EXCEPTION NEW zcx_mcp_schema_ddic_error( textid     = invalid_override
+                                                   field_path = field_path
+                                                   reason     = reason ).
   ENDMETHOD.
-
 
   METHOD raise_processing_error.
-    RAISE EXCEPTION TYPE zcx_mcp_schema_ddic_error
-      EXPORTING textid         = processing_error
-                structure_name = structure_name
-                field_name     = field_name
-                reason         = reason.
+    RAISE EXCEPTION NEW zcx_mcp_schema_ddic_error( textid         = processing_error
+                                                   structure_name = structure_name
+                                                   field_name     = field_name
+                                                   reason         = reason ).
   ENDMETHOD.
 
-
   METHOD raise_structure_not_found.
-    RAISE EXCEPTION TYPE zcx_mcp_schema_ddic_error
-      EXPORTING textid         = structure_not_found
-                structure_name = structure_name.
+    RAISE EXCEPTION NEW zcx_mcp_schema_ddic_error( textid         = structure_not_found
+                                                   structure_name = structure_name ).
   ENDMETHOD.
 ENDCLASS.

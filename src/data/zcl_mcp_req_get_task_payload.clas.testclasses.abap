@@ -12,10 +12,10 @@ ENDCLASS.
 
 CLASS ltcl_req_get_task_payload IMPLEMENTATION.
   METHOD test_valid_task_id.
-    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"task-payload-42"}' ).
+    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"0123456789ABCDEF0123456789ABCDEF"}' ).
     DATA(req)  = NEW zcl_mcp_req_get_task_payload( json ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 'task-payload-42'
+    cl_abap_unit_assert=>assert_equals( exp = '0123456789ABCDEF0123456789ABCDEF'
                                         act = req->get_task_id( ) ).
   ENDMETHOD.
 
@@ -39,17 +39,17 @@ CLASS ltcl_req_get_task_payload IMPLEMENTATION.
 
   METHOD test_with_meta.
     DATA(json) = zcl_mcp_ajson=>parse(
-      '{"taskId":"task-3","_meta":{"clientRef":"ref-x"}}' ).
+      '{"taskId":"0123456789ABCDEF0123456789ABCDEF","_meta":{"clientRef":"ref-x"}}' ).
     DATA(req) = NEW zcl_mcp_req_get_task_payload( json ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 'task-3'
+    cl_abap_unit_assert=>assert_equals( exp = '0123456789ABCDEF0123456789ABCDEF'
                                         act = req->get_task_id( ) ).
     cl_abap_unit_assert=>assert_equals( exp = 'ref-x'
                                         act = req->get_meta( )->get_string( '/clientRef' ) ).
   ENDMETHOD.
 
   METHOD test_no_meta.
-    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"task-3"}' ).
+    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"0123456789ABCDEF0123456789ABCDEF"}' ).
     DATA(req)  = NEW zcl_mcp_req_get_task_payload( json ).
 
     cl_abap_unit_assert=>assert_true( act = req->get_meta( )->is_empty( )

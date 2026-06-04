@@ -97,14 +97,13 @@ CLASS zcl_mcp_resp_initialize IMPLEMENTATION.
     result = zcl_mcp_ajson=>create_empty( ).
 
     " Protocol version - base server logic sets this normally;
-    " fallback to latest spec version if not explicitly provided.
-    IF int_protocol_version IS NOT INITIAL.
-      result->set( iv_path = 'protocolVersion'
-                   iv_val  = int_protocol_version ).
-    ELSE.
-      result->set( iv_path = 'protocolVersion'
-                   iv_val  = zif_mcp_constants=>latest_protocol_version ).
-    ENDIF.
+    DATA(effective_protocol_version) = COND string(
+      WHEN int_protocol_version IS NOT INITIAL
+      THEN int_protocol_version
+      ELSE zif_mcp_constants=>latest_protocol_version ).
+
+    result->set( iv_path = 'protocolVersion'
+                 iv_val  = effective_protocol_version ).
 
     result->touch_object( 'capabilities' ).
 
@@ -128,9 +127,10 @@ CLASS zcl_mcp_resp_initialize IMPLEMENTATION.
     ENDIF.
 
     " Tasks capability - new in MCP 2025-11-25
-    IF    int_capabilities-tasks-list       = abap_true
-       OR int_capabilities-tasks-cancel     = abap_true
-       OR int_capabilities-tasks-tools_call = abap_true.
+    IF     effective_protocol_version >= zif_mcp_constants=>protocol_version_2025_11_25
+       AND (    int_capabilities-tasks-list       = abap_true
+             OR int_capabilities-tasks-cancel     = abap_true
+             OR int_capabilities-tasks-tools_call = abap_true ).
       result->touch_object( 'capabilities/tasks' ).
       IF int_capabilities-tasks-list = abap_true.
         result->touch_object( 'capabilities/tasks/list' ).

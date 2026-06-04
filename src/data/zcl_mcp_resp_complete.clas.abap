@@ -71,9 +71,23 @@
       ENDIF.
     ENDMETHOD.
 
-    METHOD add_value.    APPEND value TO int_values.  ENDMETHOD.
-    METHOD set_values.   int_values   = values.        ENDMETHOD.
-    METHOD set_total.    int_total    = total.          ENDMETHOD.
-    METHOD set_has_more. int_has_more = has_more.       ENDMETHOD.
-    METHOD set_meta.     int_meta     = meta.           ENDMETHOD.
+  METHOD add_value.
+    APPEND value TO int_values.
+  ENDMETHOD.
+
+  METHOD set_values.
+    int_values = values.
+  ENDMETHOD.
+
+  METHOD set_total.
+    int_total = total.
+  ENDMETHOD.
+
+  METHOD set_has_more.
+    int_has_more = has_more.
+  ENDMETHOD.
+
+  METHOD set_meta.
+    int_meta = meta.
+  ENDMETHOD.
   ENDCLASS.

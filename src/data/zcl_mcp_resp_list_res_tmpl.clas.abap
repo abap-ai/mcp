@@ -7,12 +7,6 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_mcp_internal.
 
-    TYPES: BEGIN OF annotations,
-             audience      TYPE STANDARD TABLE OF string WITH EMPTY KEY,
-             priority      TYPE decfloat16,
-             last_modified TYPE timestamp,
-           END OF annotations.
-
     TYPES: BEGIN OF resource_template,
              uritemplate TYPE string,
              name        TYPE string,

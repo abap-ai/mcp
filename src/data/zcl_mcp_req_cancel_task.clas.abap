@@ -33,14 +33,25 @@ CLASS zcl_mcp_req_cancel_task IMPLEMENTATION.
   METHOD constructor.
     IF json->exists( '/taskId' ).
       int_task_id = json->get_string( '/taskId' ).
-      IF int_task_id IS INITIAL.
-        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
-                                            msgv1  = 'taskId' ).
-      ENDIF.
-    ELSE.
+    ENDIF.
+
+    IF int_task_id IS INITIAL.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
                                           msgv1  = 'taskId' ).
     ENDIF.
+
+    IF strlen( int_task_id ) <> 32.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
+                                          msgv1  = CONV #( |Invalid taskId: { int_task_id }| ) ) ##NO_TEXT.
+    ENDIF.
+
+    FIND REGEX '^[0-9A-Fa-f]{32}$' IN int_task_id.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
+                                          msgv1  = CONV #( |Invalid taskId: { int_task_id }| ) ) ##NO_TEXT.
+    ENDIF.
+
+    TRANSLATE int_task_id TO UPPER CASE.
 
     IF json->exists( '/_meta' ).
       int_meta = json->slice( '/_meta' ).

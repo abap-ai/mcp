@@ -4,15 +4,15 @@ INTERFACE zif_mcp_types
   " Conversation role - "user" | "assistant"
   TYPES message_role TYPE string.
 
-  CONSTANTS role_user      TYPE zif_mcp_types=>message_role VALUE 'user'.
-  CONSTANTS role_assistant TYPE zif_mcp_types=>message_role VALUE 'assistant'.
+  CONSTANTS role_user      TYPE message_role VALUE 'user'.
+  CONSTANTS role_assistant TYPE message_role VALUE 'assistant'.
 
   " Optional annotations attached to content blocks, resources,
   " resource templates, and resource links.
   " last_modified is stored as ABAP timestamp and serialised to
   " ISO 8601 by the response classes.
   TYPES: BEGIN OF annotations,
-           audience      TYPE STANDARD TABLE OF zif_mcp_types=>message_role WITH EMPTY KEY,
+           audience      TYPE STANDARD TABLE OF message_role WITH EMPTY KEY,
            priority      TYPE decfloat16,
            last_modified TYPE timestamp,
          END OF annotations.
@@ -37,16 +37,16 @@ INTERFACE zif_mcp_types
   TYPES task_state TYPE string.
 
   CONSTANTS: BEGIN OF task_states,
-               working        TYPE zif_mcp_types=>task_state VALUE 'working',
-               completed      TYPE zif_mcp_types=>task_state VALUE 'completed',
-               failed         TYPE zif_mcp_types=>task_state VALUE 'failed',
-               cancelled      TYPE zif_mcp_types=>task_state VALUE 'cancelled',
+               working        TYPE task_state VALUE 'working',
+               completed      TYPE task_state VALUE 'completed',
+               failed         TYPE task_state VALUE 'failed',
+               cancelled      TYPE task_state VALUE 'cancelled',
              END OF task_states.
 
   " Task data (MCP 2025-11-25).
   TYPES: BEGIN OF task,
            task_id        TYPE string,
-           status         TYPE zif_mcp_types=>task_state,
+           status         TYPE task_state,
            status_message TYPE string,
            created_at     TYPE timestamp,
            last_updated   TYPE timestamp,

@@ -21,11 +21,10 @@ CLASS ltcl_mcp_test_resp_complete DEFINITION FINAL
   ENDCLASS.
 
   CLASS ltcl_mcp_test_resp_complete IMPLEMENTATION.
-
-    METHOD setup.
-      cut  = NEW zcl_mcp_resp_complete( ).
-      json = zcl_mcp_ajson=>create_empty( ).
-    ENDMETHOD.
+  METHOD setup.
+    cut  = NEW zcl_mcp_resp_complete( ).
+    json = zcl_mcp_ajson=>create_empty( ).
+  ENDMETHOD.
 
   METHOD empty_values_array.
     json = cut->zif_mcp_internal~generate_json( ).
@@ -139,7 +138,7 @@ CLASS ltcl_mcp_test_resp_complete DEFINITION FINAL
     meta->set_string( iv_path = '/progressToken'
                       iv_val  = 'tok1' ).
 
-    cut->set_values( VALUE #( ( `alpha`) ( `beta` ) ) ).
+    cut->set_values( VALUE #( ( `alpha` ) ( `beta` ) ) ).
     cut->set_total( 10 ).
     cut->set_has_more( abap_true ).
     cut->set_meta( meta ).
@@ -161,5 +160,4 @@ CLASS ltcl_mcp_test_resp_complete DEFINITION FINAL
                                         act = json->get_string( '/_meta/progressToken' )
                                         msg = 'meta token' ).
   ENDMETHOD.
-
-  ENDCLASS.
+ENDCLASS.

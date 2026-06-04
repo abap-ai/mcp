@@ -44,7 +44,9 @@ CLASS ltcl_tasks DEFINITION FINAL FOR TESTING
     METHODS test_list_scoped_to_user       FOR TESTING RAISING cx_static_check.
     METHODS test_class_methods_ignore_ownr FOR TESTING RAISING cx_static_check.
     METHODS test_create_with_ttl_exact     FOR TESTING RAISING cx_static_check.
-    METHODS test_delete_ttl_crosses_hour FOR TESTING RAISING cx_static_check.
+    METHODS test_delete_ttl_crosses_hour   FOR TESTING RAISING cx_static_check.
+    METHODS test_cancel_idempotent         FOR TESTING RAISING cx_static_check.
+    METHODS test_cancel_foreign_user       FOR TESTING RAISING cx_static_check.
 
     METHODS make_id RETURNING VALUE(result) TYPE sysuuid_c32
                     RAISING   cx_static_check.
@@ -471,6 +473,34 @@ CLASS ltcl_tasks IMPLEMENTATION.
       WHERE task_id = @task_id
       INTO @DATA(check).
     cl_abap_unit_assert=>assert_initial( check ).
+  ENDMETHOD.
+
+  METHOD test_cancel_idempotent.
+    DATA(task_id) = cut->create_task( tool_name = 'my_tool' ).
+
+    zcl_mcp_tasks=>cancel( task_id ).
+    zcl_mcp_tasks=>cancel( task_id ).
+
+    DATA(task) = cut->get( task_id ).
+
+    cl_abap_unit_assert=>assert_equals( exp = zcl_mcp_tasks=>status_cancelled
+                                        act = task-status ).
+  ENDMETHOD.
+
+  METHOD test_cancel_foreign_user.
+    DATA(task_id) = make_id( ).
+
+    insert_task( task_id    = task_id
+                 status     = zcl_mcp_tasks=>status_working
+                 created_by = 'OTHER_USER' ).
+
+    TRY.
+        zcl_mcp_tasks=>cancel( task_id ).
+        cl_abap_unit_assert=>fail( 'Expected task_not_found for foreign user task' ).
+      CATCH zcx_mcp_server INTO DATA(error).
+        cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>task_not_found
+                                            act = error->if_t100_message~t100key ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

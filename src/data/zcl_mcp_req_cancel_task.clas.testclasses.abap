@@ -12,10 +12,10 @@ ENDCLASS.
 
 CLASS ltcl_req_cancel_task IMPLEMENTATION.
   METHOD test_valid_task_id.
-    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"task-cancel-99"}' ).
+    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"0123456789ABCDEF0123456789ABCDEF"}' ).
     DATA(req)  = NEW zcl_mcp_req_cancel_task( json ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 'task-cancel-99'
+    cl_abap_unit_assert=>assert_equals( exp = '0123456789ABCDEF0123456789ABCDEF'
                                         act = req->get_task_id( ) ).
   ENDMETHOD.
 
@@ -39,17 +39,17 @@ CLASS ltcl_req_cancel_task IMPLEMENTATION.
 
   METHOD test_with_meta.
     DATA(json) = zcl_mcp_ajson=>parse(
-      '{"taskId":"task-2","_meta":{"reason":"user_request"}}' ).
+      '{"taskId":"0123456789ABCDEF0123456789ABCDEF","_meta":{"reason":"user_request"}}' ).
     DATA(req) = NEW zcl_mcp_req_cancel_task( json ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 'task-2'
+    cl_abap_unit_assert=>assert_equals( exp = '0123456789ABCDEF0123456789ABCDEF'
                                         act = req->get_task_id( ) ).
     cl_abap_unit_assert=>assert_equals( exp = 'user_request'
                                         act = req->get_meta( )->get_string( '/reason' ) ).
   ENDMETHOD.
 
   METHOD test_no_meta.
-    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"task-2"}' ).
+    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"0123456789ABCDEF0123456789ABCDEF"}' ).
     DATA(req)  = NEW zcl_mcp_req_cancel_task( json ).
 
     cl_abap_unit_assert=>assert_true( act = req->get_meta( )->is_empty( )

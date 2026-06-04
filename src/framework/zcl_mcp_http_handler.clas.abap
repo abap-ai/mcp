@@ -113,6 +113,10 @@ CLASS zcl_mcp_http_handler DEFINITION
       RETURNING VALUE(result) TYPE string.
 
     DATA mcp_server TYPE REF TO zif_mcp_server.
+
+    METHODS validate_session_id
+      IMPORTING session_id TYPE string
+      RAISING   zcx_mcp_server.
 ENDCLASS.
 
 
@@ -168,7 +172,6 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD handle_delete.
-
     " Check if sessions are enabled
     IF mcp_server->server-session_mode = zcl_mcp_session=>session_mode_stateless.
       response->set_status( code   = 405
@@ -189,6 +192,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
         ENDIF.
       WHEN zcl_mcp_session=>session_mode_mcp.
         TRY.
+            validate_session_id( session_id ).
             mcp_server->session = NEW zcl_mcp_session( session_id   = CONV sysuuid_c32( session_id )
                                                        session_mode = mcp_server->server-session_mode
                                                        create_new   = abap_false ).
@@ -488,6 +492,10 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       server->response->set_header_field( name  = 'Mcp-Session-Id'
                                           value = CONV #( mcp_server->server-session_id ) ) ##NO_TEXT.
     ENDIF.
+    IF mcp_server->server-protocol_version IS NOT INITIAL.
+      server->response->set_header_field( name  = 'Mcp-Protocol-Version'
+                                          value = mcp_server->server-protocol_version ) ##NO_TEXT.
+    ENDIF.
     logger->info( |HTTP { method } for { area } { servername } completed| ) ##NO_TEXT.
     logger->save( ).
   ENDMETHOD.
@@ -615,6 +623,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
           ENDIF.
         WHEN zcl_mcp_session=>session_mode_mcp.
           TRY.
+              validate_session_id( session_id ).
               mcp_server->session = NEW zcl_mcp_session( session_id   = CONV sysuuid_c32( session_id )
                                                          session_mode = mcp_server->server-session_mode
                                                          create_new   = abap_false ).
@@ -769,8 +778,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
 
       CATCH zcx_mcp_server INTO DATA(mcp_error).
         IF     request-method = 'tools/call'
-           AND (    mcp_error->if_t100_message~t100key = zcx_mcp_server=>invalid_arguments
-                 OR mcp_error->if_t100_message~t100key = zcx_mcp_server=>required_params ).
+           AND mcp_error->if_t100_message~t100key = zcx_mcp_server=>invalid_arguments.
           DATA(err_result) = NEW zcl_mcp_resp_call_tool( ).
           err_result->set_error( abap_true ).
           err_result->add_text_content( mcp_error->get_text( ) ).
@@ -790,8 +798,9 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
           ENDCASE.
           response-error-message = mcp_error->get_text( ).
         ENDIF.
+
         logger->warning(
-            |Error processing request { request-method } for { mcp_server->server-area } { mcp_server->server-server } details: { response-error-message }| ) ##NO_TEXT.
+            |Error processing request { request-method } for { mcp_server->server-area } { mcp_server->server-server } details: { mcp_error->get_text( ) }| ) ##NO_TEXT.
     ENDTRY.
 
     response-id         = request-id.
@@ -800,7 +809,6 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
 
     result = jsonrpc->serialize_response( response ).
   ENDMETHOD.
-
 
   METHOD handle_options.
     DATA(origin) = request->get_header_field( 'Origin' ) ##NO_TEXT.
@@ -812,9 +820,9 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    IF ( origin_allowed( origin = origin
-                         area   = area
-                         server = server ) ) = abap_false.
+    IF origin_allowed( origin = origin
+                       area   = area
+                       server = server ) = abap_false.
       response->set_status( code   = 403
                             reason = 'Forbidden' ) ##NO_TEXT.
       RETURN.
@@ -837,12 +845,13 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                                     value = request_headers ) ##NO_TEXT.
       ELSE.
         response->set_header_field(
-          name  = 'Access-Control-Allow-Headers'
-          value = 'Content-Type, Accept, Authorization, Mcp-Session-Id, Mcp-Protocol-Version' ) ##NO_TEXT.
+            name  = 'Access-Control-Allow-Headers'
+            value = 'Content-Type, Accept, Authorization, Mcp-Session-Id, Mcp-Protocol-Version' ) ##NO_TEXT.
       ENDIF.
     ENDIF.
 
-    response->set_header_field( name = 'Access-Control-Max-Age' value = '86400' ) ##NO_TEXT.
+    response->set_header_field( name  = 'Access-Control-Max-Age'
+                                value = '86400' ) ##NO_TEXT.
   ENDMETHOD.
 
 
@@ -891,5 +900,23 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       CATCH zcx_mcp_ajson_error.
         result = |\{"jsonrpc":"2.0","error":\{"code":{ code },"message":"{ message }"\}\}|.
     ENDTRY.
+  ENDMETHOD.
+
+  METHOD validate_session_id.
+    IF session_id IS INITIAL.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown
+                                          msgv1  = CONV #( session_id ) ).
+    ENDIF.
+
+    IF strlen( session_id ) <> 32.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown
+                                          msgv1  = CONV #( session_id ) ).
+    ENDIF.
+
+    FIND REGEX '^[0-9A-Fa-f]{32}$' IN session_id.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown
+                                          msgv1  = CONV #( session_id ) ).
+    ENDIF.
   ENDMETHOD.
 ENDCLASS.

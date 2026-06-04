@@ -9,14 +9,15 @@ CLASS ltcl_req_get_task DEFINITION FINAL FOR TESTING
     METHODS test_empty_task_id   FOR TESTING RAISING cx_static_check.
     METHODS test_with_meta       FOR TESTING RAISING cx_static_check.
     METHODS test_no_meta         FOR TESTING RAISING cx_static_check.
+    METHODS test_invalid_task_id FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 CLASS ltcl_req_get_task IMPLEMENTATION.
   METHOD test_valid_task_id.
-    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"task-abc-123"}' ).
-    DATA(req)  = NEW zcl_mcp_req_get_task( json ).
+    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"0123456789ABCDEF0123456789ABCDEF"}' ).
+    DATA(req) = NEW zcl_mcp_req_get_task( json ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 'task-abc-123'
+    cl_abap_unit_assert=>assert_equals( exp = '0123456789ABCDEF0123456789ABCDEF'
                                         act = req->get_task_id( ) ).
   ENDMETHOD.
 
@@ -25,7 +26,7 @@ CLASS ltcl_req_get_task IMPLEMENTATION.
     TRY.
         DATA(req) = NEW zcl_mcp_req_get_task( json ).
         cl_abap_unit_assert=>fail( 'Expected exception for missing taskId' ).
-      CATCH zcx_mcp_server. "#EC EMPTY_CATCH
+      CATCH zcx_mcp_server.                            "#EC EMPTY_CATCH
     ENDTRY.
   ENDMETHOD.
 
@@ -34,17 +35,18 @@ CLASS ltcl_req_get_task IMPLEMENTATION.
     TRY.
         DATA(req) = NEW zcl_mcp_req_get_task( json ).
         cl_abap_unit_assert=>fail( 'Expected exception for empty taskId' ).
-      CATCH zcx_mcp_server. "#EC EMPTY_CATCH
+      CATCH zcx_mcp_server.                            "#EC EMPTY_CATCH
     ENDTRY.
   ENDMETHOD.
 
   METHOD test_with_meta.
     DATA(json) = zcl_mcp_ajson=>parse(
-      '{"taskId":"task-1","_meta":{"progressToken":"tok-99"}}' ).
+                     '{"taskId":"0123456789ABCDEF0123456789ABCDEF","_meta":{"progressToken":"tok-99"}}' ).
     DATA(req) = NEW zcl_mcp_req_get_task( json ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 'task-1'
+    cl_abap_unit_assert=>assert_equals( exp = '0123456789ABCDEF0123456789ABCDEF'
                                         act = req->get_task_id( ) ).
+
     cl_abap_unit_assert=>assert_false( act = req->get_meta( )->is_empty( )
                                        msg = '_meta should not be empty' ).
     cl_abap_unit_assert=>assert_equals( exp = 'tok-99'
@@ -52,10 +54,24 @@ CLASS ltcl_req_get_task IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD test_no_meta.
-    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"task-1"}' ).
+    DATA(json) = zcl_mcp_ajson=>parse(
+      '{"taskId":"0123456789ABCDEF0123456789ABCDEF"}' ).
     DATA(req)  = NEW zcl_mcp_req_get_task( json ).
 
     cl_abap_unit_assert=>assert_true( act = req->get_meta( )->is_empty( )
                                       msg = '_meta should be empty when absent' ).
+  ENDMETHOD.
+
+  METHOD test_invalid_task_id.
+    DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"task-1"}' ).
+
+    TRY.
+        " TODO: variable is assigned but never used (ABAP cleaner)
+        DATA(req) = NEW zcl_mcp_req_get_task( json ).
+        cl_abap_unit_assert=>fail( 'Expected exception for invalid taskId' ).
+      CATCH zcx_mcp_server INTO DATA(error).
+        cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>invalid_arguments
+                                            act = error->if_t100_message~t100key ).
+    ENDTRY.
   ENDMETHOD.
 ENDCLASS.

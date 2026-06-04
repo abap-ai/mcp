@@ -115,10 +115,13 @@ CREATE PUBLIC.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
                                           msgv1  = 'argument.name' ).
     ENDIF.
-    int_argument_name  = json->get_string( '/argument/name' ).
-    int_argument_value = COND #( WHEN json->exists( '/argument/value' )
-                                 THEN json->get_string( '/argument/value' )
-                                 ELSE '' ).
+    int_argument_name = json->get_string( '/argument/name' ).
+
+    IF json->exists( '/argument/value' ) = abap_false.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
+                                          msgv1  = 'argument.value' ).
+    ENDIF.
+    int_argument_value = json->get_string( '/argument/value' ).
 
     IF json->exists( '/context' ).
       int_has_context  = abap_true.

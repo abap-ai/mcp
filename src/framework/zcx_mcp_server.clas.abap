@@ -93,7 +93,7 @@ public section.
     end of UNKNOWN_TOOL .
   constants:
     begin of INVALID_ARGUMENTS,
-      msgid type symsgid value 'ZLLM_MCP',
+      msgid type symsgid value 'ZMCP',
       msgno type symsgno value '010',
       attr1 type scx_attrname value 'MSGV1',
       attr2 type scx_attrname value '',
@@ -102,7 +102,7 @@ public section.
     end of INVALID_ARGUMENTS .
   constants:
     begin of SESSION_EXPIRED,
-      msgid type symsgid value 'ZLLM_MCP',
+      msgid type symsgid value 'ZMCP',
       msgno type symsgno value '011',
       attr1 type scx_attrname value 'MSGV1',
       attr2 type scx_attrname value '',
@@ -111,7 +111,7 @@ public section.
     end of SESSION_EXPIRED .
   constants:
     begin of SESSION_UNKNOWN,
-      msgid type symsgid value 'ZLLM_MCP',
+      msgid type symsgid value 'ZMCP',
       msgno type symsgno value '012',
       attr1 type scx_attrname value 'MSGV1',
       attr2 type scx_attrname value '',
@@ -120,7 +120,7 @@ public section.
     end of SESSION_UNKNOWN .
   constants:
     begin of SESSION_LOAD_ERROR,
-      msgid type symsgid value 'ZLLM_MCP',
+      msgid type symsgid value 'ZMCP',
       msgno type symsgno value '013',
       attr1 type scx_attrname value 'MSGV1',
       attr2 type scx_attrname value '',
@@ -129,7 +129,7 @@ public section.
     end of SESSION_LOAD_ERROR .
   constants:
     begin of SESSION_SAVE_ERROR,
-      msgid type symsgid value 'ZLLM_MCP',
+      msgid type symsgid value 'ZMCP',
       msgno type symsgno value '014',
       attr1 type scx_attrname value 'MSGV1',
       attr2 type scx_attrname value '',
@@ -138,7 +138,7 @@ public section.
     end of SESSION_SAVE_ERROR .
   constants:
     begin of TASK_NOT_FOUND,
-      msgid type symsgid value 'ZLLM_MCP',
+      msgid type symsgid value 'ZMCP',
       msgno type symsgno value '015',
       attr1 type scx_attrname value 'MSGV1',
       attr2 type scx_attrname value '',

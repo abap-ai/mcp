@@ -45,14 +45,13 @@ CLASS zcl_mcp_demo_server_ddic DEFINITION
                                    RAISING   zcx_mcp_ajson_error.
 ENDCLASS.
 
-
-
 CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
   METHOD handle_initialize.
     response-result->set_capabilities( VALUE #( prompts   = VALUE #( enabled = abap_true )
                                                 resources = VALUE #( enabled = abap_true )
                                                 tools     = VALUE #( enabled = abap_true ) ) ).
-    response-result->set_implementation( VALUE #( name    = `Demo MCP Server`
+
+    response-result->set_implementation( VALUE #( name    = `Demo MCP Server - using ICF session logic. Tools only.`
                                                   version = `1.0.0` ) ) ##NO_TEXT.
     response-result->set_instructions(
         `Use the features provided by this server only if explicitly requested. If not sure ask the user!` ) ##NO_TEXT.

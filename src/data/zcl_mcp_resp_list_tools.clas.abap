@@ -69,6 +69,12 @@ CLASS zcl_mcp_resp_list_tools DEFINITION
     METHODS get_tools
       RETURNING VALUE(result) TYPE tools.
 
+    "! <p class="shorttext synchronized" lang="en">Get next cursor</p>
+    "!
+    "! @parameter result | <p class="shorttext synchronized" lang="en">Cursor</p>
+    METHODS get_next_cursor
+      RETURNING VALUE(result) TYPE next_cursor.
+
   PRIVATE SECTION.
     DATA int_tools       TYPE tools.
     DATA int_next_cursor TYPE zif_mcp_types=>page_cursor.
@@ -141,13 +147,13 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
                        iv_val  = <tool>-annotations-title ).
         ENDIF.
 
-        " readOnlyHint — spec default false, emit only when true
+        " readOnlyHint - spec default false, emit only when true
         IF <tool>-annotations-readonlyhint = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/readOnlyHint|
                        iv_val  = abap_true ).
         ENDIF.
 
-        " destructiveHint — spec default true; emit explicit override or legacy abap_true
+        " destructiveHint - spec default true; emit explicit override or legacy abap_true
         IF <tool>-annotations-destructivehint_set = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/destructiveHint|
                        iv_val  = <tool>-annotations-destructivehint ).
@@ -156,13 +162,13 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
                        iv_val  = abap_true ).
         ENDIF.
 
-        " idempotentHint — spec default false, emit only when true
+        " idempotentHint - spec default false, emit only when true
         IF <tool>-annotations-idempotenthint = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/idempotentHint|
                        iv_val  = abap_true ).
         ENDIF.
 
-        " openWorldHint — spec default true; emit explicit override or legacy abap_true
+        " openWorldHint - spec default true; emit explicit override or legacy abap_true
         IF <tool>-annotations-openworldhint_set = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/openWorldHint|
                        iv_val  = <tool>-annotations-openworldhint ).
@@ -233,5 +239,9 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
 
   METHOD get_tools.
     result = int_tools.
+  ENDMETHOD.
+
+  METHOD get_next_cursor.
+    result = int_next_cursor.
   ENDMETHOD.
 ENDCLASS.

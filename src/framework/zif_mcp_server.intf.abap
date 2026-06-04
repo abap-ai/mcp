@@ -130,11 +130,11 @@ INTERFACE zif_mcp_server
   METHODS tasks_cancel IMPORTING !request        TYPE REF TO zcl_mcp_req_cancel_task
                        RETURNING VALUE(response) TYPE cancel_task_response.
 
-   "! <p class="shorttext synchronized" lang="en">MCP completions</p>
-   "!
-   "! @parameter request | <p class="shorttext synchronized" lang="en">Request</p>
-   "! @parameter response | <p class="shorttext synchronized" lang="en">Response</p>
-   METHODS completions_complete
+  "! <p class="shorttext synchronized">MCP completions</p>
+  "!
+  "! @parameter request  | <p class="shorttext synchronized">Request</p>
+  "! @parameter response | <p class="shorttext synchronized">Response</p>
+  METHODS completions_complete
     IMPORTING !request        TYPE REF TO zcl_mcp_req_complete
     RETURNING VALUE(response) TYPE complete_response.
 

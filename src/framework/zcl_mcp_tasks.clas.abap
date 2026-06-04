@@ -9,13 +9,13 @@ CLASS zcl_mcp_tasks DEFINITION
 
   PUBLIC SECTION.
     "! Status constants - match wire values in zmcp_task_status domain
-    CONSTANTS status_working        TYPE zmcp_task_status VALUE 'working'.
-    CONSTANTS status_completed      TYPE zmcp_task_status VALUE 'completed'.
-    CONSTANTS status_failed         TYPE zmcp_task_status VALUE 'failed'.
-    CONSTANTS status_cancelled      TYPE zmcp_task_status VALUE 'cancelled'.
+    CONSTANTS status_working   TYPE zmcp_task_status VALUE 'working'.
+    CONSTANTS status_completed TYPE zmcp_task_status VALUE 'completed'.
+    CONSTANTS status_failed    TYPE zmcp_task_status VALUE 'failed'.
+    CONSTANTS status_cancelled TYPE zmcp_task_status VALUE 'cancelled'.
 
     "! Page size for tasks/list
-    CONSTANTS page_size             TYPE i                VALUE 50.
+    CONSTANTS page_size        TYPE i                VALUE 50.
 
     "! <p class="shorttext synchronized">Constructor</p>
     "! @parameter area   | <p class="shorttext synchronized">MCP area</p>
@@ -32,7 +32,7 @@ CLASS zcl_mcp_tasks DEFINITION
     "! @parameter poll_interval | <p class="shorttext synchronized">Suggested poll interval in milliseconds</p>
     "! @parameter result        | <p class="shorttext synchronized">New task ID</p>
     METHODS create_task
-      IMPORTING tool_name     TYPE string
+      IMPORTING tool_name     TYPE string ##NEEDED
                 session_id    TYPE sysuuid_c32 OPTIONAL
                 ttl           TYPE i           DEFAULT 0
                 poll_interval TYPE i           DEFAULT 5000
@@ -116,9 +116,9 @@ CLASS zcl_mcp_tasks DEFINITION
       RAISING   zcx_mcp_server.
 
     "! <p class="shorttext synchronized">Cancel a task</p>
-    "! Transitions status to 'cancelled'. Guards against cancelling
-    "! terminal tasks (completed/failed).
-    "! Safe to call from batch jobs and background RFCs.
+    "! Transitions the current user's working task to 'cancelled'.
+    "! Idempotent when the task is already cancelled.
+    "! User-scoped cancellation for client/API calls.
     "! @parameter task_id | <p class="shorttext synchronized">Task ID</p>
     CLASS-METHODS cancel
       IMPORTING task_id TYPE sysuuid_c32
@@ -232,15 +232,21 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD list.
-    DATA rows      TYPE TABLE OF zmcp_tasks.
-    DATA cursor_ts TYPE timestamp.
-    DATA fetch     TYPE i.
+    DATA rows                TYPE TABLE OF zmcp_tasks.
+    DATA cursor_ts           TYPE timestamp.
+    DATA cursor_task_id      TYPE sysuuid_c32.
+    DATA cursor_ts_text      TYPE string.
+    DATA cursor_task_id_text TYPE string.
+    DATA fetch               TYPE i.
 
     IF cursor IS INITIAL.
-      cursor_ts = '99991231235959'.
+      cursor_ts      = '99991231235959'.
+      cursor_task_id = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'.
     ELSE.
+      SPLIT cursor AT '|' INTO cursor_ts_text cursor_task_id_text.
+
       TRY.
-          cursor_ts = CONV timestamp( cursor ).
+          cursor_ts = CONV timestamp( cursor_ts_text ).
           IF cursor_ts = 0.
             RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
                                                 msgv1  = 'Invalid cursor' ) ##NO_TEXT.
@@ -250,6 +256,18 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
           RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
                                               msgv1  = 'Invalid cursor' ) ##NO_TEXT.
       ENDTRY.
+
+      IF cursor_task_id_text IS INITIAL.
+        " Backward compatibility for timestamp-only cursors.
+        cursor_task_id = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'.
+      ELSE.
+        FIND REGEX '^[0-9A-Fa-f]{32}$' IN cursor_task_id_text.
+        IF sy-subrc <> 0.
+          RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
+                                              msgv1  = 'Invalid cursor' ) ##NO_TEXT.
+        ENDIF.
+        cursor_task_id = to_upper( cursor_task_id_text ).
+      ENDIF.
     ENDIF.
 
     fetch = page_size + 1.
@@ -259,14 +277,17 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
       WHERE area       = @int_area
         AND server     = @int_server
         AND created_by = @sy-uname
-        AND created_at < @cursor_ts
-      ORDER BY created_at DESCENDING
+        AND (    created_at < @cursor_ts
+              OR ( created_at = @cursor_ts AND task_id < @cursor_task_id ) )
+      ORDER BY created_at DESCENDING,
+               task_id DESCENDING
       INTO CORRESPONDING FIELDS OF TABLE @rows
       UP TO @fetch ROWS.                                "#EC CI_NOFIELD
 
-    IF lines( rows ) > page_size.
+    IF sy-subrc = 0 AND lines( rows ) > page_size.
       DELETE rows INDEX lines( rows ).
-      result-next_cursor = CONV string( rows[ lines( rows ) ]-created_at ).
+      DATA(last_row) = rows[ lines( rows ) ].
+      result-next_cursor = |{ last_row-created_at }\|{ last_row-task_id }|.
     ENDIF.
 
     result-tasks = VALUE #( FOR row IN rows
@@ -337,6 +358,13 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
       THEN status_failed
       ELSE status_completed ).
 
+    DATA(row) = read_task_row( task_id ).
+    IF is_valid_transition( current = row-status
+                            next    = final_status ) = abap_false.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
+                                          msgv1  = CONV #( |Task has already reached a terminal state| ) ) ##NO_TEXT.
+    ENDIF.
+
     GET TIME STAMP FIELD DATA(now).
 
     UPDATE zmcp_tasks
@@ -344,18 +372,22 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
           status       = @final_status,
           last_updated = @now
       WHERE task_id = @task_id
-        AND status  = @status_working.
+        AND status  = @row-status.
 
     IF sy-subrc <> 0.
-      DATA(row) = read_task_row( task_id ).
-
-      RAISE EXCEPTION NEW zcx_mcp_server(
-                              textid = zcx_mcp_server=>internal_error
-                              msgv1  = CONV #( |Invalid status transition { row-status } -> { final_status }| ) ) ##NO_TEXT.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
+                                          msgv1  = CONV #( |Task has already reached a terminal state| ) ) ##NO_TEXT.
     ENDIF.
   ENDMETHOD.
 
   METHOD fail.
+    DATA(row) = read_task_row( task_id ).
+    IF is_valid_transition( current = row-status
+                            next    = status_failed ) = abap_false.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
+                                          msgv1  = CONV #( |Task has already reached a terminal state| ) ) ##NO_TEXT.
+    ENDIF.
+
     GET TIME STAMP FIELD DATA(now).
 
     UPDATE zmcp_tasks
@@ -363,33 +395,64 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
           status_message = @message,
           last_updated   = @now
       WHERE task_id = @task_id
-        AND status  = @status_working.
+        AND status  = @row-status.
 
     IF sy-subrc <> 0.
-      DATA(row) = read_task_row( task_id ).
-
-      RAISE EXCEPTION NEW zcx_mcp_server(
-                              textid = zcx_mcp_server=>internal_error
-                              msgv1  = CONV #( |Invalid status transition { row-status } -> { status_failed }| ) ) ##NO_TEXT.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
+                                          msgv1  = CONV #( |Task has already reached a terminal state| ) ) ##NO_TEXT.
     ENDIF.
   ENDMETHOD.
 
   METHOD cancel.
+    SELECT SINGLE task_id, status, created_by
+      FROM zmcp_tasks
+      WHERE task_id = @task_id
+      INTO @DATA(row).
+
+    IF sy-subrc <> 0 OR row-created_by <> sy-uname.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>task_not_found
+                                          msgv1  = CONV #( task_id ) ) ##NO_TEXT.
+    ENDIF.
+
+    IF row-status = status_cancelled.
+      RETURN.
+    ENDIF.
+
+    IF is_valid_transition( current = row-status
+                            next    = status_cancelled ) = abap_false.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
+                                          msgv1  = CONV #( |Task has already reached a terminal state| ) ) ##NO_TEXT.
+    ENDIF.
+
     GET TIME STAMP FIELD DATA(now).
 
     UPDATE zmcp_tasks
       SET status       = @status_cancelled,
           last_updated = @now
-      WHERE task_id = @task_id
-        AND status  = @status_working.
+      WHERE task_id    = @task_id
+        AND created_by = @sy-uname
+        AND status     = @row-status.
 
-    IF sy-subrc <> 0.
-      DATA(row) = read_task_row( task_id ).
-
-      RAISE EXCEPTION NEW zcx_mcp_server(
-                              textid = zcx_mcp_server=>internal_error
-                              msgv1  = CONV #( |Invalid status transition { row-status } -> { status_cancelled }| ) ) ##NO_TEXT.
+    IF sy-subrc = 0.
+      RETURN.
     ENDIF.
+
+    SELECT SINGLE status, created_by
+      FROM zmcp_tasks
+      WHERE task_id = @task_id
+      INTO @DATA(current_row).
+
+    IF sy-subrc <> 0 OR current_row-created_by <> sy-uname.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>task_not_found
+                                          msgv1  = CONV #( task_id ) ) ##NO_TEXT.
+    ENDIF.
+
+    IF current_row-status = status_cancelled.
+      RETURN.
+    ENDIF.
+
+    RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
+                                        msgv1  = CONV #( |Task has already reached a terminal state| ) ) ##NO_TEXT.
   ENDMETHOD.
 
   METHOD delete_outdated_tasks.
@@ -407,25 +470,27 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
         AND ttl     > 0
       INTO CORRESPONDING FIELDS OF TABLE @terminal_ttl_tasks. "#EC CI_NOFIELD
 
-    LOOP AT terminal_ttl_tasks ASSIGNING FIELD-SYMBOL(<terminal_task>).
-      DATA(expiry_cutoff) = cl_abap_tstmp=>subtractsecs( tstmp = CONV timestampl( now )
-                                                         secs  = <terminal_task>-ttl ).
+    IF sy-subrc = 0.
+      LOOP AT terminal_ttl_tasks ASSIGNING FIELD-SYMBOL(<terminal_task>).
+        DATA(expiry_cutoff) = cl_abap_tstmp=>subtractsecs( tstmp = CONV timestampl( now )
+                                                           secs  = <terminal_task>-ttl ).
 
-      DATA db_expiry_cutoff TYPE timestamp.
-      cl_abap_tstmp=>move( EXPORTING tstmp_src = expiry_cutoff
-                           IMPORTING tstmp_tgt = db_expiry_cutoff ).
+        DATA db_expiry_cutoff TYPE timestamp.
+        cl_abap_tstmp=>move( EXPORTING tstmp_src = expiry_cutoff
+                             IMPORTING tstmp_tgt = db_expiry_cutoff ).
 
-      IF <terminal_task>-last_updated < db_expiry_cutoff.
-        APPEND VALUE #( sign   = 'I'
-                        option = 'EQ'
-                        low    = <terminal_task>-task_id ) TO expired_task_ids.
+        IF <terminal_task>-last_updated < db_expiry_cutoff.
+          APPEND VALUE #( sign   = 'I'
+                          option = 'EQ'
+                          low    = <terminal_task>-task_id ) TO expired_task_ids.
+        ENDIF.
+      ENDLOOP.
+
+      IF expired_task_ids IS NOT INITIAL.
+        DELETE FROM zmcp_tasks
+          WHERE task_id IN @expired_task_ids.
+        result = sy-dbcnt.
       ENDIF.
-    ENDLOOP.
-
-    IF expired_task_ids IS NOT INITIAL.
-      DELETE FROM zmcp_tasks
-        WHERE task_id IN @expired_task_ids.
-      result = sy-dbcnt.
     ENDIF.
 
     " Remove terminal tasks with no TTL after default retention (7 days)
@@ -459,15 +524,12 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD is_valid_transition.
-    result = SWITCH #( current
-                       WHEN status_working
-                       THEN COND #(
-     WHEN next = status_completed
-       OR next = status_failed
-       OR next = status_cancelled
-     THEN abap_true
-     ELSE abap_false )
-                       ELSE abap_false ).
+    result = xsdbool(
+          current = status_working
+      AND (    next = status_working
+            OR next = status_completed
+            OR next = status_failed
+            OR next = status_cancelled ) ).
   ENDMETHOD.
 
   METHOD read_task_row.
