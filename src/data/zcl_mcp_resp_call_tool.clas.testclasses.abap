@@ -8,21 +8,22 @@ CLASS ltcl_call_tool_result DEFINITION FINAL FOR TESTING
 
     METHODS setup.
     METHODS teardown.
-    METHODS test_text_content         FOR TESTING RAISING cx_static_check.
-    METHODS test_image_content        FOR TESTING RAISING cx_static_check.
-    METHODS test_audio_content        FOR TESTING RAISING cx_static_check.
-    METHODS test_resource_link        FOR TESTING RAISING cx_static_check.
-    METHODS test_text_resource        FOR TESTING RAISING cx_static_check.
-    METHODS test_blob_resource        FOR TESTING RAISING cx_static_check.
-    METHODS test_structured_content   FOR TESTING RAISING cx_static_check.
-    METHODS test_structured_no_text   FOR TESTING RAISING cx_static_check.
-    METHODS test_multiple_contents    FOR TESTING RAISING cx_static_check.
-    METHODS test_with_error_flag      FOR TESTING RAISING cx_static_check.
-    METHODS test_with_metadata        FOR TESTING RAISING cx_static_check.
-    METHODS test_content_meta         FOR TESTING RAISING cx_static_check.
-    METHODS test_set_content          FOR TESTING RAISING cx_static_check.
-    METHODS test_annotations          FOR TESTING RAISING cx_static_check.
+    METHODS test_text_content          FOR TESTING RAISING cx_static_check.
+    METHODS test_image_content         FOR TESTING RAISING cx_static_check.
+    METHODS test_audio_content         FOR TESTING RAISING cx_static_check.
+    METHODS test_resource_link         FOR TESTING RAISING cx_static_check.
+    METHODS test_text_resource         FOR TESTING RAISING cx_static_check.
+    METHODS test_blob_resource         FOR TESTING RAISING cx_static_check.
+    METHODS test_structured_content    FOR TESTING RAISING cx_static_check.
+    METHODS test_structured_no_text    FOR TESTING RAISING cx_static_check.
+    METHODS test_multiple_contents     FOR TESTING RAISING cx_static_check.
+    METHODS test_with_error_flag       FOR TESTING RAISING cx_static_check.
+    METHODS test_with_metadata         FOR TESTING RAISING cx_static_check.
+    METHODS test_content_meta          FOR TESTING RAISING cx_static_check.
+    METHODS test_set_content           FOR TESTING RAISING cx_static_check.
+    METHODS test_annotations           FOR TESTING RAISING cx_static_check.
     METHODS test_timestamp_annotations FOR TESTING RAISING cx_static_check.
+    METHODS test_task_result           FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 CLASS ltcl_call_tool_result IMPLEMENTATION.
@@ -470,7 +471,7 @@ CLASS ltcl_call_tool_result IMPLEMENTATION.
 
   METHOD test_annotations.
     " Given
-    DATA annotations TYPE zcl_mcp_resp_call_tool=>annotations.
+    DATA annotations TYPE zif_mcp_types=>annotations.
 
     annotations-audience = VALUE #( ( `user` ) ( `assistant` ) ).
     annotations-priority = '0.8'.
@@ -499,7 +500,7 @@ CLASS ltcl_call_tool_result IMPLEMENTATION.
 
   METHOD test_timestamp_annotations.
     " Given
-    DATA annotations TYPE zcl_mcp_resp_call_tool=>annotations.
+    DATA annotations TYPE zif_mcp_types=>annotations.
     annotations-audience = VALUE #( ( `user` ) ).
     annotations-priority = '0.9'.
     " Create a timestamp: 2024-01-15 14:30:45
@@ -535,5 +536,44 @@ CLASS ltcl_call_tool_result IMPLEMENTATION.
     " Should contain T separator
     cl_abap_unit_assert=>assert_char_cp( act = timestamp_result
                                          exp = '*T*' ).
+  ENDMETHOD.
+
+  METHOD test_task_result.
+    " Given - simulate a task-deferred tool response
+    DATA task TYPE zif_mcp_types=>task.
+
+    task-task_id       = '1234567890ABCDEF1234567890ABCDEF'.
+    task-status        = zcl_mcp_tasks=>status_working.
+    task-poll_interval = 5000.
+    task-ttl           = 300.
+
+    cut->set_task_result( task ).
+
+    " When
+    DATA(result) = zcl_mcp_ajson=>parse( cut->zif_mcp_internal~generate_json( )->stringify( ) ).
+
+    " Then - task object must carry all polling metadata
+    cl_abap_unit_assert=>assert_equals( exp = task-task_id
+                                        act = result->get( '/task/taskId' )
+                                        msg = 'taskId must be set under /task' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = zcl_mcp_tasks=>status_working
+                                        act = result->get( '/task/status' )
+                                        msg = 'status must be set under /task' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = '5000'
+                                        act = result->get( '/task/pollInterval' )
+                                        msg = 'pollInterval must be present for client polling' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = '300'
+                                        act = result->get( '/task/ttl' )
+                                        msg = 'ttl must be present when set' ).
+
+    " Task result and content are mutually exclusive
+    cl_abap_unit_assert=>assert_false( act = result->exists( '/content' )
+                                       msg = 'content must not be present in a task result response' ).
+
+    cl_abap_unit_assert=>assert_false( act = result->exists( '/structuredContent' )
+                                       msg = 'structuredContent must not be present in a task result response' ).
   ENDMETHOD.
 ENDCLASS.

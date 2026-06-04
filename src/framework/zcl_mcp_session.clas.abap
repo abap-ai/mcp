@@ -95,11 +95,19 @@ CLASS zcl_mcp_session IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    SELECT SINGLE * FROM zmcp_sessions WHERE session_id = @session_id INTO @DATA(session).
+    SELECT SINGLE * FROM zmcp_sessions
+  WHERE session_id = @session_id
+  INTO @DATA(session).
     IF sy-subrc <> 0.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown msgv1 = CONV #( session_id ) ).
+    ENDIF.
+
+    " *** ADD: user isolation check ***
+    IF session-created_by <> sy-uname.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown
                                           msgv1  = CONV #( session_id ) ).
     ENDIF.
+    " Use session_unknown (not a dedicated "forbidden") to avoid user enumeration
 
     " Verify if the session is still valid
     DATA current_timestamp TYPE timestamp.
@@ -123,7 +131,7 @@ CLASS zcl_mcp_session IMPLEMENTATION.
 
   METHOD remove.
     DELETE session_data WHERE key = key.
-    IF sy-subrc <> 0. "#EC EMPTY_IF_BRANCH
+    IF sy-subrc <> 0.                              "#EC EMPTY_IF_BRANCH
       " Ignored, if it does not exist we cannot delete id.
       " Additional exception handling is not relevant.
     ENDIF.
@@ -155,26 +163,51 @@ CLASS zcl_mcp_session IMPLEMENTATION.
                                             msgv1  = `Could not convert to JSON` ) ##NO_TEXT.
     ENDTRY.
 
-    DATA db_session TYPE zmcp_sessions.
-    db_session-session_id = session_id.
-    db_session-data       = value.
-    GET TIME STAMP FIELD db_session-updated.
+    DATA updated TYPE timestamp.
+    GET TIME STAMP FIELD updated.
 
-    MODIFY zmcp_sessions FROM @db_session.
+    UPDATE zmcp_sessions
+      SET data    = @value,
+          updated = @updated
+      WHERE session_id = @session_id
+        AND created_by = @sy-uname.
+
     IF sy-subrc <> 0.
-      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_save_error
-                                          msgv1  = `DB update failed.` ) ##NO_TEXT.
+      SELECT SINGLE session_id FROM zmcp_sessions
+        WHERE session_id = @session_id
+        INTO @DATA(existing_session_id)  ##NEEDED.
+
+      IF sy-subrc = 0.
+        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown
+                                            msgv1  = CONV #( session_id ) ).
+      ENDIF.
+
+      DATA db_session TYPE zmcp_sessions.
+      db_session-session_id = session_id.
+      db_session-data       = value.
+      db_session-created_by = sy-uname.
+      db_session-updated    = updated.
+
+      INSERT zmcp_sessions FROM @db_session.
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_save_error
+                                            msgv1  = `DB insert failed.` ) ##NO_TEXT.
+      ENDIF.
     ENDIF.
+
     COMMIT WORK AND WAIT.
   ENDMETHOD.
 
   METHOD delete.
     IF session_id IS NOT INITIAL.
-      DELETE FROM zmcp_sessions WHERE session_id = @session_id.
+      DELETE FROM zmcp_sessions
+        WHERE session_id = @session_id
+          AND created_by = @sy-uname.
+
       IF sy-subrc <> 0.
-        " Ignored, we don't want to raise an exception if the session does not exist.
         RETURN.
       ENDIF.
+
       COMMIT WORK AND WAIT.
     ENDIF.
   ENDMETHOD.

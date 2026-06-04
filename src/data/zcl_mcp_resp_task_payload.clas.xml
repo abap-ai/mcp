@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_RESP_TASK_PAYLOAD</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP Response Task Payload</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>ADD_TEXT_CONTENT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Add Text Content Item</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>GET_IS_ERROR</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Return internal error</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_FROM_JSON</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Load Pre-built Result JSON</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_IS_ERROR</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Mark Result as Error</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_META</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set Meta Data</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_RELATED_TASK</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set Task in _Meta</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_STRUCTURED_CONTENT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set Structured Content</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_TEXT_CONTENT</CMPNAME>
+     <SCONAME>TEXT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Plain text to include in the result</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_FROM_JSON</CMPNAME>
+     <SCONAME>JSON</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Pre-built CallToolResult JSON</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_IS_ERROR</CMPNAME>
+     <SCONAME>IS_ERROR</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set to abap_true to mark result as error</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_META</CMPNAME>
+     <SCONAME>META</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Metadata JSON object</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_RELATED_TASK</CMPNAME>
+     <SCONAME>TASK_ID</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>TaskId</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_RELATED_TASK</CMPNAME>
+     <SCONAME>ZCX_MCP_AJSON_ERROR</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>JSON error</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_STRUCTURED_CONTENT</CMPNAME>
+     <SCONAME>STRUCTURED_CONTENT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>JSON object conforming to the tool output schema</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

@@ -1,17 +1,9 @@
-"! <p class="shorttext synchronized">MCP Get Prompt Result</p>
-"! Implementation for the GetPromptResult interface
 CLASS zcl_mcp_resp_get_prompt DEFINITION
-PUBLIC FINAL
-CREATE PUBLIC.
+  PUBLIC FINAL
+  CREATE PUBLIC.
 
   PUBLIC SECTION.
     INTERFACES zif_mcp_internal.
-
-    TYPES: BEGIN OF annotations,
-             audience      TYPE STANDARD TABLE OF string WITH EMPTY KEY,
-             priority      TYPE decfloat16,
-             last_modified TYPE timestamp,
-           END OF annotations.
 
     TYPES: BEGIN OF text_resource_contents,
              uri       TYPE string,
@@ -27,11 +19,10 @@ CREATE PUBLIC.
              meta      TYPE REF TO zif_mcp_ajson,
            END OF blob_resource_contents.
 
-    " Content types for messages
     TYPES: BEGIN OF text_content,
              type        TYPE string,
              text        TYPE string,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF text_content.
 
@@ -39,7 +30,7 @@ CREATE PUBLIC.
              type        TYPE string,
              data        TYPE string,
              mime_type   TYPE string,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF image_content.
 
@@ -47,14 +38,14 @@ CREATE PUBLIC.
              type        TYPE string,
              data        TYPE string,
              mime_type   TYPE string,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF audio_content.
 
     TYPES: BEGIN OF embedded_resource,
              type        TYPE string,
              resource    TYPE REF TO data,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF embedded_resource.
 
@@ -65,12 +56,14 @@ CREATE PUBLIC.
              title       TYPE string,
              description TYPE string,
              mime_type   TYPE string,
+             size        TYPE i,
+             annotations TYPE zif_mcp_types=>annotations,
+             icons       TYPE zif_mcp_types=>icon_list,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF resource_link_content.
 
-    " Message structure
     TYPES: BEGIN OF prompt_message,
-             role    TYPE string,
+             role    TYPE zif_mcp_types=>message_role,
              content TYPE REF TO data,
            END OF prompt_message.
 
@@ -95,10 +88,10 @@ CREATE PUBLIC.
     "! @parameter annotations | <p class="shorttext synchronized">Optional annotations</p>
     "! @parameter meta        | <p class="shorttext synchronized">Optional meta data</p>
     METHODS add_text_message
-      IMPORTING role        TYPE string
+      IMPORTING role        TYPE zif_mcp_types=>message_role
                 !text       TYPE string
-                annotations TYPE annotations          OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+                annotations TYPE zif_mcp_types=>annotations OPTIONAL
+                meta        TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Image Message</p>
     "!
@@ -108,11 +101,11 @@ CREATE PUBLIC.
     "! @parameter annotations | <p class="shorttext synchronized">Optional annotations</p>
     "! @parameter meta        | <p class="shorttext synchronized">Optional meta data</p>
     METHODS add_image_message
-      IMPORTING role        TYPE string
+      IMPORTING role        TYPE zif_mcp_types=>message_role
                 !data       TYPE string
                 mime_type   TYPE string
-                annotations TYPE annotations          OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+                annotations TYPE zif_mcp_types=>annotations OPTIONAL
+                meta        TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Audio Message</p>
     "!
@@ -122,11 +115,11 @@ CREATE PUBLIC.
     "! @parameter annotations | <p class="shorttext synchronized">Optional annotations</p>
     "! @parameter meta        | <p class="shorttext synchronized">Optional meta data</p>
     METHODS add_audio_message
-      IMPORTING role        TYPE string
+      IMPORTING role        TYPE zif_mcp_types=>message_role
                 !data       TYPE string
                 mime_type   TYPE string
-                annotations TYPE annotations          OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+                annotations TYPE zif_mcp_types=>annotations OPTIONAL
+                meta        TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Text Resource Message</p>
     "!
@@ -137,12 +130,12 @@ CREATE PUBLIC.
     "! @parameter annotations | <p class="shorttext synchronized">Optional annotations</p>
     "! @parameter meta        | <p class="shorttext synchronized">Optional meta data</p>
     METHODS add_text_resource_message
-      IMPORTING role        TYPE string
+      IMPORTING role        TYPE zif_mcp_types=>message_role
                 uri         TYPE string
                 !text       TYPE string
-                mime_type   TYPE string               OPTIONAL
-                annotations TYPE annotations          OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+                mime_type   TYPE string                     OPTIONAL
+                annotations TYPE zif_mcp_types=>annotations OPTIONAL
+                meta        TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Blob Resource Message</p>
     "!
@@ -153,30 +146,36 @@ CREATE PUBLIC.
     "! @parameter annotations | <p class="shorttext synchronized">Optional annotations</p>
     "! @parameter meta        | <p class="shorttext synchronized">Optional meta data</p>
     METHODS add_blob_resource_message
-      IMPORTING role        TYPE string
+      IMPORTING role        TYPE zif_mcp_types=>message_role
                 uri         TYPE string
                 !blob       TYPE string
-                mime_type   TYPE string               OPTIONAL
-                annotations TYPE annotations          OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+                mime_type   TYPE string                     OPTIONAL
+                annotations TYPE zif_mcp_types=>annotations OPTIONAL
+                meta        TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Resource Link Message</p>
     "!
     "! @parameter role        | <p class="shorttext synchronized">Role (user or assistant)</p>
     "! @parameter uri         | <p class="shorttext synchronized">Resource URI</p>
-    "! @parameter name        | <p class="shorttext synchronized">resource name</p>
+    "! @parameter name        | <p class="shorttext synchronized">Resource name</p>
     "! @parameter description | <p class="shorttext synchronized">Optional resource description</p>
     "! @parameter title       | <p class="shorttext synchronized">Optional resource title</p>
     "! @parameter mime_type   | <p class="shorttext synchronized">Optional MIME type</p>
+    "! @parameter size        | <p class="shorttext synchronized">Optional size</p>
+    "! @parameter annotations | <p class="shorttext synchronized">Optional annotations</p>
+    "! @parameter icons       | <p class="shorttext synchronized">Optional icons</p>
     "! @parameter meta        | <p class="shorttext synchronized">Optional meta data</p>
     METHODS add_resource_link_message
-      IMPORTING role         TYPE string
+      IMPORTING role         TYPE zif_mcp_types=>message_role
                 uri          TYPE string
                 !name        TYPE string
-                !description TYPE string               OPTIONAL
-                title        TYPE string               OPTIONAL
-                mime_type    TYPE string               OPTIONAL
-                meta         TYPE REF TO zif_mcp_ajson OPTIONAL.
+                !description TYPE string                     OPTIONAL
+                !title       TYPE string                     OPTIONAL
+                mime_type    TYPE string                     OPTIONAL
+                !size        TYPE i                          OPTIONAL
+                annotations  TYPE zif_mcp_types=>annotations OPTIONAL
+                icons        TYPE zif_mcp_types=>icon_list   OPTIONAL
+                meta         TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Set Meta Data</p>
     "! Optional metadata to attach to response
@@ -186,7 +185,6 @@ CREATE PUBLIC.
       IMPORTING meta TYPE REF TO zif_mcp_ajson.
 
   PRIVATE SECTION.
-    " Content type identifiers
     CONSTANTS: BEGIN OF content_type,
                  text          TYPE string VALUE 'text',
                  image         TYPE string VALUE 'image',
@@ -195,7 +193,6 @@ CREATE PUBLIC.
                  audio         TYPE string VALUE 'audio',
                END OF content_type.
 
-    " Message type enum
     CONSTANTS: BEGIN OF message_type,
                  text          TYPE i VALUE 1,
                  image         TYPE i VALUE 2,
@@ -205,34 +202,34 @@ CREATE PUBLIC.
                  resource_link TYPE i VALUE 6,
                END OF message_type.
 
-    " Unified message storage structure
     TYPES: BEGIN OF unified_message,
-             type         TYPE i,                    " Message type (see message_type)
-             role         TYPE string,               " Role (user or assistant)
-             text         TYPE string,               " For text messages
-             image_data   TYPE string,               " For image messages
-             image_mime   TYPE string,               " For image messages
-             audio_data   TYPE string,               " For audio messages
-             audio_mime   TYPE string,               " For audio messages
-             res_uri      TYPE string,               " For resource messages
-             res_text     TYPE string,               " For text resource messages
-             res_blob     TYPE string,               " For blob resource messages
-             res_mime     TYPE string,               " For resource messages
-             res_name     TYPE string,               " For resource link messages
-             res_desc     TYPE string,               " For resource link messages
-             res_title    TYPE string,               " For resource link messages
-             annotations  TYPE annotations,          " Annotations for any type
-             content_meta TYPE REF TO zif_mcp_ajson, " Meta data for content
+             type         TYPE i,
+             role         TYPE zif_mcp_types=>message_role,
+             text         TYPE string,
+             image_data   TYPE string,
+             image_mime   TYPE string,
+             audio_data   TYPE string,
+             audio_mime   TYPE string,
+             res_uri      TYPE string,
+             res_text     TYPE string,
+             res_blob     TYPE string,
+             res_mime     TYPE string,
+             res_name     TYPE string,
+             res_desc     TYPE string,
+             res_title    TYPE string,
+             res_size     TYPE i,
+             res_icons    TYPE zif_mcp_types=>icon_list,
+             annotations  TYPE zif_mcp_types=>annotations,
+             content_meta TYPE REF TO zif_mcp_ajson,
            END OF unified_message.
 
-    " Internal data storage
     DATA description TYPE string.
     DATA messages    TYPE STANDARD TABLE OF unified_message WITH EMPTY KEY.
     DATA meta        TYPE REF TO zif_mcp_ajson.
 
     METHODS add_annotations_to_json
       IMPORTING !path       TYPE string
-                annotations TYPE annotations
+                annotations TYPE zif_mcp_types=>annotations
                 !result     TYPE REF TO zif_mcp_ajson
       RAISING   zcx_mcp_ajson_error.
 
@@ -242,9 +239,6 @@ CREATE PUBLIC.
                 !result TYPE REF TO zif_mcp_ajson
       RAISING   zcx_mcp_ajson_error.
 
-    METHODS convert_timestamp_to_iso8601
-      IMPORTING timestamp     TYPE timestamp
-      RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 
 CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
@@ -375,6 +369,35 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
             result->set( iv_path = |{ message_path }/content/title|
                          iv_val  = <message>-res_title ).
           ENDIF.
+
+          IF <message>-res_size > 0.
+            result->set( iv_path = |{ message_path }/content/size|
+                         iv_val  = <message>-res_size ).
+          ENDIF.
+
+          IF <message>-res_icons IS NOT INITIAL.
+            result->touch_array( |{ message_path }/content/icons| ).
+            LOOP AT <message>-res_icons ASSIGNING FIELD-SYMBOL(<prl_icon>).
+              DATA(prl_icon_path) = |{ message_path }/content/icons/{ sy-tabix }|.
+              result->set( iv_path = |{ prl_icon_path }/src|
+                           iv_val  = <prl_icon>-src ).
+              IF <prl_icon>-mime_type IS NOT INITIAL.
+                result->set( iv_path = |{ prl_icon_path }/mimeType|
+                             iv_val  = <prl_icon>-mime_type ).
+              ENDIF.
+              IF <prl_icon>-sizes IS NOT INITIAL.
+                result->touch_array( |{ prl_icon_path }/sizes| ).
+                LOOP AT <prl_icon>-sizes ASSIGNING FIELD-SYMBOL(<prl_icon_size>).
+                  result->set( iv_path = |{ prl_icon_path }/sizes/{ sy-tabix }|
+                               iv_val  = <prl_icon_size> ).
+                ENDLOOP.
+              ENDIF.
+              IF <prl_icon>-theme IS NOT INITIAL.
+                result->set( iv_path = |{ prl_icon_path }/theme|
+                             iv_val  = <prl_icon>-theme ).
+              ENDIF.
+            ENDLOOP.
+          ENDIF.
       ENDCASE.
 
       " Add annotations if present
@@ -421,7 +444,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
 
     " Add lastModified if not empty
     IF annotations-last_modified IS NOT INITIAL.
-      DATA(iso_timestamp) = convert_timestamp_to_iso8601( annotations-last_modified ).
+      DATA(iso_timestamp) = zcl_mcp_util=>timestamp_to_iso8601( annotations-last_modified ).
       result->set( iv_path = |{ path }/annotations/lastModified|
                    iv_val  = iso_timestamp ).
     ENDIF.
@@ -433,38 +456,6 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
       result->set( iv_path = |{ path }/_meta|
                    iv_val  = meta ).
     ENDIF.
-  ENDMETHOD.
-
-  METHOD convert_timestamp_to_iso8601.
-    " Convert session timestamp to UTC and format as ISO 8601
-    DATA local_date       TYPE sy-datum.
-    DATA local_time       TYPE sy-uzeit.
-    DATA utc_timestamp    TYPE timestamp.
-    DATA timestamp_string TYPE string.
-
-    " Convert timestamp to string first
-    timestamp_string = |{ timestamp }|.
-
-    " Pad with leading zeros if needed
-    WHILE strlen( timestamp_string ) < 14.
-      timestamp_string = |0{ timestamp_string }|.
-    ENDWHILE.
-
-    " Extract date and time from timestamp string
-    local_date = timestamp_string+0(8).
-    local_time = timestamp_string+8(6).
-
-    " Convert local date/time to UTC timestamp
-    CONVERT DATE local_date TIME local_time INTO TIME STAMP utc_timestamp TIME ZONE sy-zonlo.
-
-    " Convert UTC timestamp back to string for formatting
-    timestamp_string = |{ utc_timestamp }|.
-    WHILE strlen( timestamp_string ) < 14.
-      timestamp_string = |0{ timestamp_string }|.
-    ENDWHILE.
-
-    " Format: YYYYMMDDHHMMSS -> YYYY-MM-DDTHH:MM:SSZ
-    result = |{ timestamp_string+0(4) }-{ timestamp_string+4(2) }-{ timestamp_string+6(2) }T{ timestamp_string+8(2) }:{ timestamp_string+10(2) }:{ timestamp_string+12(2) }Z|.
   ENDMETHOD.
 
   METHOD set_description.
@@ -512,7 +503,7 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
           ENDIF.
 
           " Get annotations
-          DATA annotations TYPE annotations.
+          DATA annotations TYPE zif_mcp_types=>annotations.
           ASSIGN COMPONENT 'ANNOTATIONS' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<annotations>).
           IF sy-subrc = 0.
             annotations = <annotations>.
@@ -672,6 +663,26 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
             title = <title>.
           ENDIF.
 
+          DATA res_size TYPE i.
+          ASSIGN COMPONENT 'SIZE' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<res_size>).
+          IF sy-subrc = 0.
+            res_size = <res_size>.
+          ENDIF.
+
+          " annotations
+          CLEAR annotations.
+          ASSIGN COMPONENT 'ANNOTATIONS' OF STRUCTURE <content_struct> TO <annotations>.
+          IF sy-subrc = 0.
+            annotations = <annotations>.
+          ENDIF.
+
+          " icons
+          DATA rl_icons TYPE zif_mcp_types=>icon_list.
+          ASSIGN COMPONENT 'ICONS' OF STRUCTURE <content_struct> TO FIELD-SYMBOL(<rl_icons>).
+          IF sy-subrc = 0 AND <rl_icons> IS ASSIGNED.
+            rl_icons = <rl_icons>.
+          ENDIF.
+
           " Add resource link message
           APPEND VALUE unified_message( type         = message_type-resource_link
                                         role         = <input_message>-role
@@ -680,6 +691,9 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                                         res_desc     = description
                                         res_mime     = mime_type
                                         res_title    = title
+                                        res_size     = res_size
+                                        annotations  = annotations
+                                        res_icons    = rl_icons
                                         content_meta = content_meta ) TO me->messages.
       ENDCASE.
     ENDLOOP.
@@ -739,6 +753,9 @@ CLASS zcl_mcp_resp_get_prompt IMPLEMENTATION.
                                   res_name     = name
                                   res_desc     = description
                                   res_mime     = mime_type
+                                  res_size     = size
+                                  annotations  = annotations
+                                  res_icons    = icons
                                   content_meta = meta ) TO messages.
   ENDMETHOD.
 

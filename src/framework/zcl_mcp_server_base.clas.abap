@@ -76,14 +76,59 @@ CLASS zcl_mcp_server_base DEFINITION ABSTRACT
       IMPORTING !request  TYPE REF TO zcl_mcp_req_call_tool
       CHANGING  !response TYPE zif_mcp_server=>call_tool_response ##NEEDED.
 
+    "! <p class="shorttext synchronized">Cancel task - optional hook</p>
+    "! Called before the framework marks the task as cancelled.
+    "! Override to signal your background process (batch job, RFC) to stop.
+    "! Default implementation does nothing.
+    "! @parameter request  | <p class="shorttext synchronized">Cancel task request</p>
+    "! @parameter response | <p class="shorttext synchronized">Cancel task response</p>
+    METHODS handle_cancel_task
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_cancel_task
+      CHANGING  !response TYPE zif_mcp_server=>cancel_task_response ##NEEDED.
+
+    "! <p class="shorttext synchronized">Provide completion candidates</p>
+    "! Override to support argument auto-complete for prompts and resource templates.
+    "! Default implementation returns method_not_found.
+    "! @parameter request  | Completion request
+    "! @parameter response | Completion response
+    METHODS handle_completions_complete
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_complete
+      CHANGING  !response TYPE zif_mcp_server=>complete_response ##NEEDED.
+
+    "! <p class="shorttext synchronized">Access the task manager</p>
+    "! Use in handle_call_tool to create tasks:
+    "!   DATA(task_id) = get_tasks( )->create_task( tool_name = ... ).
+    METHODS get_tasks
+      RETURNING VALUE(result) TYPE REF TO zcl_mcp_tasks.
+
     ALIASES server  FOR zif_mcp_server~server.
     ALIASES config  FOR zif_mcp_server~config.
     ALIASES session FOR zif_mcp_server~session.
 
   PRIVATE SECTION.
+    DATA tasks TYPE REF TO zcl_mcp_tasks.
+
     METHODS generate_fallback_uuid
-      RETURNING
-        VALUE(result) TYPE sysuuid_c32.
+      RETURNING VALUE(result) TYPE sysuuid_c32.
+
+    METHODS get_tool_task_support
+      IMPORTING tool_name     TYPE string
+      RETURNING VALUE(result) TYPE string.
+
+    METHODS enforce_tool_task_negotiation
+      IMPORTING !request  TYPE REF TO zcl_mcp_req_call_tool
+      CHANGING  !response TYPE zif_mcp_server=>call_tool_response.
+
+    TYPES: BEGIN OF tool_task_support_entry,
+             name         TYPE string,
+             task_support TYPE string,
+           END OF tool_task_support_entry.
+    TYPES tool_task_support_cache_t TYPE HASHED TABLE OF tool_task_support_entry WITH UNIQUE KEY name.
+
+    DATA tool_task_support_cache  TYPE tool_task_support_cache_t.
+    DATA tool_task_support_loaded TYPE abap_bool.
+
+    METHODS load_tool_task_support_cache.
 ENDCLASS.
 
 CLASS zcl_mcp_server_base IMPLEMENTATION.
@@ -94,6 +139,9 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
     IF server-session_id IS NOT INITIAL.
       server-http_response->set_status( code   = 400
                                         reason = 'Bad Request' ) ##NO_TEXT.
+      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_request.
+      response-error-message = 'Server already initialized for this session' ##NO_TEXT.
+      RETURN.
     ENDIF.
 
     IF server-session_mode <> zcl_mcp_session=>session_mode_stateless.
@@ -110,6 +158,8 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
           zif_mcp_server~config->get_logger( )->error( |Failed to create session { error->get_text( ) }| ) ##NO_TEXT.
           server-http_response->set_status( code   = 500
                                             reason = 'Internal Server Error' ) ##NO_TEXT.
+          response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+          response-error-message = error->get_text( ).
           RETURN.
       ENDTRY.
     ENDIF.
@@ -127,6 +177,11 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
       server-protocol_version = zif_mcp_constants=>latest_protocol_version.
     ENDIF.
     response-result->set_protocol_version( server-protocol_version ).
+
+    IF session IS BOUND.
+      session->add( VALUE #( key   = 'protocolVersion'
+                             value = server-protocol_version ) ).
+    ENDIF.
 
     handle_initialize( EXPORTING request  = request
                        CHANGING  response = response ).
@@ -178,12 +233,17 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_mcp_server~tools_call.
-    " Pre-initialize the response object
     response-result = NEW zcl_mcp_resp_call_tool( ).
 
-    " Call the handler to modify the response
-    handle_call_tool( EXPORTING request = request
-                     CHANGING  response = response ).
+    enforce_tool_task_negotiation( EXPORTING request  = request
+                                   CHANGING  response = response ).
+
+    IF response-error-code IS NOT INITIAL.
+      RETURN.
+    ENDIF.
+
+    handle_call_tool( EXPORTING request  = request
+                      CHANGING  response = response ).
   ENDMETHOD.
 
   METHOD zif_mcp_server~tools_list.
@@ -254,6 +314,212 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
   METHOD zif_mcp_server~get_session_mode.
     result = get_session_mode( ).
+  ENDMETHOD.
+
+  METHOD zif_mcp_server~tasks_list.
+    response-result = NEW zcl_mcp_resp_list_tasks( ).
+    TRY.
+        DATA(list) = get_tasks( )->list( request->get_cursor( ) ).
+        response-result->set_tasks( list-tasks ).
+        IF list-next_cursor IS NOT INITIAL.
+          response-result->set_next_cursor( list-next_cursor ).
+        ENDIF.
+      CATCH zcx_mcp_server INTO DATA(error).
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+        response-error-message = error->get_text( ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD zif_mcp_server~tasks_get.
+    response-result = NEW zcl_mcp_resp_get_task( ).
+    TRY.
+        DATA(task) = get_tasks( )->get( CONV #( request->get_task_id( ) ) ).
+        response-result->set_task( task ).
+      CATCH zcx_mcp_server INTO DATA(error).
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+        response-error-message = error->get_text( ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD zif_mcp_server~tasks_result.
+    response-result = NEW zcl_mcp_resp_task_payload( ).
+
+    TRY.
+        DATA(task_id) = request->get_task_id( ).
+        DATA(task)    = get_tasks( )->get( CONV #( task_id ) ).
+
+        CASE task-status.
+          WHEN zcl_mcp_tasks=>status_completed.
+            DATA(payload) = get_tasks( )->get_payload( CONV #( task_id ) ).
+            response-result->set_from_json( payload ).
+            response-result->set_related_task( task_id ).
+
+            WHEN zcl_mcp_tasks=>status_failed.
+              " Return the stored CallToolResult payload when present (isError: true).
+              " Fall back to a protocol-level error when no payload was stored
+              " (i.e. task was failed directly via zcl_mcp_tasks=>fail).
+              TRY.
+                  DATA(fail_payload) = get_tasks( )->get_payload( CONV #( task_id ) ).
+                  response-result->set_from_json( fail_payload ).
+                  response-result->set_related_task( task_id ).
+                CATCH zcx_mcp_server
+                      zcx_mcp_ajson_error.
+                  response-error-code = zcl_mcp_jsonrpc=>error_codes-internal_error.
+                  IF task-status_message IS NOT INITIAL.
+                    response-error-message = task-status_message.
+                  ELSE.
+                    response-error-message = |Task { task_id } failed| ##NO_TEXT.
+                  ENDIF.
+              ENDTRY.
+
+          WHEN zcl_mcp_tasks=>status_cancelled.
+            response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+            response-error-message = |Task { task_id } was cancelled| ##NO_TEXT.
+
+          WHEN OTHERS.
+            response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+            response-error-message = |Task { task_id } is not complete; poll tasks/get and retry tasks/result once completed| ##NO_TEXT.
+        ENDCASE.
+
+      CATCH zcx_mcp_server INTO DATA(error).
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+        response-error-message = error->get_text( ).
+
+      CATCH zcx_mcp_ajson_error INTO DATA(json_error).
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+        response-error-message = json_error->get_text( ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD zif_mcp_server~tasks_cancel.
+    response-result = NEW zcl_mcp_resp_cancel_task( ).
+    TRY.
+        " Ownership guard - raises task_not_found if task belongs to another user
+        get_tasks( )->get( CONV #( request->get_task_id( ) ) ).
+
+        " Give subclass a chance to stop the background process first
+        handle_cancel_task( EXPORTING request  = request
+                            CHANGING  response = response ).
+
+        " Only update status if the hook did not already set an error
+        IF response-error-code IS INITIAL.
+          zcl_mcp_tasks=>cancel( CONV #( request->get_task_id( ) ) ).
+          DATA(task) = get_tasks( )->get( CONV #( request->get_task_id( ) ) ).
+          response-result->set_task( task ).
+        ENDIF.
+      CATCH zcx_mcp_server INTO DATA(error).
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+        response-error-message = error->get_text( ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD get_tasks.
+    IF tasks IS NOT BOUND.
+      tasks = NEW zcl_mcp_tasks( area   = server-area
+                                 server = server-server ).
+    ENDIF.
+    result = tasks.
+  ENDMETHOD.
+
+  METHOD handle_cancel_task.
+  ENDMETHOD.                                       "#EC EMPTY_PROCEDURE
+
+  METHOD get_tool_task_support.
+    result = zcl_mcp_resp_list_tools=>task_support-forbidden.
+
+    load_tool_task_support_cache( ).
+
+    READ TABLE tool_task_support_cache INTO DATA(cached_support)
+         WITH TABLE KEY name = tool_name.
+    IF sy-subrc = 0 AND cached_support-task_support IS NOT INITIAL.
+      result = cached_support-task_support.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD enforce_tool_task_negotiation.
+    DATA(task_support) = get_tool_task_support( request->get_name( ) ).
+
+    IF request->has_task( ) = abap_true.
+      IF task_support = zcl_mcp_resp_list_tools=>task_support-forbidden.
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-method_not_found.
+        response-error-message = |Tool { request->get_name( ) } does not support task execution| ##NO_TEXT.
+      ENDIF.
+      RETURN.
+    ENDIF.
+
+    IF task_support = zcl_mcp_resp_list_tools=>task_support-required.
+      response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+      response-error-message = |Tool { request->get_name( ) } requires task execution| ##NO_TEXT.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD zif_mcp_server~completions_complete.
+    response-result = NEW zcl_mcp_resp_complete( ).
+    handle_completions_complete( EXPORTING request  = request
+                                 CHANGING  response = response ).
+  ENDMETHOD.
+
+  METHOD handle_completions_complete.
+    response-error-code    = zcl_mcp_jsonrpc=>error_codes-method_not_found.
+    response-error-message = 'This server does not implement completions' ##NO_TEXT.
+  ENDMETHOD.
+
+  METHOD load_tool_task_support_cache.
+    IF tool_task_support_loaded = abap_true.
+      RETURN.
+    ENDIF.
+
+    CLEAR tool_task_support_cache.
+
+    DATA cursor TYPE zif_mcp_types=>page_cursor.
+
+    TRY.
+        DO.
+          DATA(params) = zcl_mcp_ajson=>create_empty( ).
+          IF cursor IS NOT INITIAL.
+            params->set( iv_path = '/cursor'
+                         iv_val  = cursor ).
+          ENDIF.
+
+          DATA(list_request) = NEW zcl_mcp_req_list_tools( params ).
+          DATA(list_response) = VALUE zif_mcp_server=>list_tools_response( result = NEW zcl_mcp_resp_list_tools( ) ).
+
+          handle_list_tools( EXPORTING request  = list_request
+                             CHANGING  response = list_response ).
+
+          IF    list_response-error-code IS NOT INITIAL
+             OR list_response-result     IS NOT BOUND.
+            EXIT.
+          ENDIF.
+
+          DATA(tools) = list_response-result->get_tools( ).
+          LOOP AT tools INTO DATA(tool).
+            DATA(task_support) = COND string(
+              WHEN tool-execution-task_support IS NOT INITIAL
+              THEN tool-execution-task_support
+              ELSE zcl_mcp_resp_list_tools=>task_support-forbidden ).
+
+            ASSIGN tool_task_support_cache[ name = tool-name ] TO FIELD-SYMBOL(<cached_support>).
+            IF sy-subrc = 0.
+              <cached_support>-task_support = task_support.
+            ELSE.
+              INSERT VALUE #( name         = tool-name
+                              task_support = task_support ) INTO TABLE tool_task_support_cache.
+            ENDIF.
+          ENDLOOP.
+
+          DATA(next_cursor) = list_response-result->get_next_cursor( ).
+          IF next_cursor IS INITIAL OR next_cursor = cursor.
+            EXIT.
+          ENDIF.
+          cursor = next_cursor.
+        ENDDO.
+      CATCH zcx_mcp_ajson_error
+            zcx_mcp_server.
+        CLEAR tool_task_support_cache.
+    ENDTRY.
+
+    tool_task_support_loaded = abap_true.
   ENDMETHOD.
 
 ENDCLASS.

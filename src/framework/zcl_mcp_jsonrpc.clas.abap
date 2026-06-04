@@ -1,6 +1,7 @@
 "! <p class="shorttext synchronized">JSON-RPC 2.0 protocol implementation</p>
 "! Class implementing the JSON-RPC 2.0 specification for remote procedure calls using JSON.
-"! Supports request/response handling, error management, and batch processing according to the specification.
+"! Supports request/response handling, error management.
+"! Batch processing not supported due to removal in current spec and non-suppoort in clients.
 "! see https://www.jsonrpc.org/specification
 CLASS zcl_mcp_jsonrpc DEFINITION
   PUBLIC FINAL
@@ -10,19 +11,21 @@ CLASS zcl_mcp_jsonrpc DEFINITION
     " Constants for JSON-RPC protocol
     CONSTANTS jsonrpc_version TYPE string VALUE '2.0'.
     CONSTANTS: BEGIN OF error_codes,
-                 parse_error      TYPE i VALUE -32700,
-                 invalid_request  TYPE i VALUE -32600,
-                 method_not_found TYPE i VALUE -32601,
-                 invalid_params   TYPE i VALUE -32602,
-                 internal_error   TYPE i VALUE -32603,
+                 parse_error        TYPE i VALUE -32700,
+                 invalid_request    TYPE i VALUE -32600,
+                 method_not_found   TYPE i VALUE -32601,
+                 invalid_params     TYPE i VALUE -32602,
+                 internal_error     TYPE i VALUE -32603,
+                 resource_not_found TYPE i VALUE -32002,
                END OF error_codes.
 
     " Core data types
     TYPES: BEGIN OF request,
-             jsonrpc TYPE string,
-             method  TYPE string,
-             params  TYPE REF TO zif_mcp_ajson,
-             id      TYPE string,
+             jsonrpc    TYPE string,
+             method     TYPE string,
+             params     TYPE REF TO zif_mcp_ajson,
+             id         TYPE string,
+             id_present TYPE abap_bool,
            END OF request.
 
     TYPES: BEGIN OF error,
@@ -32,15 +35,13 @@ CLASS zcl_mcp_jsonrpc DEFINITION
            END OF error.
 
     TYPES: BEGIN OF response,
-             jsonrpc TYPE string,
-             result  TYPE REF TO zif_mcp_ajson,
-             error   TYPE error,
-             id      TYPE string,
+             jsonrpc    TYPE string,
+             result     TYPE REF TO zif_mcp_ajson,
+             error      TYPE error,
+             id         TYPE string,
+             id_present TYPE abap_bool,
+             id_is_null TYPE abap_bool,
            END OF response.
-
-    " Table types for batch operations
-    TYPES requests  TYPE TABLE OF request WITH EMPTY KEY.
-    TYPES responses TYPE TABLE OF response WITH EMPTY KEY.
 
     " Core JSON-RPC functionality
     METHODS create_request
@@ -62,13 +63,8 @@ CLASS zcl_mcp_jsonrpc DEFINITION
 
     " JSON parsing and serialization
     METHODS parse_request
-      IMPORTING json          TYPE string
+      IMPORTING !json         TYPE string
       RETURNING VALUE(result) TYPE request
-      RAISING   zcx_mcp_ajson_error.
-
-    METHODS parse_batch_request
-      IMPORTING json          TYPE string
-      RETURNING VALUE(result) TYPE requests
       RAISING   zcx_mcp_ajson_error.
 
     METHODS serialize_request
@@ -81,20 +77,12 @@ CLASS zcl_mcp_jsonrpc DEFINITION
       RETURNING VALUE(result) TYPE string
       RAISING   zcx_mcp_ajson_error.
 
-    METHODS serialize_batch_response
-      IMPORTING !responses    TYPE responses
-      RETURNING VALUE(result) TYPE string
-      RAISING   zcx_mcp_ajson_error.
-
     METHODS parse_response
-      IMPORTING json          TYPE string
+      IMPORTING !json         TYPE string
       RETURNING VALUE(result) TYPE response
       RAISING   zcx_mcp_ajson_error.
 
   PRIVATE SECTION.
-    METHODS is_batch
-      IMPORTING json          TYPE string
-      RETURNING VALUE(result) TYPE abap_bool.
 
     METHODS extract_id
       IMPORTING json_obj      TYPE REF TO zif_mcp_ajson
@@ -104,11 +92,10 @@ ENDCLASS.
 
 
 CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
-
-
   METHOD create_error_response.
-    response-jsonrpc = jsonrpc_version.
-    response-id      = id.
+    response-jsonrpc    = jsonrpc_version.
+    response-id         = id.
+    response-id_present = abap_true.
     response-error-code    = code.
     response-error-message = message.
 
@@ -123,16 +110,16 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     result-jsonrpc = jsonrpc_version.
     result-method  = method.
 
-    " Only set ID if provided (for notifications, it should be omitted)
-    IF id IS SUPPLIED AND id IS NOT INITIAL.
+    IF id IS SUPPLIED.
+      result-id_present = abap_true.
       result-id = id.
     ENDIF.
   ENDMETHOD.
 
-
   METHOD create_success_response.
-    response-jsonrpc = jsonrpc_version.
-    response-id      = id.
+    response-jsonrpc    = jsonrpc_version.
+    response-id         = id.
+    response-id_present = abap_true.
 
     " Set result if provided
     IF result IS SUPPLIED AND result IS BOUND.
@@ -161,64 +148,34 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     ENDCASE.
   ENDMETHOD.
 
-
-  METHOD is_batch.
-    DATA(length) = strlen( json ).
-    result = xsdbool(
-            length >= 2
-        AND substring( val = json
-                       off = 0
-                       len = 1 )         = '['
-        AND substring( val = json
-                       off = length - 1
-                       len = 1 )         = ']' ).
-  ENDMETHOD.
-
-
-  METHOD parse_batch_request.
-    " Check if JSON is batch (array) or single request
-    IF is_batch( json ).
-      " Parse as array
-      DATA(json_array) = zcl_mcp_ajson=>parse( json ).
-
-      " Process each array item
-      DATA(members) = json_array->members( '/' ).
-      LOOP AT members INTO DATA(member).
-        DATA(single_json) = json_array->slice( |/{ member }| ).
-
-        " Parse as request
-        DATA(single_request) = parse_request( single_json->stringify( ) ).
-        APPEND single_request TO result.
-      ENDLOOP.
-    ELSE.
-      " Single request
-      APPEND parse_request( json ) TO result.
-    ENDIF.
-  ENDMETHOD.
-
-
   METHOD parse_request.
     DATA json_obj TYPE REF TO zif_mcp_ajson.
 
-    " Parse JSON string to object
     json_obj = zcl_mcp_ajson=>parse( json ).
 
-    " Extract standard fields
     result-jsonrpc = json_obj->get_string( '/jsonrpc' ).
-    result-method  = json_obj->get_string( '/method' ).
+    IF result-jsonrpc <> jsonrpc_version.
+      zcx_mcp_ajson_error=>raise( |Invalid JSON-RPC version| ) ##NO_TEXT.
+    ENDIF.
 
-    " Extract parameters if they exist
+    IF json_obj->exists( '/method' ) = abap_false.
+      zcx_mcp_ajson_error=>raise( |Missing JSON-RPC method| ) ##NO_TEXT.
+    ENDIF.
+
+    result-method = json_obj->get_string( '/method' ).
+    IF result-method IS INITIAL.
+      zcx_mcp_ajson_error=>raise( |Empty JSON-RPC method| ) ##NO_TEXT.
+    ENDIF.
+
     IF json_obj->exists( '/params' ).
       result-params = json_obj->slice( '/params' ).
     ELSE.
-      " Avoid null object references
       result-params = zcl_mcp_ajson=>create_empty( ).
     ENDIF.
 
-    " Extract ID with special handling
-    result-id = extract_id( json_obj ).
+    result-id_present = xsdbool( json_obj->exists( '/id' ) ).
+    result-id         = extract_id( json_obj ).
   ENDMETHOD.
-
 
   METHOD parse_response.
     DATA json_obj TYPE REF TO zif_mcp_ajson.
@@ -246,27 +203,11 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     ENDIF.
 
     " Extract ID with special handling
-    result-id = extract_id( json_obj ).
-  ENDMETHOD.
+    result-id_present = xsdbool( json_obj->exists( '/id' ) ).
+    result-id_is_null = xsdbool(     json_obj->exists( '/id' )
+                                 AND json_obj->get_node_type( '/id' ) = 'null' ).
 
-
-  METHOD serialize_batch_response.
-    DATA array_json TYPE REF TO zif_mcp_ajson.
-
-    " Create empty array
-    array_json = zcl_mcp_ajson=>create_empty( ).
-    array_json->touch_array( '/' ).
-
-    " Add each response to the array
-    LOOP AT responses INTO DATA(response).
-      DATA(response_json) = serialize_response( response ).
-      DATA(response_obj) = zcl_mcp_ajson=>parse( response_json ).
-      array_json->push( iv_path = '/'
-                        iv_val  = response_obj ).
-    ENDLOOP.
-
-    " Convert to string
-    result = array_json->stringify( ).
+    result-id         = extract_id( json_obj ).
   ENDMETHOD.
 
   METHOD serialize_request.
@@ -298,7 +239,7 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
     ENDIF.
 
     " Add ID with correct type if present
-    IF request-id IS NOT INITIAL.
+    IF request-id_present = abap_true.
       " Try to determine if it's numeric
       TRY.
           DATA(number) = CONV i( request-id ).
@@ -311,7 +252,7 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
             json_obj->set_string( iv_path = '/id'
                                   iv_val  = request-id ).
           ENDIF.
-        CATCH cx_sy_conversion_no_number.
+        CATCH cx_sy_conversion_no_number cx_sy_conversion_overflow.
           " Not a number, use as string
           json_obj->set_string( iv_path = '/id'
                                 iv_val  = request-id ).
@@ -333,56 +274,49 @@ CLASS zcl_mcp_jsonrpc IMPLEMENTATION.
                           iv_val  = response-jsonrpc ).
 
     " Add result if success response
-    IF response-result IS BOUND AND response-error-message IS INITIAL.
-      " Copy result content to response JSON
+    IF     response-result        IS BOUND
+       AND response-error-code     = 0
+       AND response-error-message IS INITIAL.
       DATA(result_json) = response-result->stringify( ).
-      DATA(result_obj) = zcl_mcp_ajson=>parse( result_json ).
+      DATA(result_obj)  = zcl_mcp_ajson=>parse( result_json ).
       json_obj->set( iv_path = '/result'
                      iv_val  = result_obj ).
     ENDIF.
 
     " Add error if error response
-    IF response-error-message IS NOT INITIAL.
-      " Error code and message
+    IF response-error-code <> 0 OR response-error-message IS NOT INITIAL.
       json_obj->set_integer( iv_path = '/error/code'
                              iv_val  = response-error-code ).
       json_obj->set_string( iv_path = '/error/message'
                             iv_val  = response-error-message ).
 
-      " Error data if present
       IF response-error-data IS BOUND.
         DATA(error_data_json) = response-error-data->stringify( ).
-        DATA(error_data_obj) = zcl_mcp_ajson=>parse( error_data_json ).
+        DATA(error_data_obj)  = zcl_mcp_ajson=>parse( error_data_json ).
         json_obj->set( iv_path = '/error/data'
                        iv_val  = error_data_obj ).
       ENDIF.
     ENDIF.
 
-    " Add ID with correct type
-    IF response-id IS NOT INITIAL.
-      " Add ID with correct type if present
+    " MCP TS SDK JSONRPCErrorResponseSchema accepts absent id, string id, or number id,
+    " but not null. Therefore unknown/null/unusable ids are omitted.
+    IF response-id_present = abap_true AND response-id_is_null = abap_false.
       TRY.
           DATA(number) = CONV i( response-id ).
-          " Only treat as number if exact string representation matches
           IF response-id = |{ number }|.
             json_obj->set_integer( iv_path = '/id'
                                    iv_val  = number ).
           ELSE.
-            " Not an exact number, treat as string
             json_obj->set_string( iv_path = '/id'
                                   iv_val  = response-id ).
           ENDIF.
-        CATCH cx_sy_conversion_no_number.
-          " Not a number, use as string
+        CATCH cx_sy_conversion_no_number
+              cx_sy_conversion_overflow.
           json_obj->set_string( iv_path = '/id'
                                 iv_val  = response-id ).
       ENDTRY.
-    ELSE.
-      " Null ID
-      json_obj->set_null( '/id' ).
     ENDIF.
 
-    " Convert to string
     result = json_obj->stringify( ).
   ENDMETHOD.
 ENDCLASS.

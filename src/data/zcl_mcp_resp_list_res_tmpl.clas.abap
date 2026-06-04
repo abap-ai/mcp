@@ -7,24 +7,19 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_mcp_internal.
 
-    TYPES: BEGIN OF annotations,
-             audience      TYPE STANDARD TABLE OF string WITH EMPTY KEY,
-             priority      TYPE decfloat16,
-             last_modified TYPE timestamp,
-           END OF annotations.
-
     TYPES: BEGIN OF resource_template,
              uritemplate TYPE string,
              name        TYPE string,
              title       TYPE string,
              description TYPE string,
              mime_type   TYPE string,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
+             icons       TYPE zif_mcp_types=>icon_list,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF resource_template.
 
     TYPES resource_templates TYPE STANDARD TABLE OF resource_template WITH KEY uritemplate.
-    TYPES next_cursor        TYPE string.
+    TYPES next_cursor        TYPE zif_mcp_types=>page_cursor.
 
     "! <p class="shorttext synchronized">Set Resource Templates</p>
     "!
@@ -48,19 +43,11 @@ CLASS zcl_mcp_resp_list_res_tmpl DEFINITION
 
   PRIVATE SECTION.
     DATA int_resource_templates TYPE resource_templates.
-    DATA int_next_cursor        TYPE string.
+    DATA int_next_cursor        TYPE zif_mcp_types=>page_cursor.
     DATA int_meta               TYPE REF TO zif_mcp_ajson.
-
-    METHODS convert_timestamp_to_iso8601
-      IMPORTING timestamp     TYPE timestamp
-      RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 
-
-
-CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
-
-
+CLASS ZCL_MCP_RESP_LIST_RES_TMPL IMPLEMENTATION.
   METHOD set_meta.
     int_meta = meta.
   ENDMETHOD.
@@ -75,37 +62,6 @@ CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
     int_resource_templates = resource_templates.
   ENDMETHOD.
 
-  METHOD convert_timestamp_to_iso8601.
-    " Convert session timestamp to UTC and format as ISO 8601
-    DATA local_date       TYPE sy-datum.
-    DATA local_time       TYPE sy-uzeit.
-    DATA utc_timestamp    TYPE timestamp.
-    DATA timestamp_string TYPE string.
-
-    " Convert timestamp to string first
-    timestamp_string = |{ timestamp }|.
-
-    " Pad with leading zeros if needed
-    WHILE strlen( timestamp_string ) < 14.
-      timestamp_string = |0{ timestamp_string }|.
-    ENDWHILE.
-
-    " Extract date and time from timestamp string
-    local_date = timestamp_string+0(8).
-    local_time = timestamp_string+8(6).
-
-    " Convert local date/time to UTC timestamp
-    CONVERT DATE local_date TIME local_time INTO TIME STAMP utc_timestamp TIME ZONE sy-zonlo.
-
-    " Convert UTC timestamp back to string for formatting
-    timestamp_string = |{ utc_timestamp }|.
-    WHILE strlen( timestamp_string ) < 14.
-      timestamp_string = |0{ timestamp_string }|.
-    ENDWHILE.
-
-    " Format: YYYYMMDDHHMMSS -> YYYY-MM-DDTHH:MM:SSZ
-    result = |{ timestamp_string+0(4) }-{ timestamp_string+4(2) }-{ timestamp_string+6(2) }T{ timestamp_string+8(2) }:{ timestamp_string+10(2) }:{ timestamp_string+12(2) }Z|.
-  ENDMETHOD.
 
   METHOD zif_mcp_internal~generate_json.
     result = zcl_mcp_ajson=>create_empty( ).
@@ -152,6 +108,31 @@ CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
                      iv_val  = <template>-meta ).
       ENDIF.
 
+      " Add icons (optional, new in MCP 2025-11-25)
+      IF <template>-icons IS NOT INITIAL.
+        result->touch_array( |/resourceTemplates/{ template_index }/icons| ).
+        LOOP AT <template>-icons ASSIGNING FIELD-SYMBOL(<icon>).
+          DATA(icon_path) = |/resourceTemplates/{ template_index }/icons/{ sy-tabix }|.
+          result->set( iv_path = |{ icon_path }/src|
+                       iv_val  = <icon>-src ).
+          IF <icon>-mime_type IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/mimeType|
+                         iv_val  = <icon>-mime_type ).
+          ENDIF.
+          IF <icon>-sizes IS NOT INITIAL.
+            result->touch_array( |{ icon_path }/sizes| ).
+            LOOP AT <icon>-sizes ASSIGNING FIELD-SYMBOL(<size>).
+              result->set( iv_path = |{ icon_path }/sizes/{ sy-tabix }|
+                           iv_val  = <size> ).
+            ENDLOOP.
+          ENDIF.
+          IF <icon>-theme IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/theme|
+                         iv_val  = <icon>-theme ).
+          ENDIF.
+        ENDLOOP.
+      ENDIF.
+
       " Add annotations (optional)
       IF     <template>-annotations-audience      IS NOT INITIAL
          OR  <template>-annotations-priority      IS NOT INITIAL
@@ -175,7 +156,7 @@ CLASS zcl_mcp_resp_list_res_tmpl IMPLEMENTATION.
 
         " Add lastModified if not empty
         IF <template>-annotations-last_modified IS NOT INITIAL.
-          DATA(iso_timestamp) = convert_timestamp_to_iso8601( <template>-annotations-last_modified ).
+          DATA(iso_timestamp) = zcl_mcp_util=>timestamp_to_iso8601( <template>-annotations-last_modified ).
           result->set( iv_path = |/resourceTemplates/{ template_index }/annotations/lastModified|
                        iv_val  = iso_timestamp ).
         ENDIF.

@@ -63,6 +63,11 @@
      <LANGU>E</LANGU>
      <DESCRIPT>Set Structured Content</DESCRIPT>
     </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_TASK_RESULT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set Task Result</DESCRIPT>
+    </SEOCOMPOTX>
    </DESCRIPTIONS>
    <DESCRIPTIONS_SUB>
     <SEOSUBCOTX>
@@ -154,6 +159,12 @@
      <SCONAME>DESCRIPTION</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Optional description</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_RESOURCE_LINK</CMPNAME>
+     <SCONAME>ICONS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Optional icons</DESCRIPT>
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>ADD_RESOURCE_LINK</CMPNAME>
@@ -268,6 +279,12 @@
      <SCONAME>STRUCTURED_CONTENT</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Structured result data</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK_RESULT</CMPNAME>
+     <SCONAME>TASK</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Task header returned by zcl_mcp_tasks-&gt;get or -&gt;create_task</DESCRIPT>
     </SEOSUBCOTX>
    </DESCRIPTIONS_SUB>
   </asx:values>

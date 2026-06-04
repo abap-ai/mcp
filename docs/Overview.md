@@ -28,6 +28,8 @@ With the MCP Server SDK, you can implement servers that provide:
 - Prompts for AI models
 - Access to resources (like files, database records, etc.)
 - Custom tools that AI models can call
+- Long-running background tasks with polling support
+- Autocomplete suggestions for prompt and resource arguments
 
 ## Architecture
 
@@ -51,7 +53,12 @@ graph TD
     SessionMgmt --> MCPSession[MCP Session Mode]
     SessionMgmt --> ICFSession[ICF Session Mode]
     ServerImpl <--> SchemaBuilder[ZCL_MCP_SCHEMA_BUILDER]
+    ServerImpl <--> SchemaDDIC[ZCL_MCP_SCHEMA_BUILDER_DDIC]
     ServerImpl <--> SchemaValidator[ZCL_MCP_SCHEMA_VALIDATOR]
+    ServerImpl <--> Tasks[ZCL_MCP_TASKS]
+    Tasks <--> TaskDB[(ZMCP_TASKS)]
+    Tasks <--> TaskExecutor[ZIF_MCP_TASK_EXECUTOR]
+    TaskExecutor --> BgJob[Background Job / RFC]
     ServerImpl <--> Logger[ZCL_MCP_LOGGER]
     ServerImpl <--> Config[ZCL_MCP_CONFIGURATION]
 ```
@@ -84,9 +91,17 @@ graph TD
 
 6. **Schema Builder & Validator**
    - Tools for defining and validating JSON schemas
-   - Used for tool parameter validation
+   - `ZCL_MCP_SCHEMA_BUILDER`: fluent API for building schemas
+   - `ZCL_MCP_SCHEMA_BUILDER_DDIC`: derives schemas automatically from DDIC structures
+   - `ZCL_MCP_SCHEMA_VALIDATOR`: validates JSON input against a schema
 
-7. **Configuration (ZCL_MCP_CONFIGURATION)**
+7. **Task Manager (ZCL_MCP_TASKS)**
+   - Persists and manages the lifecycle of long-running background tasks
+   - Used via `ZIF_MCP_TASK_EXECUTOR` to launch and cancel background jobs/RFCs
+   - Supports status transitions: working → completed / failed / cancelled
+   - For details see [Tasks](Tasks.md)
+
+8. **Configuration (ZCL_MCP_CONFIGURATION)**
    - Manages server settings from database tables
    - Controls CORS, logging, and other behaviors
 
@@ -118,6 +133,8 @@ To install the MCP Server SDK, follow these steps:
 ## Maintenance
 
 You can use the report `zmcp_clear_mcp_sessions` to get rid of outdated MCP sessions. Ideally run it regularly as a background job if you use MCP sessions.
+
+Use the report `zmcp_clear_mcp_tasks` to remove outdated task records from `ZMCP_TASKS`. It deletes completed, failed, and cancelled tasks whose TTL has elapsed, terminal tasks without a TTL after the default retention period, and working tasks older than the maximum lifetime. Schedule it as a regular background job if you use the tasks feature.
 
 ### Prerequisites
 
@@ -194,17 +211,20 @@ At minimum, you must implement the `HANDLE_INITIALIZE` method to define your ser
 
 ```abap
 METHOD handle_initialize.
-  response-result->set_capabilities( VALUE #( 
-    prompts   = abap_false
-    resources = abap_false
-    tools     = abap_true 
+  response-result->set_capabilities( VALUE #(
+    tools = VALUE #( enabled = abap_true )
   ) ).
-  response-result->set_implementation( VALUE #( 
-    name    = `My Custom MCP Server`
-    version = `1.0.0` 
+  response-result->set_implementation( VALUE #(
+    name        = `My Custom MCP Server`
+    version     = `1.0.0`
+    " Optional MCP 2025-11-25 fields:
+    " title       = `Human-readable server title`
+    " description = `Short server description`
+    " website_url = `https://example.com`
+    " icons       = ...
   ) ).
   response-result->set_instructions(
-    `Instructions for the AI model on when to use this server...` 
+    `Instructions for the AI model on when to use this server...`
   ).
 ENDMETHOD.
 
@@ -225,6 +245,12 @@ The MCP Server SDK offers three session management modes:
 
 Note that ICF session management leads to potentially high number of sessions if the clients do not properly close them. Also your MCP client must support handling the session cookies. MCP Sessions are an alternative lightweight mode allowing you to store certain values in the DB between calls. In general use Stateless where feasible.
 
+### MCP Session User Isolation
+
+MCP sessions (mode `M`) are now bound to the user who created them. When a session is loaded, the framework verifies that `ZMCP_SESSIONS-CREATED_BY` matches `sy-uname`. If it does not match, a `session_unknown` error is returned (the same error as a missing session, to prevent user enumeration).
+
+> **Breaking change on upgrade:** The `ZMCP_SESSIONS` table has a new `CREATED_BY` column (NOT NULL). Existing session records will have an empty value in that field after the table conversion. Any active session created before this upgrade will therefore fail the user check and be rejected on the next request. Clients will receive a session error and must start a new session. To avoid unexpected client errors during a production deployment, run `ZMCP_CLEAR_MCP_SESSIONS` to delete all existing sessions immediately before activating the new code.
+
 ## Core Components
 
 ### ZCL_MCP_SERVER_BASE
@@ -244,9 +270,25 @@ Interface defining all required MCP server methods. The main methods include:
 - `prompts_get` - Get prompt details
 - `resources_list` - List available resources
 - `resources_read` - Read resource content
+- `resources_templates_list` - List resource templates
 - `tools_list` - List available tools
 - `tools_call` - Execute tool function
+- `tasks_list` - List background tasks
+- `tasks_get` - Get task status
+- `tasks_result` - Get task payload/result
+- `tasks_cancel` - Cancel a running task
+- `completions_complete` - Provide autocomplete suggestions for prompt/resource arguments
 - `get_session_mode` - Define session logic
+
+### ZIF_MCP_TYPES
+
+Shared type definitions used across the SDK:
+
+- `message_role` / `role_user` / `role_assistant` constants
+- `annotations` — audience, priority, and last-modified metadata attachable to content, resources, and tools
+- `icon` — icon metadata (src, MIME type, sizes, theme) for tools, prompts, and resources
+- `page_cursor` — opaque pagination cursor used in all paginated requests/responses
+- `task` / `task_list` / `task_list_result` — task lifecycle types (MCP 2025-11-25)
 
 ### Schema Builder
 
@@ -267,6 +309,27 @@ Key features:
 - Apply validation constraints (min/max length, value ranges, enums)
 - Create nested objects and arrays
 - Mark required properties
+
+For details see [Schema Builder](SchemaBuilder.md).
+
+### DDIC Schema Builder
+
+`ZCL_MCP_SCHEMA_BUILDER_DDIC` auto-generates a JSON Schema from an existing DDIC structure or table. This eliminates manual schema maintenance when ABAP data types are already defined in the Data Dictionary:
+
+```abap
+TRY.
+    DATA(schema) = NEW zcl_mcp_schema_builder_ddic(
+        structure_name  = 'SFLIGHT'
+        field_overrides = VALUE #(
+            ( field_path = 'carrid'  description = 'Airline code'   required = abap_true )
+            ( field_path = 'connid'  description = 'Connection ID'  required = abap_true ) ) ).
+    DATA(json) = schema->to_json( ).
+  CATCH zcx_mcp_schema_ddic_error zcx_mcp_ajson_error INTO DATA(error).
+    " Handle error
+ENDTRY.
+```
+
+Field names and descriptions are derived from DDIC metadata automatically; use `field_overrides` to customize individual fields. Override paths are lowercase DDIC field paths.
 
 For details see [Schema Builder](SchemaBuilder.md).
 
@@ -294,10 +357,20 @@ Key features:
 - Ensures numeric values are within defined ranges
 - Validates array sizes and nested structures
 - Provides detailed error messages for validation failures
-  
+
+### Completions
+
+The `completion/complete` endpoint lets clients request autocomplete suggestions
+for prompt arguments and resource-template variables. Override
+`handle_completions_complete` in your server, parse the request with
+`ZCL_MCP_REQ_COMPLETE`, and return candidates via `ZCL_MCP_RESP_COMPLETE`. Declare
+the `completions` capability during initialization.
+
+For details see [Completions](Completions.md).
+
 ## Demo Implementations
 
-The SDK includes three demo implementations:
+The SDK includes four demo implementations:
 
 ### ZCL_MCP_DEMO_SERVER_STATELESS
 
@@ -305,7 +378,7 @@ A stateless MCP server demonstrating:
 
 - Simple prompt handling
 - Resource access
-- Tool implementation (server time and flight connection details)
+- Tool implementation (server time, flight connection details, and async flight report task)
 
 ### ZCL_MCP_DEMO_SERVER_MCPSESSION
 
@@ -313,6 +386,7 @@ Demonstrates MCP session handling with:
 
 - Session information tool
 - Incremental counter tool that persists state between calls
+- Asynchronous background task (`start_slow_computation`) launched via `ZMCP_DEMO_BG_TASK` report, demonstrating the full task lifecycle
 
 ### ZCL_MCP_DEMO_SERVER_ICFSESSION
 
@@ -320,6 +394,14 @@ Demonstrates ICF session handling with:
 
 - Session information tool
 - Instance variables that persist state between calls
+
+### ZCL_MCP_DEMO_SERVER_DDIC
+
+Demonstrates DDIC-based schema generation with:
+
+- Prompts (greet, joke)
+- Resources and resource templates backed by DDIC table data
+- Flight connection tool using `ZCL_MCP_SCHEMA_BUILDER_DDIC` to derive its input schema from the `SPFLI` DDIC structure
 
 ### Demo Configuration
 
@@ -330,6 +412,7 @@ This is included in the repo. Delete if you don't want it.
 | demo | demo_session_icf    | ZCL_MCP_DEMO_SERVER_ICFSESSION    | ICF Stateful  |
 | demo | demo_session_mcp    | ZCL_MCP_DEMO_SERVER_MCPSESSION    | MCP Session   |
 | demo | demo_standard       | ZCL_MCP_DEMO_SERVER_STATELESS     | No Session    |
+| demo | demo_ddic           | ZCL_MCP_DEMO_SERVER_DDIC          | No Session    |
 
 ## Usage/Clients
 
@@ -339,28 +422,37 @@ At the time of writing this clients supporting HTTP Streamable protocol are stil
 
 ### Handler Methods
 
-| Method                  | Description                          |
-| ----------------------- | ------------------------------------ |
-| `handle_initialize`     | Required: Set up server capabilities |
-| `handle_list_prompts`   | List available prompts               |
-| `handle_get_prompt`     | Retrieve specific prompt details     |
-| `handle_list_resources` | List available resources             |
-| `handle_resources_read` | Read resource content                |
-| `handle_list_res_tmpls` | List resource templates              |
-| `handle_list_tools`     | List available tools                 |
-| `handle_call_tool`      | Execute a tool                       |
+| Method                        | Description                                              |
+| ----------------------------- | -------------------------------------------------------- |
+| `handle_initialize`           | Required: Set up server capabilities                     |
+| `handle_list_prompts`         | List available prompts                                   |
+| `handle_get_prompt`           | Retrieve specific prompt details                         |
+| `handle_list_resources`       | List available resources                                 |
+| `handle_resources_read`       | Read resource content                                    |
+| `handle_list_res_tmpls`       | List resource templates                                  |
+| `handle_list_tools`           | List available tools                                     |
+| `handle_call_tool`            | Execute a tool                                           |
+| `handle_cancel_task`          | Optional hook before the framework marks a task cancelled |
+| `handle_completions_complete` | Return autocomplete suggestions for prompt/resource args |
+
+`tasks_list`, `tasks_get`, and `tasks_result` are implemented by `ZCL_MCP_SERVER_BASE` and delegate to `ZCL_MCP_TASKS`; custom servers normally only override `handle_cancel_task` when a background process needs an explicit stop signal.
 
 ### Key Data Types
 
-| Type                      | Description                         |
-| ------------------------- | ----------------------------------- |
-| `initialize_response`     | Server capabilities and information |
-| `list_prompts_response`   | Collection of available prompts     |
-| `get_prompt_response`     | Details of a specific prompt        |
-| `list_resources_response` | Collection of available resources   |
-| `resources_read_response` | Content of a specific resource      |
-| `list_tools_response`     | Collection of available tools       |
-| `call_tool_response`      | Result of tool execution            |
+| Type                        | Description                                         |
+| --------------------------- | --------------------------------------------------- |
+| `initialize_response`       | Server capabilities and information                 |
+| `list_prompts_response`     | Collection of available prompts                     |
+| `get_prompt_response`       | Details of a specific prompt                        |
+| `list_resources_response`   | Collection of available resources                   |
+| `resources_read_response`   | Content of a specific resource                      |
+| `list_tools_response`       | Collection of available tools                       |
+| `call_tool_response`        | Result of tool execution                            |
+| `list_tasks_response`       | Paginated list of background tasks                  |
+| `get_task_response`         | Status of a single task                             |
+| `get_task_payload_response` | Result payload of a completed task                  |
+| `cancel_task_response`      | Confirmation of task cancellation                   |
+| `complete_response`         | Autocomplete suggestions for a prompt/resource arg  |
 
 ### Request/Response Classes
 
@@ -369,6 +461,8 @@ See the relevant subpages:
 - [Resources](Resources.md)
 - [Prompts](Prompts.md)
 - [Tools](Tools.md)
+- [Tasks](Tasks.md)
+- [Completions](Completions.md)
 
 ### Server Properties
 

@@ -2,6 +2,8 @@
 
 The JSON Schema Builder (`ZCL_MCP_SCHEMA_BUILDER`) is a utility class that simplifies creating JSON Schema definitions for your Model Context Protocol tools, allowing you to define input validation rules with a chainable API.
 
+A second builder, `ZCL_MCP_SCHEMA_BUILDER_DDIC`, auto-generates schemas directly from DDIC structures — see [DDIC Schema Builder](#ddic-schema-builder) below.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -20,6 +22,7 @@ The JSON Schema Builder (`ZCL_MCP_SCHEMA_BUILDER`) is a utility class that simpl
 - [Creating Arrays](#creating-arrays)
 - [Complex Schema Examples](#complex-schema-examples)
 - [API Reference](#api-reference)
+- [DDIC Schema Builder](#ddic-schema-builder)
 
 ## Overview
 
@@ -289,4 +292,82 @@ METHODS to_json
     VALUE(result) TYPE REF TO zif_mcp_ajson
   RAISING
     zcx_mcp_ajson_error.
+```
+
+## DDIC Schema Builder
+
+`ZCL_MCP_SCHEMA_BUILDER_DDIC` generates a JSON Schema automatically from an existing DDIC structure or table. This is useful when your tool parameters mirror an existing ABAP data type — you define the type once in the Data Dictionary and the builder derives the schema from it.
+
+### Basic Usage
+
+```abap
+TRY.
+    DATA(builder) = NEW zcl_mcp_schema_builder_ddic( 'SPFLI' ).
+    DATA(schema)  = builder->to_json( ).
+  CATCH zcx_mcp_schema_ddic_error zcx_mcp_ajson_error INTO DATA(error).
+    " Handle error
+ENDTRY.
+```
+
+### Field Overrides
+
+By default, field names and descriptions come from DDIC metadata (field labels). Use `field_overrides` to customise individual fields — you can change the display name, description, and required flag without touching the DDIC definition:
+
+```abap
+DATA(overrides) = VALUE zcl_mcp_schema_builder_ddic=>def_field_overrides(
+    ( field_path = 'carrid'  name = 'airline_code'    description = 'Two-letter airline code' required = abap_true )
+    ( field_path = 'connid'  name = 'connection_id'   description = 'Connection number'       required = abap_true )
+    ( field_path = 'fldate'  name = 'flight_date'     description = 'Departure date'          required = abap_false ) ).
+
+TRY.
+    DATA(builder) = NEW zcl_mcp_schema_builder_ddic(
+        structure_name  = 'SFLIGHT'
+        field_overrides = overrides ).
+    DATA(schema) = builder->to_json( ).
+  CATCH zcx_mcp_schema_ddic_error zcx_mcp_ajson_error INTO DATA(error).
+    " Handle error
+ENDTRY.
+```
+
+The `field_path` uses lowercase DDIC field names and dot notation for nested structures (e.g. `'address.city'`).
+
+### Type Mapping
+
+| ABAP type category | JSON Schema type |
+| ------------------ | ---------------- |
+| `CHAR`, `NUMC`, `CUKY`, `UNIT`, `LANG`, `CLNT`, `LCHR`, `LRAW`, `STRING`, `SSTRING`, `DATS`, `TIMS`, `ACCP` | `string` |
+| `INT1`, `INT2`, `INT4`, `INT8`, `PREC` | `integer` |
+| `DEC`, `CURR`, `QUAN`, `FLTP`, `D16D`, `D34D`, `D16R`, `D34R`, `DECFLOAT16`, `DECFLOAT34` | `number` |
+| `RAW`, `RAWSTRING` | `string` |
+| Nested structure   | `object` (recursed) |
+| Table type         | `array` with a generic string `item` field |
+
+### Error Handling
+
+`ZCX_MCP_SCHEMA_DDIC_ERROR` is raised when the DDIC structure cannot be found or field overrides are invalid. Unknown simple DDIC types fall back to `string`. Catch it alongside `ZCX_MCP_AJSON_ERROR`.
+
+### API Reference
+
+```abap
+CLASS zcl_mcp_schema_builder_ddic DEFINITION.
+  PUBLIC SECTION.
+    TYPES: BEGIN OF def_field_override,
+             field_path  TYPE string,   " Lowercase dot-path, e.g. 'address.city'
+             name        TYPE string,   " Override field name in the schema
+             description TYPE string,   " Override description
+             required    TYPE abap_bool,
+           END OF def_field_override.
+    TYPES def_field_overrides TYPE STANDARD TABLE OF def_field_override
+          WITH NON-UNIQUE KEY field_path.
+
+    METHODS constructor
+      IMPORTING structure_name  TYPE string
+                field_overrides TYPE def_field_overrides OPTIONAL
+      RAISING   zcx_mcp_schema_ddic_error
+                zcx_mcp_ajson_error.
+
+    METHODS to_json
+      RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson
+      RAISING   zcx_mcp_ajson_error.
+ENDCLASS.
 ```
