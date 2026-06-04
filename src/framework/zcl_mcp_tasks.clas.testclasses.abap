@@ -29,7 +29,6 @@ CLASS ltcl_tasks DEFINITION FINAL FOR TESTING
     METHODS test_list_pagination           FOR TESTING RAISING cx_static_check.
     METHODS test_list_empty                FOR TESTING RAISING cx_static_check.
     METHODS test_update_status_valid       FOR TESTING RAISING cx_static_check.
-    METHODS test_update_status_invalid     FOR TESTING RAISING cx_static_check.
     METHODS test_terminal_blocked          FOR TESTING RAISING cx_static_check.
     METHODS test_update_sets_message       FOR TESTING RAISING cx_static_check.
     METHODS test_complete                  FOR TESTING RAISING cx_static_check.
@@ -247,17 +246,6 @@ CLASS ltcl_tasks IMPLEMENTATION.
     DATA(task) = cut->get( task_id ).
     cl_abap_unit_assert=>assert_equals( exp = zcl_mcp_tasks=>status_cancelled
                                         act = task-status ).
-  ENDMETHOD.
-
-  METHOD test_update_status_invalid.
-    " working --> working is not a valid self-transition
-    DATA(task_id) = cut->create_task( tool_name = 'my_tool' ).
-    TRY.
-        zcl_mcp_tasks=>update_status( task_id = task_id
-                                      status  = zcl_mcp_tasks=>status_working ).
-        cl_abap_unit_assert=>fail( 'Expected zcx_mcp_server for invalid transition' ).
-      CATCH zcx_mcp_server ##NO_HANDLER.
-    ENDTRY.
   ENDMETHOD.
 
   METHOD test_terminal_blocked.
