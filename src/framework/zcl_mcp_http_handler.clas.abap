@@ -106,6 +106,10 @@ CLASS zcl_mcp_http_handler DEFINITION
                                      server        TYPE zmcp_server
                            RETURNING VALUE(result) TYPE abap_bool.
 
+    METHODS set_cors_response_headers
+      IMPORTING origin    TYPE string
+                !response TYPE REF TO if_http_response.
+
     METHODS create_error_json
       IMPORTING !code         TYPE i
                 !message      TYPE string
@@ -439,6 +443,11 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                                       reason = 'Forbidden' ) ##NO_TEXT.
         logger->warning( |Origin { origin } not allowed for { area } { servername }| ) ##NO_TEXT.
         continue = abap_false.
+      ENDIF.
+
+      IF continue = abap_true AND origin IS NOT INITIAL.
+        set_cors_response_headers( origin   = origin
+                                   response = server->response ).
       ENDIF.
     ENDIF.
 
@@ -828,8 +837,8 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    response->set_header_field( name  = 'Access-Control-Allow-Origin'
-                                value = origin ) ##NO_TEXT.
+    set_cors_response_headers( origin   = origin
+                               response = response ).
     response->set_status( code   = 200
                           reason = 'OK' ).
 
@@ -852,6 +861,17 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
 
     response->set_header_field( name  = 'Access-Control-Max-Age'
                                 value = '86400' ) ##NO_TEXT.
+  ENDMETHOD.
+
+  METHOD set_cors_response_headers.
+    response->set_header_field( name  = 'Access-Control-Allow-Origin'
+                                value = origin ) ##NO_TEXT.
+    response->set_header_field( name  = 'Access-Control-Allow-Credentials'
+                                value = 'true' ) ##NO_TEXT.
+    response->set_header_field( name  = 'Access-Control-Expose-Headers'
+                                value = 'Mcp-Session-Id, Mcp-Protocol-Version' ) ##NO_TEXT.
+    response->set_header_field( name  = 'Vary'
+                                value = 'Origin' ) ##NO_TEXT.
   ENDMETHOD.
 
 

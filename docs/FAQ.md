@@ -5,6 +5,7 @@ This document holds some tipps and tricks as well as solutions to common issues.
 ## ICF sessions do not work
 
 Make sure that the MCP client used supports cookies. The MCP-Session header is not enough for ICF based sessions!
+For browser based clients this also means requests must be sent with credentials enabled so the SAP ICF session cookie is stored and sent on follow-up requests.
 
 ## Syntax error in ZCL_MCP_HTTP_OAUTH_HANDLER
 
