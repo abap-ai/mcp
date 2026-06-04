@@ -40,7 +40,7 @@ START-OF-SELECTION.
 
       DATA(task_result) = NEW zcl_mcp_resp_task_payload( ).
       task_result->set_structured_content( sc ).
-      task_result->add_text_content( |{ p_value }² = { p_value * p_value }, computed in { total_secs }s| ) ##NO_TEXT.
+      task_result->add_text_content( |{ p_value }^2 = { p_value * p_value }, computed in { total_secs }s| ) ##NO_TEXT.
 
       zcl_mcp_tasks=>complete( task_id = p_taskid
                                result  = task_result ).

@@ -32,12 +32,12 @@ CLASS zcl_mcp_tasks DEFINITION
     "! @parameter poll_interval | <p class="shorttext synchronized">Suggested poll interval in milliseconds</p>
     "! @parameter result        | <p class="shorttext synchronized">New task ID</p>
     METHODS create_task
-      IMPORTING tool_name     TYPE string ##NEEDED
+      IMPORTING tool_name     TYPE string
                 session_id    TYPE sysuuid_c32 OPTIONAL
                 ttl           TYPE i           DEFAULT 0
                 poll_interval TYPE i           DEFAULT 5000
       RETURNING VALUE(result) TYPE sysuuid_c32
-      RAISING   zcx_mcp_server.
+      RAISING   zcx_mcp_server ##NEEDED.
 
     "! <p class="shorttext synchronized">Get task header (no payload)</p>
     "! @parameter task_id | <p class="shorttext synchronized">Task ID</p>
@@ -325,7 +325,7 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
         DATA(payload_str) = payload->stringify( ).
       CATCH zcx_mcp_ajson_error INTO DATA(error).
         RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
-                                            msgv1  = CONV #( error->get_text( ) ) ) ##NO_TEXT.
+                                            msgv1  = CONV #( error->get_text( ) ) ).
     ENDTRY.
 
     GET TIME STAMP FIELD DATA(now).
@@ -350,7 +350,7 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
         DATA(payload_str) = payload->stringify( ).
       CATCH zcx_mcp_ajson_error INTO DATA(error).
         RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
-                                            msgv1  = CONV #( error->get_text( ) ) ) ##NO_TEXT.
+                                            msgv1  = CONV #( error->get_text( ) ) ).
     ENDTRY.
 
     DATA(final_status) = COND zmcp_task_status(
@@ -411,7 +411,7 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
 
     IF sy-subrc <> 0 OR row-created_by <> sy-uname.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>task_not_found
-                                          msgv1  = CONV #( task_id ) ) ##NO_TEXT.
+                                          msgv1  = CONV #( task_id ) ).
     ENDIF.
 
     IF row-status = status_cancelled.
@@ -444,7 +444,7 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
 
     IF sy-subrc <> 0 OR current_row-created_by <> sy-uname.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>task_not_found
-                                          msgv1  = CONV #( task_id ) ) ##NO_TEXT.
+                                          msgv1  = CONV #( task_id ) ).
     ENDIF.
 
     IF current_row-status = status_cancelled.
@@ -468,6 +468,7 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
       FROM zmcp_tasks
       WHERE status IN ( @status_completed, @status_failed, @status_cancelled )
         AND ttl     > 0
+      ORDER BY PRIMARY KEY
       INTO CORRESPONDING FIELDS OF TABLE @terminal_ttl_tasks. "#EC CI_NOFIELD
 
     IF sy-subrc = 0.
@@ -533,15 +534,13 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD read_task_row.
-    SELECT SINGLE *
-      FROM zmcp_tasks
+    SELECT SINGLE * FROM zmcp_tasks
       WHERE task_id = @task_id
-      INTO @result.
+      INTO CORRESPONDING FIELDS OF @result.
 
     IF sy-subrc <> 0.
-      RAISE EXCEPTION NEW zcx_mcp_server(
-        textid = zcx_mcp_server=>task_not_found
-        msgv1  = CONV #( task_id ) ) ##NO_TEXT.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>task_not_found
+                                          msgv1  = CONV #( task_id ) ).
     ENDIF.
   ENDMETHOD.
 

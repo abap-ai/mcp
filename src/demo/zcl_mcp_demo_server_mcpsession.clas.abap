@@ -272,7 +272,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
           response-result->set_structured_content( structured_content = sc
                                                    add_text_content   = abap_false ).
           response-result->add_text_content(
-              |{ value }² = { value * value }, computed in { wait_secs }s (sync - consider using async!)| ) ##NO_TEXT.
+              |{ value }^2 = { value * value }, computed in { wait_secs }s (sync - consider using async!)| ) ##NO_TEXT.
         CATCH zcx_mcp_ajson_error INTO DATA(json_error).
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
           response-error-message = json_error->get_text( ).

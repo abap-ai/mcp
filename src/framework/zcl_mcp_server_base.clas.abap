@@ -319,7 +319,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
   METHOD zif_mcp_server~tasks_list.
     response-result = NEW zcl_mcp_resp_list_tasks( ).
     TRY.
-        DATA(list) = get_tasks( )->list( cursor = request->get_cursor( ) ).
+        DATA(list) = get_tasks( )->list( request->get_cursor( ) ).
         response-result->set_tasks( list-tasks ).
         IF list-next_cursor IS NOT INITIAL.
           response-result->set_next_cursor( list-next_cursor ).

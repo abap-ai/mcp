@@ -175,7 +175,7 @@ CLASS zcl_mcp_session IMPLEMENTATION.
     IF sy-subrc <> 0.
       SELECT SINGLE session_id FROM zmcp_sessions
         WHERE session_id = @session_id
-        INTO @DATA(existing_session_id).
+        INTO @DATA(existing_session_id)  ##NEEDED.
 
       IF sy-subrc = 0.
         RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown
