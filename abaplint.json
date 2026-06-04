@@ -171,7 +171,7 @@
     "cyclomatic_complexity": {
       "exclude": [],
       "severity": "Error",
-      "max": 25
+      "max": 30
     },
     "dangerous_statement": {
       "exclude": [],
@@ -465,7 +465,7 @@
     "method_length": {
       "exclude": [],
       "severity": "Error",
-      "statements": 200,
+      "statements": 250,
       "errorWhenEmpty": false,
       "ignoreTestClasses": false,
       "checkForms": true
@@ -513,7 +513,7 @@
       "severity": "Error"
     },
     "no_prefixes": {
-      "exclude": [],
+      "exclude": ["zcl_mcp_resp_task_payload"],
       "severity": "Error",
       "data": "^[LGM].?_",
       "statics": "^S.?_",

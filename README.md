@@ -9,7 +9,7 @@ ABAP implementation of the [Model Context Protocol](https://modelcontextprotocol
 
 Supported protocol versions: 2025-03-26, 2025-06-18, 2025-11-25
 
-Note that old protocol versions might be dropped after a while especially if they increaase maintenance effort.
+Note that old protocol versions might be dropped after a while especially if they increase maintenance effort.
 
 ## Documentation
 
@@ -43,14 +43,14 @@ Not implemented:
 - Sampling - considered for the future, open an issue if you have a use case that would benefit from it
 - Elicitation - without SSE I see no proper way to implement this
 - Roots - likely irrelevant for ABAP
-- Further notifications not relevant without SSE: Cancellation, Ping, Progress, Logging
+- Further notifications not relevant without SSE: Cancellation, Progress, Logging
 
 ## Authorization
 
 Implement the standard [Authorization](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization) in ABAP via custom code is not feasible, we have to rely on ABAP features. \
 An overview of likely options is outlined in [Authentication Documentation](./docs/Authentication.md).
 
-## Autentication
+## Authentication
 
 OAuth is suggested but outside of newer S/4HANA releases challenging, for options see [Authentication](./docs/Authentication.md). Further suggestions are welcome.
 

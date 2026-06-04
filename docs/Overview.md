@@ -357,7 +357,7 @@ Key features:
 
 ### Completions
 
-The `completions/complete` endpoint lets clients request autocomplete suggestions
+The `completion/complete` endpoint lets clients request autocomplete suggestions
 for prompt arguments and resource-template variables. Override
 `handle_completions_complete` in your server, parse the request with
 `ZCL_MCP_REQ_COMPLETE`, and return candidates via `ZCL_MCP_RESP_COMPLETE`. Declare

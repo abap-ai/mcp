@@ -5,7 +5,7 @@ Context Protocol (MCP) Server SDK. Completions let MCP clients request suggestio
 as a user fills in a **prompt argument** or a **resource-template variable** —
 similar to IDE autocomplete.
 
-The feature implements the `completions/complete` endpoint and is part of the
+The feature implements the `completion/complete` endpoint and is part of the
 protocol from 2025-06-18 onward.
 
 ## Table of Contents
@@ -20,7 +20,7 @@ protocol from 2025-06-18 onward.
 ## Overview
 
 When a client offers autocomplete for a prompt or resource-template argument, it
-sends a `completions/complete` request containing:
+sends a `completion/complete` request containing:
 
 - a **reference** to a prompt (by name) or a resource template (by URI template),
 - the **argument** being completed and the partial value typed so far,
