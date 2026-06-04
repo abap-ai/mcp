@@ -121,7 +121,7 @@ METHOD handle_get_prompt.
         IF sy-subrc = 0.
           response-result->set_description( 'Greeting prompt' ).
           response-result->add_text_message(
-            role = zif_mcp_server=>role_user
+            role = zif_mcp_types=>role_user
             text = |Hello { name_arg-value }, nice to meet you!|
           ).
         ENDIF.
@@ -146,13 +146,13 @@ METHOD handle_get_prompt.
       
       " Text instruction
       response-result->add_text_message(
-        role = zif_mcp_server=>role_user
+        role = zif_mcp_types=>role_user
         text = 'Please analyze the following media files:'
       ).
       
       " Image content
       response-result->add_image_message(
-        role = zif_mcp_server=>role_user
+        role = zif_mcp_types=>role_user
         data = get_base64_image( )
         mime_type = 'image/png'
         annotations = VALUE #( priority = '1.0' )
@@ -160,14 +160,14 @@ METHOD handle_get_prompt.
       
       " Audio content
       response-result->add_audio_message(
-        role = zif_mcp_server=>role_user
+        role = zif_mcp_types=>role_user
         data = get_base64_audio( )
         mime_type = 'audio/mp3'
       ).
       
       " Resource link
       response-result->add_resource_link_message(
-        role = zif_mcp_server=>role_user
+        role = zif_mcp_types=>role_user
         uri = 'https://example.com/document.pdf'
         name = 'Analysis Document'
         description = 'Supporting documentation'
@@ -193,7 +193,7 @@ METHOD handle_get_prompt.
         
         " Add embedded text resource
         response-result->add_text_resource_message(
-          role = zif_mcp_server=>role_user
+          role = zif_mcp_types=>role_user
           uri = |abap://classes/{ class_arg-value }|
           text = source_code
           mime_type = 'text/x-abap'

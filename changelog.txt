@@ -12,10 +12,26 @@
  + Prompts, resources, tools, and server info now support 2025-11-25 metadata additions such as titles, annotations, and icons
  + New demos: ZCL_MCP_DEMO_SERVER_DDIC and ZMCP_DEMO_BG_TASK
 
- ! BREAKING: MCP sessions are now bound to the creating user (new CREATED_BY column in ZMCP_SESSIONS).
+ ! BREAKING (MCP-managed sessions only): MCP sessions are now bound to the creating user
+   (new CREATED_BY column in ZMCP_SESSIONS). This only affects servers using ZCL_MCP_SESSION-based
+   session management; stateless and ICF-session servers are unaffected.
    Existing session records will have an empty CREATED_BY after table conversion and will be rejected.
    Run ZMCP_CLEAR_MCP_SESSIONS before activating the new code to prevent unexpected session errors
    for connected clients.
+
+ ! BREAKING: ZCL_MCP_RESP_INITIALIZE capabilities structure changed.
+   The PROMPTS, RESOURCES, and TOOLS fields in the CAPABILITIES type changed from ABAP_BOOL to nested
+   structs (PROMPTS_CAPABILITY, RESOURCES_CAPABILITY, TOOLS_CAPABILITY). Replace direct boolean
+   assignments such as CAPABILITIES-PROMPTS = ABAP_TRUE with CAPABILITIES-PROMPTS-ENABLED = ABAP_TRUE.
+
+ ! BREAKING: Local ANNOTATIONS types removed from response classes.
+   ZCL_MCP_RESP_CALL_TOOL=>ANNOTATIONS, ZCL_MCP_RESP_GET_PROMPT=>ANNOTATIONS,
+   ZCL_MCP_RESP_LIST_RESOURCES=>ANNOTATIONS, and ZCL_MCP_RESP_LIST_RES_TMPL=>ANNOTATIONS have been
+   removed. Replace any references with ZIF_MCP_TYPES=>ANNOTATIONS (structure is identical).
+
+ ! BREAKING: Batch JSON-RPC API removed from ZCL_MCP_JSONRPC.
+   PARSE_BATCH_REQUEST, SERIALIZE_BATCH_RESPONSE, and the REQUESTS/RESPONSES table types have been
+   removed. Batch processing was never part of the MCP specification and is not supported by clients.
 
 2025-06-22 v0.2
 -----------------

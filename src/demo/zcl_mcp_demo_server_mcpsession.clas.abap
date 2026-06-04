@@ -197,7 +197,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
       TRY.
           DATA(ttl) = COND i( WHEN request->get_task_ttl( ) > 0
                               THEN request->get_task_ttl( )
-                              ELSE 300 ).
+                              ELSE 300000 ).
           task_id = get_tasks( )->create_task( tool_name = request->get_name( )
                                                ttl       = ttl ).
         CATCH zcx_mcp_server INTO DATA(task_error).

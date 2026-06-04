@@ -6,6 +6,7 @@ The Tasks feature lets an MCP server offload long-running work to background job
 
 - [Overview](#overview)
 - [Task Lifecycle](#task-lifecycle)
+- [Units: Milliseconds vs Seconds](#units-milliseconds-vs-seconds)
 - [Database Table](#database-table)
 - [ZCL_MCP_TASKS](#zcl_mcp_tasks)
 - [ZIF_MCP_TASK_EXECUTOR](#zif_mcp_task_executor)
@@ -46,6 +47,17 @@ Status constants are available on `ZCL_MCP_TASKS` and mirrored in `ZIF_MCP_TYPES
 | `status_failed`         | `failed`         | Job encountered a non-recoverable error |
 | `status_cancelled`      | `cancelled`      | Client requested cancellation |
 
+## Units: Milliseconds vs Seconds
+
+The MCP spec and all public API surfaces use **milliseconds** for time-related fields. Internally the database column `ZMCP_TASKS-TTL` stores **seconds** to fit in a standard INT4 field.
+
+| Field | Public API / wire | Database storage | Notes |
+| ----- | ----------------- | ---------------- | ----- |
+| `ttl` (create_task, tasks/get, tasks/list) | milliseconds | seconds (converted on write/read) | `create_task( ttl = 3600000 )` stores 3600 s |
+| `poll_interval` (create_task, tasks/get) | milliseconds | milliseconds (no conversion) | Stored and returned as-is |
+
+**Common mistake:** passing a bare seconds value (e.g., `300`) to `create_task( ttl = ... )`. Because the parameter is in milliseconds, `300` means 300 ms, which rounds up to 1 second in the database — a completed task result would disappear almost immediately. Use `300000` for 5 minutes or `3600000` for 1 hour.
+
 ## Database Table
 
 Tasks are stored in the `ZMCP_TASKS` table. The table is scoped by `AREA` + `SERVER` so task IDs are isolated per server. Do not read or write this table directly — use `ZCL_MCP_TASKS`.
@@ -75,7 +87,7 @@ DATA(task_id) = tasks->create_task(
 ).
 ```
 
-`ZMCP_TASKS-TTL` stores seconds internally. The public API and wire responses use milliseconds.
+See [Units: Milliseconds vs Seconds](#units-milliseconds-vs-seconds). `ZMCP_TASKS-TTL` stores seconds; the public API and wire responses use milliseconds. `poll_interval` is stored as-is in milliseconds.
 
 ### Updating Status
 
@@ -225,9 +237,9 @@ The suggested polling interval is returned in the task object as `pollInterval` 
 
 Use the report `ZMCP_CLEAR_MCP_TASKS` to remove outdated records:
 
-- Completed, failed, and cancelled tasks whose TTL has elapsed are deleted.
-- Terminal tasks without a TTL are deleted after the default retention period.
-- Working tasks older than the maximum lifetime are also deleted.
+- Completed, failed, and cancelled tasks whose TTL has elapsed (measured from `LAST_UPDATED`) are deleted.
+- Terminal tasks without a TTL (TTL = 0 / no expiry) are deleted after a default retention period of **7 days**.
+- Working tasks older than **24 hours** are deleted as stuck jobs.
 
 Schedule this report as a regular background job.
 

@@ -211,17 +211,20 @@ At minimum, you must implement the `HANDLE_INITIALIZE` method to define your ser
 
 ```abap
 METHOD handle_initialize.
-  response-result->set_capabilities( VALUE #( 
-    prompts = VALUE #( enabled = abap_false )
-    resources = VALUE #( enabled = abap_false )
+  response-result->set_capabilities( VALUE #(
     tools = VALUE #( enabled = abap_true )
   ) ).
-  response-result->set_implementation( VALUE #( 
-    name    = `My Custom MCP Server`
-    version = `1.0.0` 
+  response-result->set_implementation( VALUE #(
+    name        = `My Custom MCP Server`
+    version     = `1.0.0`
+    " Optional MCP 2025-11-25 fields:
+    " title       = `Human-readable server title`
+    " description = `Short server description`
+    " website_url = `https://example.com`
+    " icons       = ...
   ) ).
   response-result->set_instructions(
-    `Instructions for the AI model on when to use this server...` 
+    `Instructions for the AI model on when to use this server...`
   ).
 ENDMETHOD.
 
@@ -375,7 +378,7 @@ A stateless MCP server demonstrating:
 
 - Simple prompt handling
 - Resource access
-- Tool implementation (server time and flight connection details)
+- Tool implementation (server time, flight connection details, and async flight report task)
 
 ### ZCL_MCP_DEMO_SERVER_MCPSESSION
 
