@@ -429,7 +429,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
             FROM sflight
             WHERE carrid = @airline_code
             ORDER BY connid, fldate
-            INTO TABLE @DATA(flights). "#EC CI_SUBRC
+            INTO TABLE @DATA(flights) ##SUBRC_OK.
 
           DATA(payload) = zcl_mcp_ajson=>create_empty( ).
           payload->set_string( iv_path = `/airline`
@@ -464,7 +464,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
         FROM sflight
         WHERE carrid = @airline_code
         ORDER BY connid, fldate
-        INTO TABLE @DATA(sync_flights). "#EC CI_SUBRC
+        INTO TABLE @DATA(sync_flights) ##SUBRC_OK.
 
       TRY.
           DATA(sync_payload) = zcl_mcp_ajson=>create_empty( ).
@@ -517,7 +517,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
                 WHERE carrname LIKE @like_pattern
                 ORDER BY carrid
                 INTO TABLE @DATA(carriers)
-                UP TO 5 ROWS. "#EC CI_SUBRC
+                UP TO 5 ROWS ##SUBRC_OK.
               LOOP AT carriers ASSIGNING FIELD-SYMBOL(<carrier>).
                 response-result->add_value( CONV #( <carrier>-carrname ) ).
               ENDLOOP.
