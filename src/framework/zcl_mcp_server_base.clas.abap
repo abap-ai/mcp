@@ -156,7 +156,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
       ENDTRY.
       TRY.
           CREATE OBJECT session TYPE zcl_mcp_session EXPORTING session_id = server-session_id session_mode = server-session_mode create_new = abap_true.
-          
+
         CATCH zcx_mcp_server INTO error.
           zif_mcp_server~config->get_logger( )->error( |Failed to create session { error->get_text( ) }| ) ##NO_TEXT.
           server-http_response->set_status( code   = 500
@@ -172,9 +172,9 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
     ENDIF.
 
     " Determine protocol version
-    
+
     SPLIT zif_mcp_constants=>supported_protocol_versions AT `,` INTO TABLE supported_protocol_versions.
-    
+
     READ TABLE supported_protocol_versions WITH KEY table_line = request->get_protocol_version( ) TRANSPORTING NO FIELDS.
     temp1 = sy-subrc.
     IF temp1 = 0.
@@ -186,7 +186,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
     response-result->set_protocol_version( server-protocol_version ).
 
     IF session IS BOUND.
-      
+
       CLEAR temp2.
       temp2-key = 'protocolVersion'.
       temp2-value = server-protocol_version.
@@ -311,7 +311,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
     GET TIME STAMP FIELD timestamp.
 
     " Create random object with timestamp seed
-    
+
     temp3 = timestamp.
     random = cl_abap_random=>create( temp3 ).
 
@@ -334,13 +334,13 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
         DATA error TYPE REF TO zcx_mcp_server.
     CREATE OBJECT response-result TYPE zcl_mcp_resp_list_tasks.
     TRY.
-        
+
         list = get_tasks( )->list( request->get_cursor( ) ).
         response-result->set_tasks( list-tasks ).
         IF list-next_cursor IS NOT INITIAL.
           response-result->set_next_cursor( list-next_cursor ).
         ENDIF.
-        
+
       CATCH zcx_mcp_server INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
@@ -353,12 +353,12 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
         DATA error TYPE REF TO zcx_mcp_server.
     CREATE OBJECT response-result TYPE zcl_mcp_resp_get_task.
     TRY.
-        
+
         temp4 = request->get_task_id( ).
-        
+
         task = get_tasks( )->get( temp4 ).
         response-result->set_task( task ).
-        
+
       CATCH zcx_mcp_server INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
         response-error-message = error->get_text( ).
@@ -378,18 +378,18 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
     CREATE OBJECT response-result TYPE zcl_mcp_resp_task_payload.
 
     TRY.
-        
+
         task_id = request->get_task_id( ).
-        
+
         temp5 = task_id.
-        
+
         task    = get_tasks( )->get( temp5 ).
 
         CASE task-status.
           WHEN zcl_mcp_tasks=>status_completed.
-            
+
             temp6 = task_id.
-            
+
             payload = get_tasks( )->get_payload( temp6 ).
             response-result->set_from_json( payload ).
             response-result->set_related_task( task_id ).
@@ -399,9 +399,9 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
               " Fall back to a protocol-level error when no payload was stored
               " (i.e. task was failed directly via zcl_mcp_tasks=>fail).
               TRY.
-                  
+
                   temp7 = task_id.
-                  
+
                   fail_payload = get_tasks( )->get_payload( temp7 ).
                   response-result->set_from_json( fail_payload ).
                   response-result->set_related_task( task_id ).
@@ -424,12 +424,12 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
             response-error-message = |Task { task_id } is not complete; poll tasks/get and retry tasks/result once completed| ##NO_TEXT.
         ENDCASE.
 
-        
+
       CATCH zcx_mcp_server INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
         response-error-message = error->get_text( ).
 
-        
+
       CATCH zcx_mcp_ajson_error INTO json_error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = json_error->get_text( ).
@@ -445,7 +445,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
     CREATE OBJECT response-result TYPE zcl_mcp_resp_cancel_task.
     TRY.
         " Ownership guard - raises task_not_found if task belongs to another user
-        
+
         temp8 = request->get_task_id( ).
         get_tasks( )->get( temp8 ).
 
@@ -455,16 +455,16 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
         " Only update status if the hook did not already set an error
         IF response-error-code IS INITIAL.
-          
+
           temp9 = request->get_task_id( ).
           zcl_mcp_tasks=>cancel( temp9 ).
-          
+
           temp10 = request->get_task_id( ).
-          
+
           task = get_tasks( )->get( temp10 ).
           response-result->set_task( task ).
         ENDIF.
-        
+
       CATCH zcx_mcp_server INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
         response-error-message = error->get_text( ).
@@ -487,7 +487,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
     load_tool_task_support_cache( ).
 
-    
+
     READ TABLE tool_task_support_cache INTO cached_support
          WITH TABLE KEY name = tool_name.
     IF sy-subrc = 0 AND cached_support-task_support IS NOT INITIAL.
@@ -543,23 +543,23 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
 
     CLEAR tool_task_support_cache.
 
-    
+
 
     TRY.
         DO.
-          
+
           params = zcl_mcp_ajson=>create_empty( ).
           IF cursor IS NOT INITIAL.
             params->set( iv_path = '/cursor'
                          iv_val  = cursor ).
           ENDIF.
 
-          
+
           CREATE OBJECT list_request TYPE zcl_mcp_req_list_tools EXPORTING JSON = params.
-          
+
           CLEAR temp11.
           CREATE OBJECT temp11-result TYPE zcl_mcp_resp_list_tools.
-          
+
           list_response = temp11.
 
           handle_list_tools( EXPORTING request  = list_request
@@ -570,25 +570,25 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
             EXIT.
           ENDIF.
 
-          
+
           tools = list_response-result->get_tools( ).
-          
+
           LOOP AT tools INTO tool.
-            
+
             IF tool-execution-task_support IS NOT INITIAL.
               temp12 = tool-execution-task_support.
             ELSE.
               temp12 = zcl_mcp_resp_list_tools=>task_support-forbidden.
             ENDIF.
-            
+
             task_support = temp12.
 
-            
+
             READ TABLE tool_task_support_cache WITH KEY name = tool-name ASSIGNING <cached_support>.
             IF sy-subrc = 0.
               <cached_support>-task_support = task_support.
             ELSE.
-              
+
               CLEAR temp13.
               temp13-name = tool-name.
               temp13-task_support = task_support.
@@ -596,7 +596,7 @@ CLASS zcl_mcp_server_base IMPLEMENTATION.
             ENDIF.
           ENDLOOP.
 
-          
+
           next_cursor = list_response-result->get_next_cursor( ).
           IF next_cursor IS INITIAL OR next_cursor = cursor.
             EXIT.

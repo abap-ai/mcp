@@ -58,7 +58,7 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
     temp1-tools-enabled = abap_true.
     response-result->set_capabilities( temp1 ).
 
-    
+
     CLEAR temp2.
     temp2-name = `Demo MCP Server - using ICF session logic. Tools only.`.
     temp2-version = `1.0.0`.
@@ -77,13 +77,13 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
     DATA temp5 TYPE zcl_mcp_resp_list_prompts=>prompt_arguments.
     DATA temp6 LIKE LINE OF temp5.
     CLEAR temp3.
-    
+
     temp4-name = `greet`.
     temp4-description = `Asks the LLM to greet someone.`.
     temp4-title = `greet someone`.
-    
+
     CLEAR temp1.
-    
+
     temp2-name = `name`.
     temp2-description = `Name of the person to greet`.
     temp2-required = abap_true.
@@ -94,9 +94,9 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
     temp4-name = `joke`.
     temp4-description = `Asks the LLM to tell a joke about a specific topic`.
     temp4-title = `Tell a joke`.
-    
+
     CLEAR temp5.
-    
+
     temp6-name = `topic`.
     temp6-description = `Topic to joke about`.
     temp6-required = abap_true.
@@ -115,7 +115,7 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
     arguments = request->get_arguments( ).
     CASE request->get_name( ).
       WHEN `greet`.
-        
+
         READ TABLE arguments INTO argument WITH KEY key = `name`.
         IF sy-subrc <> 0.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
@@ -150,7 +150,7 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
     DATA temp5 TYPE zcl_mcp_resp_list_resources=>resources.
     DATA temp6 LIKE LINE OF temp5.
     CLEAR temp5.
-    
+
     temp6-uri = `abap://classes/zcl_demo`.
     temp6-name = `zcl_demo.class`.
     temp6-description = `Demo Class`.
@@ -166,7 +166,7 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
     DATA temp7 TYPE zcl_mcp_resp_list_res_tmpl=>resource_templates.
     DATA temp8 LIKE LINE OF temp7.
     CLEAR temp7.
-    
+
     temp8-uritemplate = `file://sales_receipt/{sales_order}`.
     temp8-name = `Sales Receipts`.
     temp8-description = `Receipts for Sales Order`.
@@ -181,7 +181,7 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
     " No example for the dynamic resource for now.
 
     IF request->get_uri( ) = `abap://classes/zcl_demo`.
-      
+
       text = |CLASS zcl_demo DEFINITION PUBLIC FINAL CREATE PUBLIC.\n|
                       && |  PUBLIC SECTION.\n|
                       && |    METHODS: get_text RETURNING VALUE(rv_text) TYPE string.\n|
@@ -212,7 +212,7 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
 
     " Demo Tool without any input parameter
     TRY.
-        
+
         CREATE OBJECT output_schema_servertime TYPE zcl_mcp_schema_builder.
         output_schema_servertime->add_string( name        = `server_date`
                                               description = `Current server date, format YYYY-MM-DD`
@@ -222,14 +222,14 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
                                               description = `Current server time, format HH:MM:SS`
                                               required    = abap_true ) ##NO_TEXT.
 
-        
+
         CLEAR temp9.
         temp9-name = `get_server_time`.
         temp9-title = `Get Server Time`.
         temp9-description = `Get the current server date and time in internal format.`.
         temp9-output_schema = output_schema_servertime->to_json( ).
         APPEND temp9 TO tools ##NO_TEXT.
-        
+
       CATCH zcx_mcp_ajson_error INTO schema_error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = schema_error->get_text( ).
@@ -239,7 +239,7 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
     " Demo tool with input parameters
     " Note: The input schema is defined in the get_flight_conn_schema method
     TRY.
-        
+
         CREATE OBJECT output_schema_flight_conn TYPE zcl_mcp_schema_builder.
         output_schema_flight_conn->begin_array( description = `Flights Table`
                                                 name        = `Flights` ) ##NO_TEXT.
@@ -263,7 +263,7 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
                                                required    = abap_true ) ##NO_TEXT.
         output_schema_flight_conn->end_array( ).
 
-        
+
         CLEAR temp10.
         temp10-name = `get_flight_conn_details`.
         temp10-description = `Get details of one specific flight connection`.
@@ -272,7 +272,7 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
         temp10-output_schema = output_schema_flight_conn->to_json( ).
         APPEND temp10
                TO tools ##NO_TEXT.
-        
+
       CATCH zcx_mcp_ajson_error INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
@@ -294,7 +294,7 @@ CLASS zcl_mcp_demo_server_ddic IMPLEMENTATION.
             response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
             response-error-message = |Tool { request->get_name( ) } not found.| ##NO_TEXT.
         ENDCASE.
-        
+
       CATCH zcx_mcp_ajson_error INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
@@ -326,35 +326,35 @@ TYPES END OF temp11.
 
     " Validate input parameter via schema validator class
     TRY.
-        
+
         schema = get_flight_conn_schema( ).
-        
+
         CREATE OBJECT validator TYPE zcl_mcp_schema_validator EXPORTING SCHEMA = schema->to_json( ).
-        
+
         validation_result = validator->validate( input ).
         IF validation_result = abap_false.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
           response-error-message = concat_lines_of( validator->get_errors( ) ).
           RETURN.
         ENDIF.
-        
+
       CATCH zcx_mcp_ajson_error INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
         RETURN.
     ENDTRY.
 
-    
+
     airline_code = input->get_string( `airline_code` ).
-    
+
     flight_number = input->get_integer( `flight_number` ).
 
-    
+
     connid = flight_number.
 
     " Select only the required fields
-    
-    
+
+
     SELECT carrid connid fldate price currency planetype
       FROM sflight INTO TABLE flights
       WHERE carrid = airline_code AND connid = connid
@@ -367,7 +367,7 @@ TYPES END OF temp11.
     ENDIF.
 
     " Create markdown table
-    
+
     markdown = |## Flight Connection Details\n\n|.
 
     " Add table headers
@@ -375,7 +375,7 @@ TYPES END OF temp11.
     markdown = |{ markdown }\|---------\|------------\|-------------\|-------\|----------\|------------\|\n| ##NO_TEXT.
 
     " Add table rows
-    
+
     LOOP AT flights ASSIGNING <flight>.
       markdown = markdown &&
         |\| { <flight>-carrid } \| { <flight>-connid } \| { <flight>-fldate DATE = USER } \| { <flight>-price } \| { <flight>-currency } \| { <flight>-planetype } \|\n|.
@@ -387,7 +387,7 @@ TYPES END OF temp11.
     ENDIF.
 
     " Add structed content based on the output schema. Do not add text content as we already have markdown above.
-    
+
     structured_content = zcl_mcp_ajson=>create_empty( ).
     structured_content->set( iv_path = `Flights`
                              iv_val  = flights ) ##NO_TEXT.
@@ -400,7 +400,7 @@ TYPES END OF temp11.
   METHOD get_server_time.
     DATA structured_content TYPE REF TO zcl_mcp_ajson.
     response-result->add_text_content( |Current Server Date: { sy-datum } Time: { sy-uzeit } in internal format.| ) ##NO_TEXT.
-    
+
     structured_content = zcl_mcp_ajson=>create_empty( ).
     structured_content->set( iv_path = `server_date`
                              iv_val  = sy-datum ).
@@ -415,7 +415,7 @@ TYPES END OF temp11.
     DATA schema TYPE REF TO zcl_mcp_schema_builder.
     DATA temp12 TYPE string_table.
     CREATE OBJECT schema TYPE zcl_mcp_schema_builder.
-    
+
     CLEAR temp12.
     INSERT `AA` INTO TABLE temp12.
     INSERT `AB` INTO TABLE temp12.

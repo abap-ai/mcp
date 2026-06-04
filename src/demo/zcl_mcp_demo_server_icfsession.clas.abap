@@ -49,7 +49,7 @@ CLASS zcl_mcp_demo_server_icfsession IMPLEMENTATION.
     CLEAR temp1-tools.
     temp1-tools-enabled = abap_true.
     response-result->set_capabilities( temp1 ).
-    
+
     CLEAR temp2.
     temp2-name = `Demo MCP Server - using ICF session logic. Tools only.`.
     temp2-version = `1.0.0`.
@@ -72,20 +72,20 @@ CLASS zcl_mcp_demo_server_icfsession IMPLEMENTATION.
 
     " Demo tool with input parameters
     TRY.
-        
+
         CREATE OBJECT schema TYPE zcl_mcp_schema_builder.
         schema->add_integer( name        = `increment`
                              description = `Increment value`
                              required    = abap_true ) ##NO_TEXT.
 
-        
+
         CLEAR temp4.
         temp4-name = `increment_example`.
         temp4-description = `Every time increments the result by the given number. This is to demonstrate the session logic.`.
         temp4-input_schema = schema->to_json( ).
         APPEND temp4
                TO tools ##NO_TEXT.
-        
+
       CATCH zcx_mcp_ajson_error INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
@@ -120,25 +120,25 @@ CLASS zcl_mcp_demo_server_icfsession IMPLEMENTATION.
     input = request->get_arguments( ).
     " Validate input parameter via schema validator class
     TRY.
-        
+
         schema = get_increment_schema( ).
-        
+
         CREATE OBJECT validator TYPE zcl_mcp_schema_validator EXPORTING SCHEMA = schema->to_json( ).
-        
+
         validation_result = validator->validate( input ).
         IF validation_result = abap_false.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
           response-error-message = concat_lines_of( validator->get_errors( ) ).
           RETURN.
         ENDIF.
-        
+
       CATCH zcx_mcp_ajson_error INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
         RETURN.
     ENDTRY.
 
-    
+
     increment = input->get_integer( `increment` ).
 
     current_increment = current_increment + increment.

@@ -71,7 +71,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
     temp1-tasks-cancel = abap_true.
     temp1-tasks-tools_call = abap_true.
     response-result->set_capabilities( temp1 ).
-    
+
     CLEAR temp2.
     temp2-name = `Demo MCP Server - using MCP session logic. Tools only.`.
     temp2-version = `1.1.0`.
@@ -94,7 +94,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
     APPEND temp3 TO tools ##NO_TEXT.
 
     TRY.
-        
+
         CLEAR temp4.
         temp4-name = `increment_example`.
         temp4-description = `Every time increments the result by the given number. Demonstrates session logic.`.
@@ -102,7 +102,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
         APPEND temp4
                TO tools ##NO_TEXT.
 
-        
+
         CREATE OBJECT output_schema TYPE zcl_mcp_schema_builder.
         output_schema->add_integer( name        = `input_value`
                                     description = `The value that was submitted`
@@ -114,7 +114,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
                                     description = `Seconds the background job waited`
                                     required    = abap_true ) ##NO_TEXT.
 
-        
+
         CLEAR temp5.
         temp5-name = `start_slow_computation`.
         temp5-title = `Start Slow Computation`.
@@ -125,7 +125,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
         temp5-execution-task_support = zcl_mcp_resp_list_tools=>task_support-optional.
         APPEND temp5
                TO tools ##NO_TEXT.
-        
+
       CATCH zcx_mcp_ajson_error INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
@@ -151,7 +151,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
             response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
             response-error-message = |Tool { request->get_name( ) } not found.| ##NO_TEXT.
         ENDCASE.
-        
+
       CATCH zcx_mcp_ajson_error INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
@@ -176,30 +176,30 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
 
     " Validate input parameter via schema validator class
     TRY.
-        
+
         schema = get_increment_schema( ).
-        
+
         CREATE OBJECT validator TYPE zcl_mcp_schema_validator EXPORTING SCHEMA = schema->to_json( ).
-        
+
         validation_result = validator->validate( input ).
         IF validation_result = abap_false.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
           response-error-message = concat_lines_of( validator->get_errors( ) ).
           RETURN.
         ENDIF.
-        
+
       CATCH zcx_mcp_ajson_error INTO error.
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
         response-error-message = error->get_text( ).
         RETURN.
     ENDTRY.
 
-    
+
     increment = input->get_integer( `increment` ).
     " Get the last increment value from the session
-    
+
     session_increment = session->get( `increment` ).
-    
+
     IF session_increment IS INITIAL.
       " No value in the session, set it to 0
       current_increment = 0.
@@ -210,7 +210,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
     response-result->add_text_content( |Incremented value: { current_increment }| ) ##NO_TEXT.
 
     " Store the new value in the session
-    
+
     CLEAR temp6.
     temp6-key = `increment`.
     temp6-value = current_increment.
@@ -249,22 +249,22 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
 
     IF request->has_task( ) IS NOT INITIAL.
       " Async path - submit background job and return task ID immediately
-      
-      
-      
+
+
+
 
       TRY.
-          
+
           IF request->get_task_ttl( ) > 0.
             temp7 = request->get_task_ttl( ).
           ELSE.
             temp7 = 300000.
           ENDIF.
-          
+
           ttl = temp7.
           task_id = get_tasks( )->create_task( tool_name = request->get_name( )
                                                ttl       = ttl ).
-          
+
         CATCH zcx_mcp_server INTO task_error.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
           response-error-message = task_error->get_text( ).
@@ -311,10 +311,10 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
       ENDIF.
 
       TRY.
-          
+
           task = get_tasks( )->get( task_id ).
           response-result->set_task_result( task ).
-          
+
         CATCH zcx_mcp_server INTO get_error.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
           response-error-message = get_error->get_text( ).
@@ -322,17 +322,17 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
 
     ELSE.
       " Synchronous path - block and wait (demonstrates why async exists)
-      
+
       temp8 = sy-uzeit.
-      
+
       random    = cl_abap_random=>create( seed = temp8 ).
-      
+
       wait_secs = random->intinrange( low  = 30
                                             high = 60 ).
       WAIT UP TO wait_secs SECONDS.
 
       TRY.
-          
+
           sc = zcl_mcp_ajson=>create_empty( ).
           sc->set_integer( iv_path = `/input_value`
                            iv_val  = value ).
@@ -345,7 +345,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
                                                    add_text_content   = abap_false ).
           response-result->add_text_content(
               |{ value }^2 = { value * value }, computed in { wait_secs }s (sync - consider using async!)| ) ##NO_TEXT.
-          
+
         CATCH zcx_mcp_ajson_error INTO json_error.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
           response-error-message = json_error->get_text( ).
