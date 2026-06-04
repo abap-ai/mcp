@@ -7,15 +7,16 @@ CLASS zcl_mcp_demo_server_stateless DEFINITION
 
   PUBLIC SECTION.
   PROTECTED SECTION.
-    METHODS handle_initialize     REDEFINITION.
-    METHODS handle_list_prompts   REDEFINITION.
-    METHODS handle_get_prompt     REDEFINITION.
-    METHODS handle_list_resources REDEFINITION.
-    METHODS handle_list_res_tmpls REDEFINITION.
-    METHODS handle_resources_read REDEFINITION.
-    METHODS handle_list_tools     REDEFINITION.
-    METHODS handle_call_tool      REDEFINITION.
-    METHODS get_session_mode      REDEFINITION.
+    METHODS handle_initialize           REDEFINITION.
+    METHODS handle_list_prompts         REDEFINITION.
+    METHODS handle_get_prompt           REDEFINITION.
+    METHODS handle_list_resources       REDEFINITION.
+    METHODS handle_list_res_tmpls       REDEFINITION.
+    METHODS handle_resources_read       REDEFINITION.
+    METHODS handle_list_tools           REDEFINITION.
+    METHODS handle_call_tool            REDEFINITION.
+    METHODS handle_completions_complete REDEFINITION.
+    METHODS get_session_mode            REDEFINITION.
 
   PRIVATE SECTION.
     "! <p class="shorttext synchronized">Retrieves current server time</p>
@@ -43,6 +44,15 @@ CLASS zcl_mcp_demo_server_stateless DEFINITION
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">Error when creating JSON schema</p>
     METHODS get_flight_conn_schema RETURNING VALUE(result) TYPE REF TO zcl_mcp_schema_builder
                                    RAISING   zcx_mcp_ajson_error.
+
+    "! <p class="shorttext synchronized">Starts an async flight report task</p>
+    "! Creates a task, fetches flight data for the airline, and completes
+    "! the task immediately (demo: synchronous simulation of async work).
+    "! @parameter request  | <p class="shorttext synchronized">Request with airline_code input</p>
+    "! @parameter response | <p class="shorttext synchronized">Response containing the task ID</p>
+    METHODS start_flight_report IMPORTING !request  TYPE REF TO zcl_mcp_req_call_tool
+                                CHANGING  !response TYPE zif_mcp_server=>call_tool_response
+                                RAISING   zcx_mcp_ajson_error.
 ENDCLASS.
 
 
@@ -52,18 +62,26 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     DATA temp1 TYPE zcl_mcp_resp_initialize=>capabilities.
     DATA temp2 TYPE zcl_mcp_resp_initialize=>implementation.
     CLEAR temp1.
-    temp1-prompts = abap_true.
-    temp1-resources = abap_true.
-    temp1-tools = abap_true.
+    CLEAR temp1-prompts.
+    temp1-prompts-enabled = abap_true.
+    CLEAR temp1-resources.
+    temp1-resources-enabled = abap_true.
+    CLEAR temp1-tools.
+    temp1-tools-enabled = abap_true.
+    CLEAR temp1-tasks.
+    temp1-tasks-list = abap_true.
+    temp1-tasks-cancel = abap_true.
+    temp1-tasks-tools_call = abap_true.
+    temp1-completions = abap_true.
     response-result->set_capabilities( temp1 ).
+
     
     CLEAR temp2.
     temp2-name = `Demo MCP Server`.
-    temp2-version = `1.0.0`.
+    temp2-version = `1.1.0`.
     response-result->set_implementation( temp2 ) ##NO_TEXT.
-    " TODO: check spelling: explicitely (typo) -> explicitly (ABAP cleaner)
     response-result->set_instructions(
-        `Use the features provided by this server only if explicitely requested. If not sure ask the user!` ) ##NO_TEXT.
+        `Use the features provided by this server only if explicitly requested. If not sure ask the user!` ) ##NO_TEXT.
   ENDMETHOD.
 
   METHOD handle_list_prompts.
@@ -122,7 +140,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
         ELSE.
           response-result->set_description( `Greet prompt` ) ##NO_TEXT.
 
-          response-result->add_text_message( role = zif_mcp_server=>role_user
+          response-result->add_text_message( role = zif_mcp_types=>role_user
                                              text = |Happily greet { argument-value } and wish them a great day| ) ##NO_TEXT.
         ENDIF.
       WHEN `joke`.
@@ -133,7 +151,7 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
         ELSE.
           response-result->set_description( `Joke prompt` ) ##NO_TEXT.
 
-          response-result->add_text_message( role = zif_mcp_server=>role_user
+          response-result->add_text_message( role = zif_mcp_types=>role_user
                                              text = |Tell a great joke about the topic { argument-value }| ) ##NO_TEXT.
         ENDIF.
       WHEN OTHERS.
@@ -208,6 +226,9 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
         DATA output_schema_flight_conn TYPE REF TO zcl_mcp_schema_builder.
         DATA temp10 TYPE zcl_mcp_resp_list_tools=>tool.
         DATA error TYPE REF TO zcx_mcp_ajson_error.
+        DATA output_schema_report TYPE REF TO zcl_mcp_schema_builder.
+        DATA temp11 TYPE zcl_mcp_resp_list_tools=>tool.
+        DATA report_error TYPE REF TO zcx_mcp_ajson_error.
 
     " Demo Tool without any input parameter
     TRY.
@@ -277,6 +298,56 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
         response-error-message = error->get_text( ).
     ENDTRY.
 
+    " Async task demo tool
+    TRY.
+        
+        CREATE OBJECT output_schema_report TYPE zcl_mcp_schema_builder.
+        output_schema_report->add_string( name        = `airline`
+                                          description = `Airline Code`
+                                          required    = abap_true ) ##NO_TEXT.
+        output_schema_report->add_integer( name        = `total_flights`
+                                           description = `Total number of flights found`
+                                           required    = abap_true ) ##NO_TEXT.
+        output_schema_report->begin_array( name        = `flights`
+                                           description = `Flight records` ) ##NO_TEXT.
+        output_schema_report->add_string( name        = `carrid`
+                                          description = `Airline Code`
+                                          required    = abap_true ) ##NO_TEXT.
+        output_schema_report->add_string( name        = `connid`
+                                          description = `Flight Connection ID`
+                                          required    = abap_true ) ##NO_TEXT.
+        output_schema_report->add_string( name        = `fldate`
+                                          description = `Flight Date`
+                                          required    = abap_true ) ##NO_TEXT.
+        output_schema_report->add_number( name        = `price`
+                                          description = `Flight Price`
+                                          required    = abap_true ) ##NO_TEXT.
+        output_schema_report->add_string( name        = `currency`
+                                          description = `Currency Code`
+                                          required    = abap_true ) ##NO_TEXT.
+        output_schema_report->add_string( name        = `planetype`
+                                          description = `Type of Plane`
+                                          required    = abap_true ) ##NO_TEXT.
+        output_schema_report->end_array( ).
+
+        
+        CLEAR temp11.
+        temp11-name = `start_flight_report`.
+        temp11-title = `Start Flight Report`.
+        temp11-description = |Starts an async task that compiles all flight data for an airline. | && |Returns a task_id immediately - use tasks/get to poll status | && |and tasks/result to retrieve the completed report.|.
+        temp11-input_schema = get_flight_conn_schema( )->to_json( ).
+        temp11-output_schema = output_schema_report->to_json( ).
+        CLEAR temp11-execution.
+        temp11-execution-task_support = zcl_mcp_resp_list_tools=>task_support-optional.
+        APPEND temp11  " <-- add
+               TO tools ##NO_TEXT.
+        
+      CATCH zcx_mcp_ajson_error INTO report_error.
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+        response-error-message = report_error->get_text( ).
+        RETURN.
+    ENDTRY.
+
     response-result->set_tools( tools ).
   ENDMETHOD.
 
@@ -289,6 +360,9 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
           WHEN `get_flight_conn_details`.
             get_flight_conn_details( EXPORTING request  = request
                                      CHANGING  response = response ).
+          WHEN `start_flight_report`.
+            start_flight_report( EXPORTING request  = request
+                                 CHANGING  response = response ).
           WHEN OTHERS.
             response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
             response-error-message = |Tool { request->get_name( ) } not found.| ##NO_TEXT.
@@ -309,15 +383,15 @@ CLASS zcl_mcp_demo_server_stateless IMPLEMENTATION.
     DATA airline_code TYPE string.
     DATA flight_number TYPE i.
     DATA connid TYPE s_conn_id.
-TYPES BEGIN OF temp11.
+TYPES BEGIN OF temp12.
 TYPES carrid TYPE sflight-carrid.
 TYPES connid TYPE sflight-connid.
 TYPES fldate TYPE sflight-fldate.
 TYPES price TYPE sflight-price.
 TYPES currency TYPE sflight-currency.
 TYPES planetype TYPE sflight-planetype.
-TYPES END OF temp11.
-    DATA flights TYPE STANDARD TABLE OF temp11 WITH DEFAULT KEY.
+TYPES END OF temp12.
+    DATA flights TYPE STANDARD TABLE OF temp12 WITH DEFAULT KEY.
     DATA markdown TYPE string.
     FIELD-SYMBOLS <flight> LIKE LINE OF flights.
     DATA structured_content TYPE REF TO zcl_mcp_ajson.
@@ -412,17 +486,17 @@ TYPES END OF temp11.
 
   METHOD get_flight_conn_schema.
     DATA schema TYPE REF TO zcl_mcp_schema_builder.
-    DATA temp12 TYPE string_table.
+    DATA temp13 TYPE string_table.
     CREATE OBJECT schema TYPE zcl_mcp_schema_builder.
     
-    CLEAR temp12.
-    INSERT `AA` INTO TABLE temp12.
-    INSERT `AB` INTO TABLE temp12.
-    INSERT `AC` INTO TABLE temp12.
+    CLEAR temp13.
+    INSERT `AA` INTO TABLE temp13.
+    INSERT `AB` INTO TABLE temp13.
+    INSERT `AC` INTO TABLE temp13.
     schema->add_string( name        = `airline_code`
                         description = `Airline Code`
                         required    = abap_true
-                        enum        = temp12 ) ##NO_TEXT.
+                        enum        = temp13 ) ##NO_TEXT.
     schema->add_integer( name        = `flight_number`
                          description = `Flight Number`
                          minimum     = 0
@@ -433,6 +507,241 @@ TYPES END OF temp11.
 
   METHOD get_session_mode.
     result = zcl_mcp_session=>session_mode_stateless.
+  ENDMETHOD.
+
+  METHOD start_flight_report.
+        DATA schema TYPE REF TO zcl_mcp_schema_builder.
+        DATA validator TYPE REF TO zcl_mcp_schema_validator.
+        DATA val_error TYPE REF TO zcx_mcp_ajson_error.
+    DATA airline_code TYPE string.
+          DATA temp15 TYPE i.
+          DATA ttl LIKE temp15.
+          DATA task_id TYPE sysuuid_c32.
+TYPES BEGIN OF temp16.
+TYPES carrid TYPE sflight-carrid.
+TYPES connid TYPE sflight-connid.
+TYPES fldate TYPE sflight-fldate.
+TYPES price TYPE sflight-price.
+TYPES currency TYPE sflight-currency.
+TYPES planetype TYPE sflight-planetype.
+TYPES END OF temp16.
+          DATA flights TYPE STANDARD TABLE OF temp16 WITH DEFAULT KEY.
+          DATA payload TYPE REF TO zcl_mcp_ajson.
+          DATA task_result TYPE REF TO zcl_mcp_resp_task_payload.
+          DATA task_error TYPE REF TO zcx_mcp_server.
+          DATA task TYPE zif_mcp_types=>task.
+          DATA get_error TYPE REF TO zcx_mcp_server.
+TYPES BEGIN OF temp17.
+TYPES carrid TYPE sflight-carrid.
+TYPES connid TYPE sflight-connid.
+TYPES fldate TYPE sflight-fldate.
+TYPES price TYPE sflight-price.
+TYPES currency TYPE sflight-currency.
+TYPES planetype TYPE sflight-planetype.
+TYPES END OF temp17.
+      DATA sync_flights TYPE STANDARD TABLE OF temp17 WITH DEFAULT KEY.
+          DATA sync_payload TYPE REF TO zcl_mcp_ajson.
+          DATA json_error TYPE REF TO zcx_mcp_ajson_error.
+    " Validate input
+    TRY.
+        
+        schema    = get_flight_conn_schema( ).
+        
+        CREATE OBJECT validator TYPE zcl_mcp_schema_validator EXPORTING SCHEMA = schema->to_json( ).
+        IF validator->validate( request->get_arguments( ) ) = abap_false.
+          response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+          response-error-message = concat_lines_of( validator->get_errors( ) ).
+          RETURN.
+        ENDIF.
+        
+      CATCH zcx_mcp_ajson_error INTO val_error.
+        response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+        response-error-message = val_error->get_text( ).
+        RETURN.
+    ENDTRY.
+
+    
+    airline_code = request->get_arguments( )->get_string( `airline_code` ).
+
+    IF request->has_task( ) IS NOT INITIAL.
+      " Client requested async execution - create task and return immediately.
+      " The actual work happens here synchronously for demo purposes,
+      " but in production this is where you'd hand off to a batch job.
+      TRY.
+          
+          IF request->get_task_ttl( ) > 0.
+            temp15 = request->get_task_ttl( ).
+          ELSE.
+            temp15 = 300000.
+          ENDIF.
+          
+          ttl = temp15.
+          
+          task_id = get_tasks( )->create_task( tool_name = request->get_name( )
+                                                     ttl       = ttl ).
+
+          zcl_mcp_tasks=>update_status( task_id = task_id
+                                        status  = zcl_mcp_tasks=>status_working
+                                        message = |Fetching flights for { airline_code }| ) ##NO_TEXT.
+
+          
+          
+          SELECT carrid connid fldate price currency planetype
+            FROM sflight INTO TABLE flights
+            WHERE carrid = airline_code
+            ORDER BY connid fldate
+             ##SUBRC_OK.
+
+          
+          payload = zcl_mcp_ajson=>create_empty( ).
+          payload->set_string( iv_path = `/airline`
+                               iv_val  = airline_code ).
+          payload->set_integer( iv_path = `/total_flights`
+                                iv_val  = lines( flights ) ).
+          payload->set( iv_path = `/flights`
+                        iv_val  = flights ).
+
+          
+          CREATE OBJECT task_result TYPE zcl_mcp_resp_task_payload.
+          task_result->set_structured_content( payload ).
+          zcl_mcp_tasks=>complete( task_id = task_id
+                                   result  = task_result ).
+
+          
+        CATCH zcx_mcp_server INTO task_error.
+          response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+          response-error-message = task_error->get_text( ).
+          RETURN.
+      ENDTRY.
+
+      TRY.
+          
+          task = get_tasks( )->get( task_id ).
+          response-result->set_task_result( task ).
+          
+        CATCH zcx_mcp_server INTO get_error.
+          response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+          response-error-message = get_error->get_text( ).
+      ENDTRY.
+
+    ELSE.
+      " Synchronous execution - return result directly
+      
+      
+      SELECT carrid connid fldate price currency planetype
+        FROM sflight INTO TABLE sync_flights
+        WHERE carrid = airline_code
+        ORDER BY connid fldate
+         ##SUBRC_OK.
+
+      TRY.
+          
+          sync_payload = zcl_mcp_ajson=>create_empty( ).
+          sync_payload->set_string( iv_path = `/airline`
+                                    iv_val  = airline_code ).
+          sync_payload->set_integer( iv_path = `/total_flights`
+                                     iv_val  = lines( sync_flights ) ).
+          sync_payload->set( iv_path = `/flights`
+                             iv_val  = sync_flights ).
+
+          response-result->set_structured_content( structured_content = sync_payload
+                                                   add_text_content   = abap_false ).
+          response-result->add_text_content( |Found { lines( sync_flights ) } flights for airline { airline_code }.| ) ##NO_TEXT.
+          
+        CATCH zcx_mcp_ajson_error INTO json_error.
+          response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
+          response-error-message = json_error->get_text( ).
+      ENDTRY.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD handle_completions_complete.
+    DATA arg_name TYPE string.
+    DATA arg_value TYPE string.
+              DATA temp18 TYPE zcl_mcp_resp_complete=>completion_values.
+              DATA names LIKE temp18.
+              DATA name LIKE LINE OF names.
+              DATA like_pattern TYPE string.
+TYPES BEGIN OF temp20.
+TYPES carrname TYPE scarr-carrname.
+TYPES END OF temp20.
+              DATA carriers TYPE STANDARD TABLE OF temp20 WITH DEFAULT KEY.
+              FIELD-SYMBOLS <carrier> LIKE LINE OF carriers.
+                DATA temp21 TYPE string.
+          DATA temp22 TYPE zcl_mcp_resp_complete=>completion_values.
+          DATA orders LIKE temp22.
+          DATA order_no LIKE LINE OF orders.
+    arg_name  = request->get_argument_name( ).
+    
+    arg_value = request->get_argument_value( ).
+
+    CASE request->get_ref_type( ).
+
+      WHEN zcl_mcp_req_complete=>ref_type-prompt.
+        CASE request->get_ref_name( ).
+
+          WHEN `greet`.
+            IF arg_name = `name`.
+              
+              CLEAR temp18.
+              INSERT `Alice` INTO TABLE temp18.
+              INSERT `Bob` INTO TABLE temp18.
+              INSERT `Charlie` INTO TABLE temp18.
+              INSERT `Dave` INTO TABLE temp18.
+              INSERT `Eve` INTO TABLE temp18.
+              
+              names = temp18.
+              
+              LOOP AT names INTO name.
+                IF NOT ( arg_value IS INITIAL OR name CP |{ arg_value }*| ).
+                  CONTINUE.
+                ENDIF.
+                response-result->add_value( name ).
+              ENDLOOP.
+            ENDIF.
+
+          WHEN `joke`.
+            IF arg_name = `topic`.
+              " Pull real airline names from the demo flight dataset as topic suggestions
+              
+              like_pattern = |{ arg_value }%|.
+              
+              
+              SELECT carrname FROM scarr INTO TABLE carriers
+                WHERE carrname LIKE like_pattern
+                ORDER BY carrid
+                
+                UP TO 5 ROWS ##SUBRC_OK.
+              
+              LOOP AT carriers ASSIGNING <carrier>.
+                
+                temp21 = <carrier>-carrname.
+                response-result->add_value( temp21 ).
+              ENDLOOP.
+            ENDIF.
+
+        ENDCASE.
+
+      WHEN zcl_mcp_req_complete=>ref_type-resource.
+        IF     request->get_ref_uri( ) = `file://sales_receipt/{sales_order}`
+           AND arg_name                = `sales_order`.
+          
+          CLEAR temp22.
+          INSERT `0000000010` INTO TABLE temp22.
+          INSERT `0000000020` INTO TABLE temp22.
+          INSERT `0000000030` INTO TABLE temp22.
+          
+          orders = temp22.
+          
+          LOOP AT orders INTO order_no.
+            IF NOT ( arg_value IS INITIAL OR order_no CP |{ arg_value }*| ).
+              CONTINUE.
+            ENDIF.
+            response-result->add_value( order_no ).
+          ENDLOOP.
+        ENDIF.
+
+    ENDCASE.
   ENDMETHOD.
 
 ENDCLASS.

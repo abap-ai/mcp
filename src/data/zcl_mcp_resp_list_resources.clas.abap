@@ -7,25 +7,20 @@ CLASS zcl_mcp_resp_list_resources DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_mcp_internal.
 
-    TYPES: BEGIN OF annotations,
-             audience      TYPE STANDARD TABLE OF string WITH DEFAULT KEY,
-             priority      TYPE decfloat16,
-             last_modified TYPE timestamp,
-           END OF annotations.
-
     TYPES: BEGIN OF resource,
              uri         TYPE string,
              name        TYPE string,
              title       TYPE string,
              description TYPE string,
              mime_type   TYPE string,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
              size        TYPE i,
+             icons       TYPE zif_mcp_types=>icon_list,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF resource.
 
     TYPES resources   TYPE STANDARD TABLE OF resource WITH KEY uri.
-    TYPES next_cursor TYPE string.
+    TYPES next_cursor TYPE zif_mcp_types=>page_cursor.
 
     "! <p class="shorttext synchronized">Set Resources</p>
     "!
@@ -49,18 +44,18 @@ CLASS zcl_mcp_resp_list_resources DEFINITION
 
   PRIVATE SECTION.
     DATA int_resources   TYPE resources.
-    DATA int_next_cursor TYPE string.
+    DATA int_next_cursor TYPE zif_mcp_types=>page_cursor.
     DATA int_meta        TYPE REF TO zif_mcp_ajson.
 
-    METHODS convert_timestamp_to_iso8601
-      IMPORTING timestamp     TYPE timestamp
-      RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 
 CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
     FIELD-SYMBOLS <resource> LIKE LINE OF int_resources.
       DATA resource_index LIKE sy-tabix.
+        FIELD-SYMBOLS <icon> LIKE LINE OF <resource>-icons.
+          DATA icon_path TYPE string.
+            FIELD-SYMBOLS <size> LIKE LINE OF <icon>-sizes.
           FIELD-SYMBOLS <audience> LIKE LINE OF <resource>-annotations-audience.
           DATA iso_timestamp TYPE string.
     result = zcl_mcp_ajson=>create_empty( ).
@@ -114,6 +109,34 @@ CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
                      iv_val  = <resource>-meta ).
       ENDIF.
 
+      " Add icons (optional, new in MCP 2025-11-25)
+      IF <resource>-icons IS NOT INITIAL.
+        result->touch_array( |/resources/{ resource_index }/icons| ).
+        
+        LOOP AT <resource>-icons ASSIGNING <icon>.
+          
+          icon_path = |/resources/{ resource_index }/icons/{ sy-tabix }|.
+          result->set( iv_path = |{ icon_path }/src|
+                       iv_val  = <icon>-src ).
+          IF <icon>-mime_type IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/mimeType|
+                         iv_val  = <icon>-mime_type ).
+          ENDIF.
+          IF <icon>-sizes IS NOT INITIAL.
+            result->touch_array( |{ icon_path }/sizes| ).
+            
+            LOOP AT <icon>-sizes ASSIGNING <size>.
+              result->set( iv_path = |{ icon_path }/sizes/{ sy-tabix }|
+                           iv_val  = <size> ).
+            ENDLOOP.
+          ENDIF.
+          IF <icon>-theme IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/theme|
+                         iv_val  = <icon>-theme ).
+          ENDIF.
+        ENDLOOP.
+      ENDIF.
+
       " Add annotations (optional)
       IF    <resource>-annotations-audience      IS NOT INITIAL
          OR <resource>-annotations-priority      IS NOT INITIAL
@@ -139,7 +162,7 @@ CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
         " Add lastModified if not empty
         IF <resource>-annotations-last_modified IS NOT INITIAL.
           
-          iso_timestamp = convert_timestamp_to_iso8601( <resource>-annotations-last_modified ).
+          iso_timestamp = zcl_mcp_util=>timestamp_to_iso8601( <resource>-annotations-last_modified ).
           result->set( iv_path = |/resources/{ resource_index }/annotations/lastModified|
                        iv_val  = iso_timestamp ).
         ENDIF.
@@ -158,38 +181,6 @@ CLASS zcl_mcp_resp_list_resources IMPLEMENTATION.
       result->set( iv_path = '/_meta'
                    iv_val  = int_meta ).
     ENDIF.
-  ENDMETHOD.
-
-  METHOD convert_timestamp_to_iso8601.
-    " Convert session timestamp to UTC and format as ISO 8601
-    DATA local_date       TYPE sy-datum.
-    DATA local_time       TYPE sy-uzeit.
-    DATA utc_timestamp    TYPE timestamp.
-    DATA timestamp_string TYPE string.
-
-    " Convert timestamp to string first
-    timestamp_string = |{ timestamp }|.
-
-    " Pad with leading zeros if needed
-    WHILE strlen( timestamp_string ) < 14.
-      timestamp_string = |0{ timestamp_string }|.
-    ENDWHILE.
-
-    " Extract date and time from timestamp string
-    local_date = timestamp_string+0(8).
-    local_time = timestamp_string+8(6).
-
-    " Convert local date/time to UTC timestamp
-    CONVERT DATE local_date TIME local_time INTO TIME STAMP utc_timestamp TIME ZONE sy-zonlo.
-
-    " Convert UTC timestamp back to string for formatting
-    timestamp_string = |{ utc_timestamp }|.
-    WHILE strlen( timestamp_string ) < 14.
-      timestamp_string = |0{ timestamp_string }|.
-    ENDWHILE.
-
-    " Format: YYYYMMDDHHMMSS -> YYYY-MM-DDTHH:MM:SSZ
-    result = |{ timestamp_string+0(4) }-{ timestamp_string+4(2) }-{ timestamp_string+6(2) }T{ timestamp_string+8(2) }:{ timestamp_string+10(2) }:{ timestamp_string+12(2) }Z|.
   ENDMETHOD.
 
   METHOD set_resources.

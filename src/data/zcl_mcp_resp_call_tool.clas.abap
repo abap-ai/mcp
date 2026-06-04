@@ -7,13 +7,6 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_mcp_internal.
 
-    " Types for annotations
-    TYPES: BEGIN OF annotations,
-             audience      TYPE STANDARD TABLE OF string WITH DEFAULT KEY,
-             priority      TYPE decfloat16,
-             last_modified TYPE timestamp,
-           END OF annotations.
-
     " Resource contents types
     TYPES: BEGIN OF text_resource_contents,
              uri       TYPE string,
@@ -37,7 +30,8 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
              description TYPE string,
              mime_type   TYPE string,
              size        TYPE i,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
+             icons       TYPE zif_mcp_types=>icon_list,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF resource_link.
 
@@ -45,7 +39,7 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
     TYPES: BEGIN OF text_content,
              type        TYPE string,
              text        TYPE string,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF text_content.
 
@@ -53,7 +47,7 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
              type        TYPE string,
              data        TYPE string,
              mime_type   TYPE string,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF image_content.
 
@@ -61,14 +55,14 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
              type        TYPE string,
              data        TYPE string,
              mime_type   TYPE string,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF audio_content.
 
     TYPES: BEGIN OF embedded_resource,
              type        TYPE string,
              resource    TYPE REF TO data,
-             annotations TYPE annotations,
+             annotations TYPE zif_mcp_types=>annotations,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF embedded_resource.
 
@@ -101,8 +95,8 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
     "! @parameter meta        | <p class="shorttext synchronized">Optional metadata</p>
     METHODS add_text_content
       IMPORTING !text       TYPE string
-                annotations TYPE annotations OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+                annotations TYPE zif_mcp_types=>annotations OPTIONAL
+                meta        TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Image Content</p>
     "!
@@ -113,8 +107,8 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
     METHODS add_image_content
       IMPORTING !data       TYPE string
                 mime_type   TYPE string
-                annotations TYPE annotations OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+                annotations TYPE zif_mcp_types=>annotations OPTIONAL
+                meta        TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Audio Content</p>
     "!
@@ -125,8 +119,8 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
     METHODS add_audio_content
       IMPORTING !data       TYPE string
                 mime_type   TYPE string
-                annotations TYPE annotations OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+                annotations TYPE zif_mcp_types=>annotations OPTIONAL
+                meta        TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Resource Link</p>
     "!
@@ -137,16 +131,18 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
     "! @parameter mime_type   | <p class="shorttext synchronized">Optional MIME type</p>
     "! @parameter size        | <p class="shorttext synchronized">Optional size in bytes</p>
     "! @parameter annotations | <p class="shorttext synchronized">Optional annotations</p>
+    "! @parameter icons       | <p class="shorttext synchronized">Optional icons</p>
     "! @parameter meta        | <p class="shorttext synchronized">Optional metadata</p>
     METHODS add_resource_link
-      IMPORTING uri         TYPE string
-                name        TYPE string
-                title       TYPE string      OPTIONAL
-                description TYPE string      OPTIONAL
-                mime_type   TYPE string      OPTIONAL
-                size        TYPE i           OPTIONAL
-                annotations TYPE annotations OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+      IMPORTING uri          TYPE string
+                !name        TYPE string
+                !title       TYPE string                     OPTIONAL
+                !description TYPE string                     OPTIONAL
+                mime_type    TYPE string                     OPTIONAL
+                !size        TYPE i                          OPTIONAL
+                annotations  TYPE zif_mcp_types=>annotations OPTIONAL
+                icons        TYPE zif_mcp_types=>icon_list   OPTIONAL
+                meta         TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Text Resource</p>
     "!
@@ -158,9 +154,9 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
     METHODS add_text_resource
       IMPORTING uri         TYPE string
                 !text       TYPE string
-                mime_type   TYPE string      OPTIONAL
-                annotations TYPE annotations OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+                mime_type   TYPE string                     OPTIONAL
+                annotations TYPE zif_mcp_types=>annotations OPTIONAL
+                meta        TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Add Blob Resource</p>
     "!
@@ -172,9 +168,9 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
     METHODS add_blob_resource
       IMPORTING uri         TYPE string
                 !blob       TYPE string
-                mime_type   TYPE string      OPTIONAL
-                annotations TYPE annotations OPTIONAL
-                meta        TYPE REF TO zif_mcp_ajson OPTIONAL.
+                mime_type   TYPE string                     OPTIONAL
+                annotations TYPE zif_mcp_types=>annotations OPTIONAL
+                meta        TYPE REF TO zif_mcp_ajson       OPTIONAL.
 
     "! <p class="shorttext synchronized">Set Content</p>
     "!
@@ -189,8 +185,19 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
     METHODS set_meta
       IMPORTING meta TYPE REF TO zif_mcp_ajson.
 
+    "! <p class="shorttext synchronized">Set Task Result</p>
+    "! Attaches task metadata to the tools/call response, signalling to the client
+    "! that execution was deferred to a background task.
+    "! The client uses the returned taskId to poll tasks/get for status updates
+    "! and tasks/result once the task reaches a terminal state.
+    "! Call this instead of add_text_content / set_structured_content when the
+    "! tool was invoked with a task: {...} block in the request.
+    "!
+    "! @parameter task | <p class="shorttext synchronized">Task header returned by zcl_mcp_tasks->get or ->create_task</p>
+    METHODS set_task_result
+      IMPORTING !task TYPE zif_mcp_types=>task.
+
   PRIVATE SECTION.
-    " Content type identifiers
     CONSTANTS: BEGIN OF content_type,
                  text          TYPE string VALUE 'text',
                  image         TYPE string VALUE 'image',
@@ -199,39 +206,37 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
                  audio         TYPE string VALUE 'audio',
                END OF content_type.
 
-    " Simple content structures that don't use references
     TYPES: BEGIN OF content_item,
              type            TYPE string,
-             text            TYPE string,      " For text content
-             image_data      TYPE string,      " For image content
-             image_mime      TYPE string,      " For image content
-             audio_data      TYPE string,      " For audio content
-             audio_mime      TYPE string,      " For audio content
-             res_uri         TYPE string,      " For resource content
-             res_text        TYPE string,      " For text resource content
-             res_mime        TYPE string,      " For resource content
-             res_blob        TYPE string,      " For blob resource content
-             res_is_blob     TYPE abap_bool,   " Flag for blob vs text
-             " Resource link fields
+             text            TYPE string,
+             image_data      TYPE string,
+             image_mime      TYPE string,
+             audio_data      TYPE string,
+             audio_mime      TYPE string,
+             res_uri         TYPE string,
+             res_text        TYPE string,
+             res_mime        TYPE string,
+             res_blob        TYPE string,
+             res_is_blob     TYPE abap_bool,
              res_name        TYPE string,
              res_title       TYPE string,
              res_description TYPE string,
              res_size        TYPE i,
-             annotations     TYPE annotations, " For any content
-             meta            TYPE REF TO zif_mcp_ajson, " For any content
+             annotations     TYPE zif_mcp_types=>annotations,
+             res_icons       TYPE zif_mcp_types=>icon_list,
+             meta            TYPE REF TO zif_mcp_ajson,
            END OF content_item.
 
-    " Table for all content, maintaining original order
     DATA content_items      TYPE STANDARD TABLE OF content_item WITH DEFAULT KEY.
     DATA meta               TYPE REF TO zif_mcp_ajson.
     DATA structured_content TYPE REF TO zif_mcp_ajson.
     DATA has_error          TYPE abap_bool.
+    DATA int_task           TYPE zif_mcp_types=>task.
 
-    METHODS add_annotations_to_json
-      IMPORTING !path       TYPE string
-                annotations TYPE annotations
-                ajson       TYPE REF TO zif_mcp_ajson
-      RAISING   zcx_mcp_ajson_error.
+    METHODS add_annotations_to_json IMPORTING !path       TYPE string
+                                              annotations TYPE zif_mcp_types=>annotations
+                                              ajson       TYPE REF TO zif_mcp_ajson
+                                    RAISING   zcx_mcp_ajson_error.
 
     METHODS add_meta_to_json
       IMPORTING !path TYPE string
@@ -239,9 +244,6 @@ CLASS zcl_mcp_resp_call_tool DEFINITION
                 ajson TYPE REF TO zif_mcp_ajson
       RAISING   zcx_mcp_ajson_error.
 
-    METHODS convert_timestamp_to_iso8601
-      IMPORTING timestamp     TYPE timestamp
-      RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 
 CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
@@ -249,7 +251,40 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
     FIELD-SYMBOLS <item> LIKE LINE OF content_items.
       DATA content_index LIKE sy-tabix.
       DATA content_path TYPE string.
+            FIELD-SYMBOLS <rl_icon> LIKE LINE OF <item>-res_icons.
+              DATA rl_icon_path TYPE string.
+                FIELD-SYMBOLS <rl_icon_size> LIKE LINE OF <rl_icon>-sizes.
     result = zcl_mcp_ajson=>create_empty( ).
+
+  " Task-deferred response: tools/call returns CreateTaskResult.
+  " The actual CallToolResult payload is retrieved later via tasks/result.
+    IF int_task-task_id IS NOT INITIAL.
+      result->set( iv_path = 'task/taskId'
+                   iv_val  = int_task-task_id ).
+      result->set( iv_path = 'task/status'
+                   iv_val  = int_task-status ).
+      result->set( iv_path = 'task/createdAt'
+                   iv_val  = zcl_mcp_util=>timestamp_to_iso8601( int_task-created_at ) ).
+      result->set( iv_path = 'task/lastUpdatedAt'
+                   iv_val  = zcl_mcp_util=>timestamp_to_iso8601( int_task-last_updated ) ).
+      IF int_task-poll_interval > 0.
+        result->set( iv_path = 'task/pollInterval'
+                     iv_val  = int_task-poll_interval ).
+      ENDIF.
+      IF int_task-ttl_is_null = abap_true.
+        result->set( iv_path      = 'task/ttl'
+                     iv_val       = ''
+                     iv_node_type = zif_mcp_ajson_types=>node_type-null ).
+      ELSE.
+        result->set( iv_path = 'task/ttl'
+                     iv_val  = int_task-ttl ).
+      ENDIF.
+      IF meta IS BOUND.
+        result->set( iv_path = '/_meta'
+                     iv_val  = meta ).
+      ENDIF.
+      RETURN.
+    ENDIF.
 
     " Create content array
     result->touch_array( '/content' ).
@@ -323,6 +358,33 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
           IF <item>-res_size > 0.
             result->set( iv_path = |{ content_path }/size|
                          iv_val  = <item>-res_size ).
+          ENDIF.
+
+          IF <item>-res_icons IS NOT INITIAL.
+            result->touch_array( |{ content_path }/icons| ).
+            
+            LOOP AT <item>-res_icons ASSIGNING <rl_icon>.
+              
+              rl_icon_path = |{ content_path }/icons/{ sy-tabix }|.
+              result->set( iv_path = |{ rl_icon_path }/src|
+                           iv_val  = <rl_icon>-src ).
+              IF <rl_icon>-mime_type IS NOT INITIAL.
+                result->set( iv_path = |{ rl_icon_path }/mimeType|
+                             iv_val  = <rl_icon>-mime_type ).
+              ENDIF.
+              IF <rl_icon>-sizes IS NOT INITIAL.
+                result->touch_array( |{ rl_icon_path }/sizes| ).
+                
+                LOOP AT <rl_icon>-sizes ASSIGNING <rl_icon_size>.
+                  result->set( iv_path = |{ rl_icon_path }/sizes/{ sy-tabix }|
+                               iv_val  = <rl_icon_size> ).
+                ENDLOOP.
+              ENDIF.
+              IF <rl_icon>-theme IS NOT INITIAL.
+                result->set( iv_path = |{ rl_icon_path }/theme|
+                             iv_val  = <rl_icon>-theme ).
+              ENDIF.
+            ENDLOOP.
           ENDIF.
 
         WHEN content_type-resource.
@@ -416,7 +478,7 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
     " Add lastModified if not empty
     IF annotations-last_modified IS NOT INITIAL.
       
-      iso_timestamp = convert_timestamp_to_iso8601( annotations-last_modified ).
+      iso_timestamp = zcl_mcp_util=>timestamp_to_iso8601( annotations-last_modified ).
       ajson->set( iv_path = |{ path }/annotations/lastModified|
                   iv_val  = iso_timestamp ).
     ENDIF.
@@ -428,38 +490,6 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
       ajson->set( iv_path = |{ path }/_meta|
                   iv_val  = meta ).
     ENDIF.
-  ENDMETHOD.
-
-  METHOD convert_timestamp_to_iso8601.
-    " Convert session timestamp to UTC and format as ISO 8601
-    DATA local_date       TYPE sy-datum.
-    DATA local_time       TYPE sy-uzeit.
-    DATA utc_timestamp    TYPE timestamp.
-    DATA timestamp_string TYPE string.
-
-    " Convert timestamp to string first
-    timestamp_string = |{ timestamp }|.
-
-    " Pad with leading zeros if needed
-    WHILE strlen( timestamp_string ) < 14.
-      timestamp_string = |0{ timestamp_string }|.
-    ENDWHILE.
-
-    " Extract date and time from timestamp string
-    local_date = timestamp_string+0(8).
-    local_time = timestamp_string+8(6).
-
-    " Convert local date/time to UTC timestamp
-    CONVERT DATE local_date TIME local_time INTO TIME STAMP utc_timestamp TIME ZONE sy-zonlo.
-
-    " Convert UTC timestamp back to string for formatting
-    timestamp_string = |{ utc_timestamp }|.
-    WHILE strlen( timestamp_string ) < 14.
-      timestamp_string = |0{ timestamp_string }|.
-    ENDWHILE.
-
-    " Format: YYYYMMDDHHMMSS -> YYYY-MM-DDTHH:MM:SSZ
-    result = |{ timestamp_string+0(4) }-{ timestamp_string+4(2) }-{ timestamp_string+6(2) }T{ timestamp_string+8(2) }:{ timestamp_string+10(2) }:{ timestamp_string+12(2) }Z|.
   ENDMETHOD.
 
   METHOD set_error.
@@ -530,6 +560,7 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
     temp4-res_mime = mime_type.
     temp4-res_size = size.
     temp4-annotations = annotations.
+    temp4-res_icons = icons.
     temp4-meta = meta.
     APPEND temp4
            TO content_items.
@@ -655,6 +686,7 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
           temp14-res_mime = link_item->mime_type.
           temp14-res_size = link_item->size.
           temp14-annotations = link_item->annotations.
+          temp14-res_icons = link_item->icons.
           temp14-meta = link_item->meta.
           APPEND temp14
                  TO content_items.
@@ -716,6 +748,10 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
 
   METHOD set_meta.
     me->meta = meta.
+  ENDMETHOD.
+
+  METHOD set_task_result.
+    int_task = task.
   ENDMETHOD.
 
 ENDCLASS.

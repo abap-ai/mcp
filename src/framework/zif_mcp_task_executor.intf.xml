@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_INTF" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOINTERF>
+    <CLSNAME>ZIF_MCP_TASK_EXECUTOR</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP Task Executor Interface</DESCRIPT>
+    <EXPOSURE>2</EXPOSURE>
+    <STATE>1</STATE>
+    <UNICODE>X</UNICODE>
+   </VSEOINTERF>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>CANCEL</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Cancel a task</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>EXECUTE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Execute a task</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>CANCEL</CMPNAME>
+     <SCONAME>TASK_ID</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Task ID</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>EXECUTE</CMPNAME>
+     <SCONAME>INPUT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Tool input parameters</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>EXECUTE</CMPNAME>
+     <SCONAME>TASK_ID</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Task ID</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>EXECUTE</CMPNAME>
+     <SCONAME>TOOL_NAME</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Originating tool name</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

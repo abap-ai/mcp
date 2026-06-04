@@ -6,7 +6,7 @@ CLASS zcl_mcp_http_handler DEFINITION
   PUBLIC SECTION.
     INTERFACES if_http_extension.
 
-protected section.
+  PROTECTED SECTION.
   PRIVATE SECTION.
     "! JSON-RPC parser instance
     DATA jsonrpc TYPE REF TO zcl_mcp_jsonrpc.
@@ -72,7 +72,7 @@ protected section.
     "! @parameter has_responses | True if message contains responses
     "! @parameter has_notifs    | True if message contains notifications
     METHODS classify_message
-      IMPORTING json          TYPE string
+      IMPORTING !json         TYPE string
       EXPORTING has_requests  TYPE abap_bool
                 has_responses TYPE abap_bool
                 has_notifs    TYPE abap_bool.
@@ -84,7 +84,7 @@ protected section.
     "! @parameter result              | JSON-RPC response
     "! @raising   zcx_mcp_ajson_error | Error
     METHODS process_request
-      IMPORTING json          TYPE string
+      IMPORTING !json         TYPE string
       RETURNING VALUE(result) TYPE string
       RAISING   zcx_mcp_ajson_error.
 
@@ -106,53 +106,74 @@ protected section.
                                      server        TYPE zmcp_server
                            RETURNING VALUE(result) TYPE abap_bool.
 
+    METHODS set_cors_response_headers
+      IMPORTING origin    TYPE string
+                !response TYPE REF TO if_http_response.
+
+    METHODS create_error_json
+      IMPORTING !code         TYPE i
+                !message      TYPE string
+                !json         TYPE string OPTIONAL
+      RETURNING VALUE(result) TYPE string.
+
     DATA mcp_server TYPE REF TO zif_mcp_server.
+
+    METHODS validate_session_id
+      IMPORTING session_id TYPE string
+      RAISING   zcx_mcp_server.
 ENDCLASS.
 
 
 
-CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
-
-
+CLASS zcl_mcp_http_handler IMPLEMENTATION.
   METHOD classify_message.
     DATA first_char TYPE c LENGTH 1.
-    DATA request    TYPE zcl_mcp_jsonrpc=>request.
+    DATA json_obj   TYPE REF TO zif_mcp_ajson.
 
     " Initialize export parameters
     CLEAR: has_requests,
            has_responses,
            has_notifs.
 
-    " Check if JSON is valid
     TRY.
-        " Get first character to check if it's an array or object
+        " Keep current simple batch handling for now.
+        " Full JSON-RPC batch semantics are tracked separately but also removed from the specification since a while.
         first_char = json(1).
 
         IF first_char = '['.
-          " It's a batch request - for simplicity we'll assume it contains at least one request
-          has_requests = abap_true.
-        ELSE.
-          " Try to parse as a single request
-          TRY.
-              request = jsonrpc->parse_request( json ).
-
-              " If it has an ID, it's a request
-              IF request-id IS NOT INITIAL.
-                has_requests = abap_true.
-              ELSE.
-                " No ID means it's a notification
-                has_notifs = abap_true.
-              ENDIF.
-            CATCH zcx_mcp_ajson_error.
-              " If not a valid request, assume it's a response
-              has_responses = abap_true.
-          ENDTRY.
+          " JSON-RPC batches are intentionally unsupported for MCP.
+          " Leave all flags initial so handle_post routes to bad-request handling below.
+          RETURN.
         ENDIF.
-      CATCH cx_root.   "#EC NEED_CX_ROOT
-        " Invalid JSON - will be handled by caller
+
+        json_obj = zcl_mcp_ajson=>parse( json ).
+
+        " JSON-RPC request/notification objects have a method.
+        " Presence of /id, not its ABAP value, distinguishes request from notification.
+        " This matters because JSON-RPC id 0 is valid but initial in ABAP.
+        IF json_obj->exists( '/method' ) IS NOT INITIAL.
+          IF json_obj->exists( '/id' ) IS NOT INITIAL.
+            has_requests = abap_true.
+          ELSE.
+            has_notifs = abap_true.
+          ENDIF.
+          RETURN.
+        ENDIF.
+
+        " JSON-RPC response objects contain either result or error.
+        IF json_obj->exists( '/result' ) IS NOT INITIAL OR json_obj->exists( '/error' ) IS NOT INITIAL.
+          has_responses = abap_true.
+          RETURN.
+        ENDIF.
+
+      CATCH zcx_mcp_ajson_error.
+        " Invalid JSON is handled by the request processing/error path.
+        RETURN.
+      CATCH cx_root.                                  "#EC NEED_CX_ROOT
+        " Defensive fallback: invalid input is handled by caller.
+        RETURN.
     ENDTRY.
   ENDMETHOD.
-
 
   METHOD handle_delete.
     DATA session_id TYPE string.
@@ -163,7 +184,7 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
       response->set_status( code   = 405
                             reason = 'Method Not Allowed' ) ##NO_TEXT.
       response->set_header_field( name  = 'Allow'
-                                  value = 'POST' ) ##NO_TEXT.
+                                  value = 'POST, OPTIONS' ) ##NO_TEXT.
       RETURN.
     ENDIF.
 
@@ -174,11 +195,12 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
       WHEN zcl_mcp_session=>session_mode_icf.
         IF session_id <> mcp_server->server-session_id.
           mcp_server->server-http_response->set_status( code   = 404
-                                        reason = 'Not Found' ) ##NO_TEXT.
+                                                        reason = 'Not Found' ) ##NO_TEXT.
           RETURN.
         ENDIF.
       WHEN zcl_mcp_session=>session_mode_mcp.
         TRY.
+            validate_session_id( session_id ).
             
             temp1 = session_id.
             CREATE OBJECT mcp_server->session TYPE zcl_mcp_session EXPORTING session_id = temp1 session_mode = mcp_server->server-session_mode create_new = abap_false.
@@ -188,14 +210,21 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
             CASE session_error->if_t100_message~t100key.
               WHEN zcx_mcp_server=>session_unknown OR zcx_mcp_server=>session_expired.
                 mcp_server->server-http_response->set_status( code   = 404
-                                              reason = 'Not Found' ) ##NO_TEXT.
+                                                              reason = 'Not Found' ) ##NO_TEXT.
+                RETURN.
+
               WHEN zcx_mcp_server=>session_load_error.
-                logger->error( |Session { session_id } load error for { mcp_server->server-area } { mcp_server->server-server } details: { session_error->get_text( ) }| ) ##NO_TEXT.
+                logger->error(
+                    |Session { session_id } load error for { mcp_server->server-area } { mcp_server->server-server } details: { session_error->get_text( ) }| ) ##NO_TEXT.
                 mcp_server->server-http_response->set_status( code   = 500
-                                              reason = 'Internal Error' ) ##NO_TEXT.
+                                                              reason = 'Internal Error' ) ##NO_TEXT.
+                RETURN.
+
+              WHEN OTHERS.
+                mcp_server->server-http_response->set_status( code   = 500
+                                                              reason = 'Internal Error' ) ##NO_TEXT.
+                RETURN.
             ENDCASE.
-            mcp_server->server-http_response->set_status( code   = 500
-                                          reason = 'Internal Error' ) ##NO_TEXT.
         ENDTRY.
     ENDCASE.
 
@@ -206,15 +235,13 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-
   METHOD handle_get.
     " We don't support streaming - return Method Not Allowed
     response->set_status( code   = 405
                           reason = 'Method Not Allowed' ) ##NO_TEXT.
     response->set_header_field( name  = 'Allow'
-                                value = 'POST' ) ##NO_TEXT.
+                                value = 'POST, DELETE, OPTIONS' ) ##NO_TEXT.
   ENDMETHOD.
-
 
   METHOD handle_post.
     DATA content_type  TYPE string.
@@ -224,7 +251,6 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
     DATA has_requests  TYPE abap_bool.
     DATA has_responses TYPE abap_bool.
     DATA has_notifs    TYPE abap_bool.
-          DATA exception TYPE REF TO zcx_mcp_ajson_error.
 
     " Get request content and headers
     content_type = request->get_header_field( 'Content-Type' ) ##NO_TEXT.
@@ -238,18 +264,48 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    " Verify Accept header contains application/json
-    IF accept NS 'application/json'.
+    " Accept application/json, or any wildcard that covers it
+    IF     accept NS 'application/json'
+       AND accept NS 'application/*'
+       AND accept NS '*/*'.
       response->set_status( code   = 406
                             reason = 'Not Acceptable' ) ##NO_TEXT.
       RETURN.
     ENDIF.
+
+    " Validate JSON syntax before classification.
+    " Unsupported JSON-RPC batches are valid JSON and are handled below as Invalid Request.
+    TRY.
+        zcl_mcp_ajson=>parse( json ).
+      CATCH zcx_mcp_ajson_error.
+        response->set_status( code   = 400
+                              reason = 'Bad Request' ) ##NO_TEXT.
+        response->set_header_field( name  = 'Content-Type'
+                                    value = 'application/json' ) ##NO_TEXT.
+        response->set_cdata( create_error_json( code    = zcl_mcp_jsonrpc=>error_codes-parse_error
+                                                message = 'Invalid JSON' ) ) ##NO_TEXT.
+        RETURN.
+    ENDTRY.
 
     " Classify the message to determine content (requests, responses, notifications)
     classify_message( EXPORTING json          = json
                       IMPORTING has_requests  = has_requests
                                 has_responses = has_responses
                                 has_notifs    = has_notifs ).
+
+    IF     has_requests  = abap_false
+       AND has_responses = abap_false
+       AND has_notifs    = abap_false.
+
+      response->set_status( code   = 400
+                            reason = 'Bad Request' ) ##NO_TEXT.
+      response->set_header_field( name  = 'Content-Type'
+                                  value = 'application/json' ) ##NO_TEXT.
+      response->set_cdata( create_error_json( code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                              message = 'Invalid Request'
+                                              json    = json ) ) ##NO_TEXT.
+      RETURN.
+    ENDIF.
 
     " If message contains only responses or notifications
     IF has_requests = abap_false AND ( has_responses = abap_true OR has_notifs = abap_true ).
@@ -265,15 +321,22 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
       TRY.
           " Process the request and get the response
           response_text = process_request( json ).
-          
-        CATCH zcx_mcp_ajson_error INTO exception.
+        CATCH zcx_mcp_ajson_error.
           " Handle JSON-RPC error
           response->set_status( code   = 400
                                 reason = 'Bad Request' ) ##NO_TEXT.
-          response->set_cdata(
-              |\{"jsonrpc":"2.0","error":{ zcl_mcp_jsonrpc=>error_codes-parse_error } "code":\{,"message":"Invalid JSON"\},"id":null\}| ) ##NO_TEXT.
+          response->set_header_field( name  = 'Content-Type'
+                                      value = 'application/json' ) ##NO_TEXT.
+          response->set_cdata( create_error_json( code    = zcl_mcp_jsonrpc=>error_codes-parse_error
+                                                  message = 'Invalid JSON' ) ) ##NO_TEXT.
           RETURN.
       ENDTRY.
+
+      IF response_text IS INITIAL.
+        response->set_status( code   = 202
+                              reason = 'Accepted' ) ##NO_TEXT.
+        RETURN.
+      ENDIF.
 
       " Always JSON response
       response->set_header_field( name  = 'Content-Type'
@@ -290,7 +353,6 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
       response->set_cdata( response_text ).
     ENDIF.
   ENDMETHOD.
-
 
   METHOD if_http_extension~handle_request.
     DATA path       TYPE string.
@@ -343,6 +405,11 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
       IF mcp_server IS NOT BOUND.
         server->response->set_status( code   = 400
                                       reason = 'Bad Request' ) ##NO_TEXT.
+        server->response->set_header_field( name  = 'Content-Type'
+                                            value = 'application/json' ) ##NO_TEXT.
+        server->response->set_cdata( create_error_json( code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                                        message = 'Invalid or expired MCP session'
+                                                        json    = server->request->get_cdata( ) ) ) ##NO_TEXT.
         continue = abap_false.
       ENDIF.
     ELSE.
@@ -386,6 +453,11 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
         logger->warning( |Origin { origin } not allowed for { area } { servername }| ) ##NO_TEXT.
         continue = abap_false.
       ENDIF.
+
+      IF continue = abap_true AND origin IS NOT INITIAL.
+        set_cors_response_headers( origin   = origin
+                                   response = server->response ).
+      ENDIF.
     ENDIF.
 
     IF continue = abap_false.
@@ -422,7 +494,7 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
         server->response->set_status( code   = 405
                                       reason = 'Method Not Allowed' ) ##NO_TEXT.
         server->response->set_header_field( name  = 'Allow'
-                                            value = 'POST, DELETE' ) ##NO_TEXT.
+                                            value = 'POST, DELETE, OPTIONS' ) ##NO_TEXT.
     ENDCASE.
 
     IF mcp_server->server-session_mode = zcl_mcp_session=>session_mode_mcp AND method = 'POST' AND mcp_server->session IS BOUND.
@@ -440,6 +512,10 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
       temp2 = mcp_server->server-session_id.
       server->response->set_header_field( name  = 'Mcp-Session-Id'
                                           value = temp2 ) ##NO_TEXT.
+    ENDIF.
+    IF mcp_server->server-protocol_version IS NOT INITIAL.
+      server->response->set_header_field( name  = 'Mcp-Protocol-Version'
+                                          value = mcp_server->server-protocol_version ) ##NO_TEXT.
     ENDIF.
     logger->info( |HTTP { method } for { area } { servername } completed| ) ##NO_TEXT.
     logger->save( ).
@@ -493,15 +569,19 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-
   METHOD process_request.
     DATA response TYPE zcl_mcp_jsonrpc=>response.
     DATA request  TYPE zcl_mcp_jsonrpc=>request.
     DATA error    TYPE zcl_mcp_jsonrpc=>error.
+
+    DATA json_obj TYPE REF TO zif_mcp_ajson.
+    DATA error_id TYPE string.
+    DATA error_id_present TYPE abap_bool.
       DATA session_id TYPE string.
               DATA temp7 TYPE sysuuid_c32.
               DATA session_error TYPE REF TO zcx_mcp_server.
       DATA protocol_version TYPE string.
+          DATA protocol_entry TYPE zcl_mcp_session=>session_entry.
         DATA supported_protocol_versions TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
         DATA temp8 LIKE sy-subrc.
             DATA initialize TYPE zif_mcp_server=>initialize_response.
@@ -520,21 +600,74 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
             DATA temp9 TYPE REF TO zcl_mcp_req_list_tools.
             DATA call_tool TYPE zif_mcp_server=>call_tool_response.
             DATA temp10 TYPE REF TO zcl_mcp_req_call_tool.
+            DATA list_tasks TYPE zif_mcp_server=>list_tasks_response.
+            DATA temp11 TYPE REF TO zcl_mcp_req_list_tasks.
+            DATA get_task TYPE zif_mcp_server=>get_task_response.
+            DATA temp12 TYPE REF TO zcl_mcp_req_get_task.
+            DATA task_result TYPE zif_mcp_server=>get_task_payload_response.
+            DATA temp13 TYPE REF TO zcl_mcp_req_get_task_payload.
+            DATA cancel_task TYPE zif_mcp_server=>cancel_task_response.
+            DATA temp14 TYPE REF TO zcl_mcp_req_cancel_task.
+            DATA complete TYPE zif_mcp_server=>complete_response.
+            DATA temp15 TYPE REF TO zcl_mcp_req_complete.
         DATA mcp_error TYPE REF TO zcx_mcp_server.
+          DATA err_result TYPE REF TO zcl_mcp_resp_call_tool.
 
-    " Parse the request(s)
     TRY.
-        request = jsonrpc->parse_request( json ).
+        json_obj = zcl_mcp_ajson=>parse( json ).
       CATCH zcx_mcp_ajson_error.
-        " JSON parse error
-        error-code    = jsonrpc->error_codes-parse_error.
+        error-code    = zcl_mcp_jsonrpc=>error_codes-parse_error.
         error-message = 'Invalid JSON' ##NO_TEXT.
         response = jsonrpc->create_error_response( id      = ''
                                                    code    = error-code
                                                    message = error-message ).
+        response-id_is_null = abap_true.
         result = jsonrpc->serialize_response( response ).
-        logger->warning(
-            |JSON parse error for { mcp_server->server-area } { mcp_server->server-server } details: { error-message }| ) ##NO_TEXT.
+        RETURN.
+    ENDTRY.
+
+    
+
+    IF json_obj->exists( '/id' ) IS NOT INITIAL.
+      CASE json_obj->get_node_type( '/id' ).
+        WHEN 'str' OR 'num'.
+          error_id = json_obj->get_string( '/id' ).
+          error_id_present = abap_true.
+      ENDCASE.
+    ENDIF.
+
+    IF    json_obj->get_string( '/jsonrpc' ) <> zcl_mcp_jsonrpc=>jsonrpc_version
+       OR json_obj->exists( '/method' )       = abap_false
+       OR json_obj->get_string( '/method' )  IS INITIAL.
+
+      error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_request.
+      error-message = 'Invalid Request' ##NO_TEXT.
+      response = jsonrpc->create_error_response( id      = error_id
+                                                 code    = error-code
+                                                 message = error-message ).
+      response-id_present = error_id_present.
+      response-id_is_null = abap_false.
+      result = jsonrpc->serialize_response( response ).
+      RETURN.
+    ENDIF.
+
+    " Parse the request(s)
+    TRY.
+        request = jsonrpc->parse_request( json ).
+        IF request-id_present = abap_false.
+          " Notifications do not receive JSON-RPC responses.
+          result = ``.
+          RETURN.
+        ENDIF.
+      CATCH zcx_mcp_ajson_error.
+        error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_request.
+        error-message = 'Invalid Request' ##NO_TEXT.
+        response = jsonrpc->create_error_response( id      = error_id
+                                                   code    = error-code
+                                                   message = error-message ).
+        response-id_present = error_id_present.
+        response-id_is_null = abap_false.
+        result = jsonrpc->serialize_response( response ).
         RETURN.
     ENDTRY.
 
@@ -542,15 +675,33 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
     IF request-method <> 'initialize'.
       
       session_id = mcp_server->server-http_request->get_header_field( 'Mcp-Session-Id' ) ##NO_TEXT.
+      IF mcp_server->server-session_mode <> zcl_mcp_session=>session_mode_stateless AND session_id IS INITIAL.
+        mcp_server->server-http_response->set_status( code   = 400
+                                                      reason = 'Bad Request' ) ##NO_TEXT.
+        response = jsonrpc->create_error_response( id      = request-id
+                                                   code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                                   message = 'Missing Mcp-Session-Id' ) ##NO_TEXT.
+        response-id_present = request-id_present.
+        response-jsonrpc    = request-jsonrpc.
+        result = jsonrpc->serialize_response( response ).
+        RETURN.
+      ENDIF.
       CASE mcp_server->server-session_mode.
         WHEN zcl_mcp_session=>session_mode_icf.
           IF session_id <> mcp_server->server-session_id.
             mcp_server->server-http_response->set_status( code   = 404
                                                           reason = 'Not Found' ) ##NO_TEXT.
+            response = jsonrpc->create_error_response( id      = request-id
+                                                       code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                                       message = 'Invalid or expired MCP session' ) ##NO_TEXT.
+            response-id_present = request-id_present.
+            response-jsonrpc    = request-jsonrpc.
+            result = jsonrpc->serialize_response( response ).
             RETURN.
           ENDIF.
         WHEN zcl_mcp_session=>session_mode_mcp.
           TRY.
+              validate_session_id( session_id ).
               
               temp7 = session_id.
               CREATE OBJECT mcp_server->session TYPE zcl_mcp_session EXPORTING session_id = temp7 session_mode = mcp_server->server-session_mode create_new = abap_false.
@@ -561,16 +712,34 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
                 WHEN zcx_mcp_server=>session_unknown OR zcx_mcp_server=>session_expired.
                   mcp_server->server-http_response->set_status( code   = 404
                                                                 reason = 'Not Found' ) ##NO_TEXT.
+                  response = jsonrpc->create_error_response( id      = request-id
+                                                             code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                                             message = 'Invalid or expired MCP session' ) ##NO_TEXT.
+                  response-id_present = request-id_present.
+                  response-jsonrpc    = request-jsonrpc.
+                  result = jsonrpc->serialize_response( response ).
                   RETURN.
                 WHEN zcx_mcp_server=>session_load_error.
                   logger->error(
                       |Session { session_id } load error for { mcp_server->server-area } { mcp_server->server-server } details: { session_error->get_text( ) }| ) ##NO_TEXT.
                   mcp_server->server-http_response->set_status( code   = 500
                                                                 reason = 'Internal Error' ) ##NO_TEXT.
+                  response = jsonrpc->create_error_response( id      = request-id
+                                                             code    = zcl_mcp_jsonrpc=>error_codes-internal_error
+                                                             message = session_error->get_text( ) ).
+                  response-id_present = request-id_present.
+                  response-jsonrpc    = request-jsonrpc.
+                  result = jsonrpc->serialize_response( response ).
                   RETURN.
               ENDCASE.
               mcp_server->server-http_response->set_status( code   = 500
                                                             reason = 'Internal Error' ) ##NO_TEXT.
+              response = jsonrpc->create_error_response( id      = request-id
+                                                         code    = zcl_mcp_jsonrpc=>error_codes-internal_error
+                                                         message = session_error->get_text( ) ).
+              response-id_present = request-id_present.
+              response-jsonrpc    = request-jsonrpc.
+              result = jsonrpc->serialize_response( response ).
               RETURN.
           ENDTRY.
       ENDCASE.
@@ -582,7 +751,22 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
       
       protocol_version = mcp_server->server-http_request->get_header_field( 'Mcp-Protocol-Version' ) ##NO_TEXT.
       IF protocol_version IS INITIAL.
-        mcp_server->server-protocol_version = zif_mcp_constants=>latest_protocol_version.
+        IF mcp_server->server-protocol_version IS NOT INITIAL.
+          " Stateful ICF mode can keep the negotiated version in the server instance.
+          protocol_version = mcp_server->server-protocol_version.
+        ELSEIF mcp_server->session IS BOUND.
+          " MCP session mode can restore the negotiated version from persisted session data.
+          
+          protocol_entry = mcp_server->session->get( 'protocolVersion' ).
+          protocol_version = protocol_entry-value.
+        ENDIF.
+
+        IF protocol_version IS INITIAL.
+          " Streamable HTTP default when no negotiated version can be identified.
+          protocol_version = zif_mcp_constants=>protocol_version_2025_03_26.
+        ENDIF.
+
+        mcp_server->server-protocol_version = protocol_version.
       ELSE.
         
         SPLIT zif_mcp_constants=>supported_protocol_versions AT `,` INTO TABLE supported_protocol_versions.
@@ -595,6 +779,12 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
           " As per spec we must return a 400 error if we don't support the protocol version
           mcp_server->server-http_response->set_status( code   = 400
                                                         reason = 'Bad Request' ) ##NO_TEXT.
+          response = jsonrpc->create_error_response( id      = request-id
+                                                     code    = zcl_mcp_jsonrpc=>error_codes-invalid_request
+                                                     message = |Unsupported Mcp-Protocol-Version { protocol_version }| ) ##NO_TEXT.
+          response-id_present = request-id_present.
+          response-jsonrpc    = request-jsonrpc.
+          result = jsonrpc->serialize_response( response ).
           RETURN.
         ENDIF.
       ENDIF.
@@ -614,10 +804,13 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
             initialize = mcp_server->initialize( temp1 ).
             response-error  = initialize-error.
             response-result = initialize-result->zif_mcp_internal~generate_json( ).
-          WHEN 'ping'.  " see: https://modelcontextprotocol.io/specification/2025-06-18/basic/utilities/ping
-            CLEAR: response-error.
+          WHEN 'ping'.
+            CLEAR response-error.
             response-result = zcl_mcp_ajson=>create_empty( ).
             response-result->touch_object( '' ).
+          WHEN 'logging/setLevel'.
+            response-error-code    = zcl_mcp_jsonrpc=>error_codes-method_not_found.
+            response-error-message = 'logging/setLevel is not supported: server does not declare logging capability' ##NO_TEXT.
           WHEN 'prompts/list'.
             
             
@@ -667,36 +860,87 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
             call_tool = mcp_server->tools_call( temp10 ).
             response-error  = call_tool-error.
             response-result = call_tool-result->zif_mcp_internal~generate_json( ).
+          WHEN 'tasks/list'.
+            
+            
+            CREATE OBJECT temp11 TYPE zcl_mcp_req_list_tasks EXPORTING JSON = request-params.
+            list_tasks = mcp_server->tasks_list( temp11 ).
+            response-error  = list_tasks-error.
+            response-result = list_tasks-result->zif_mcp_internal~generate_json( ).
+          WHEN 'tasks/get'.
+            
+            
+            CREATE OBJECT temp12 TYPE zcl_mcp_req_get_task EXPORTING JSON = request-params.
+            get_task = mcp_server->tasks_get( temp12 ).
+            response-error  = get_task-error.
+            response-result = get_task-result->zif_mcp_internal~generate_json( ).
+          WHEN 'tasks/result'.
+            
+            
+            CREATE OBJECT temp13 TYPE zcl_mcp_req_get_task_payload EXPORTING JSON = request-params.
+            task_result = mcp_server->tasks_result( temp13 ).
+            response-error  = task_result-error.
+            response-result = task_result-result->zif_mcp_internal~generate_json( ).
+          WHEN 'tasks/cancel'.
+            
+            
+            CREATE OBJECT temp14 TYPE zcl_mcp_req_cancel_task EXPORTING JSON = request-params.
+            cancel_task = mcp_server->tasks_cancel( temp14 ).
+            response-error  = cancel_task-error.
+            response-result = cancel_task-result->zif_mcp_internal~generate_json( ).
+          WHEN 'completion/complete'.
+            
+            
+            CREATE OBJECT temp15 TYPE zcl_mcp_req_complete EXPORTING JSON = request-params.
+            complete = mcp_server->completions_complete( temp15 ).
+            response-error  = complete-error.
+            response-result = complete-result->zif_mcp_internal~generate_json( ).
           WHEN OTHERS.
             response-error-code    = -32601.
-            response-error-message = |Method { request-method } not allowed.| ##NO_TEXT.
+            response-error-message = |Method { request-method } not found.| ##NO_TEXT.
         ENDCASE.
 
         
       CATCH zcx_mcp_server INTO mcp_error.
-        CASE mcp_error->if_t100_message~t100key.
-          WHEN zcx_mcp_server=>invalid_arguments OR zcx_mcp_server=>prompt_name_invalid OR zcx_mcp_server=>required_params.
-            response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-            response-error-message = mcp_error->get_text( ).
-          WHEN OTHERS.
-            response-error-code    = zcl_mcp_jsonrpc=>error_codes-internal_error.
-            response-error-message = mcp_error->get_text( ).
-        ENDCASE.
+        IF     request-method = 'tools/call'
+           AND mcp_error->if_t100_message~t100key = zcx_mcp_server=>invalid_arguments.
+          
+          CREATE OBJECT err_result TYPE zcl_mcp_resp_call_tool.
+          err_result->set_error( abap_true ).
+          err_result->add_text_content( mcp_error->get_text( ) ).
+          response-result = err_result->zif_mcp_internal~generate_json( ).
+        ELSE.
+          CASE mcp_error->if_t100_message~t100key.
+            WHEN zcx_mcp_server=>invalid_arguments
+              OR zcx_mcp_server=>prompt_name_invalid
+              OR zcx_mcp_server=>required_params.
+              response-error-code = zcl_mcp_jsonrpc=>error_codes-invalid_params.
+            WHEN zcx_mcp_server=>resource_not_found.
+              response-error-code = zcl_mcp_jsonrpc=>error_codes-resource_not_found.
+            WHEN zcx_mcp_server=>unknown_tool.
+              response-error-code = zcl_mcp_jsonrpc=>error_codes-method_not_found.
+            WHEN OTHERS.
+              response-error-code = zcl_mcp_jsonrpc=>error_codes-internal_error.
+          ENDCASE.
+          response-error-message = mcp_error->get_text( ).
+        ENDIF.
+
         logger->warning(
-            |Error processing request { request-method } for { mcp_server->server-area } { mcp_server->server-server } details: { response-error-message }| ) ##NO_TEXT.
+            |Error processing request { request-method } for { mcp_server->server-area } { mcp_server->server-server } details: { mcp_error->get_text( ) }| ) ##NO_TEXT.
     ENDTRY.
 
-    response-id      = request-id.
-    response-jsonrpc = request-jsonrpc.
+    response-id         = request-id.
+    response-id_present = request-id_present.
+    response-jsonrpc    = request-jsonrpc.
 
     result = jsonrpc->serialize_response( response ).
   ENDMETHOD.
-
 
   METHOD handle_options.
     DATA origin TYPE string.
     DATA fields TYPE tihttpnvp.
     DATA request_methods TYPE string.
+      DATA request_headers TYPE string.
     origin = request->get_header_field( 'Origin' ) ##NO_TEXT.
     
     request->get_header_fields( CHANGING fields = fields ).
@@ -706,16 +950,16 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    IF ( origin_allowed( origin = origin
-                         area   = area
-                         server = server ) ) = abap_false.
+    IF origin_allowed( origin = origin
+                       area   = area
+                       server = server ) = abap_false.
       response->set_status( code   = 403
                             reason = 'Forbidden' ) ##NO_TEXT.
       RETURN.
     ENDIF.
 
-    response->set_header_field( name  = 'Access-Control-Allow-Origin'
-                                value = origin ) ##NO_TEXT.
+    set_cors_response_headers( origin   = origin
+                               response = response ).
     response->set_status( code   = 200
                           reason = 'OK' ).
 
@@ -725,9 +969,32 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
       " As the current method is fine we just return all that we support
       response->set_header_field( name  = 'Access-Control-Allow-Methods'
                                   value = 'POST, DELETE, OPTIONS' ) ##NO_TEXT.
+      
+      request_headers = request->get_header_field( 'Access-Control-Request-Headers' ) ##NO_TEXT.
+
+      IF request_headers IS NOT INITIAL.
+        response->set_header_field( name  = 'Access-Control-Allow-Headers'
+                                    value = request_headers ) ##NO_TEXT.
+      ELSE.
+        response->set_header_field(
+            name  = 'Access-Control-Allow-Headers'
+            value = 'Content-Type, Accept, Authorization, Mcp-Session-Id, Mcp-Protocol-Version' ) ##NO_TEXT.
+      ENDIF.
     ENDIF.
 
-    response->set_header_field( name = 'Access-Control-Max-Age' value = '86400' ) ##NO_TEXT.
+    response->set_header_field( name  = 'Access-Control-Max-Age'
+                                value = '86400' ) ##NO_TEXT.
+  ENDMETHOD.
+
+  METHOD set_cors_response_headers.
+    response->set_header_field( name  = 'Access-Control-Allow-Origin'
+                                value = origin ) ##NO_TEXT.
+    response->set_header_field( name  = 'Access-Control-Allow-Credentials'
+                                value = 'true' ) ##NO_TEXT.
+    response->set_header_field( name  = 'Access-Control-Expose-Headers'
+                                value = 'Mcp-Session-Id, Mcp-Protocol-Version' ) ##NO_TEXT.
+    response->set_header_field( name  = 'Vary'
+                                value = 'Origin' ) ##NO_TEXT.
   ENDMETHOD.
 
 
@@ -743,5 +1010,74 @@ CLASS ZCL_MCP_HTTP_HANDLER IMPLEMENTATION.
         EXIT.
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+
+  METHOD create_error_json.
+    DATA response   TYPE zcl_mcp_jsonrpc=>response.
+    DATA json_obj   TYPE REF TO zif_mcp_ajson.
+    DATA error_id   TYPE string.
+    DATA id_present TYPE abap_bool.
+
+    IF json IS SUPPLIED AND json IS NOT INITIAL.
+      TRY.
+          json_obj = zcl_mcp_ajson=>parse( json ).
+
+          IF json_obj->exists( '/id' ) IS NOT INITIAL.
+            CASE json_obj->get_node_type( '/id' ).
+              WHEN 'str' OR 'num'.
+                error_id   = json_obj->get_string( '/id' ).
+                id_present = abap_true.
+            ENDCASE.
+          ENDIF.
+        CATCH zcx_mcp_ajson_error.
+          " Malformed JSON: no usable id can be recovered.
+      ENDTRY.
+    ENDIF.
+
+    response = jsonrpc->create_error_response( id      = error_id
+                                               code    = code
+                                               message = message ).
+
+    response-id_present = id_present.
+    response-id_is_null = abap_false.
+
+    TRY.
+        result = jsonrpc->serialize_response( response ).
+      CATCH zcx_mcp_ajson_error.
+        result = |\{"jsonrpc":"2.0","error":\{"code":{ code },"message":"{ message }"\}\}|.
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD validate_session_id.
+      DATA temp9 TYPE symsgv.
+      DATA temp16 TYPE REF TO zcx_mcp_server.
+      DATA temp10 TYPE symsgv.
+      DATA temp17 TYPE REF TO zcx_mcp_server.
+      DATA temp11 TYPE symsgv.
+      DATA temp18 TYPE REF TO zcx_mcp_server.
+    IF session_id IS INITIAL.
+      
+      temp9 = session_id.
+      
+      CREATE OBJECT temp16 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>session_unknown msgv1 = temp9.
+      RAISE EXCEPTION temp16.
+    ENDIF.
+
+    IF strlen( session_id ) <> 32.
+      
+      temp10 = session_id.
+      
+      CREATE OBJECT temp17 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>session_unknown msgv1 = temp10.
+      RAISE EXCEPTION temp17.
+    ENDIF.
+
+    FIND REGEX '^[0-9A-Fa-f]{32}$' IN session_id.
+    IF sy-subrc <> 0.
+      
+      temp11 = session_id.
+      
+      CREATE OBJECT temp18 TYPE zcx_mcp_server EXPORTING textid = zcx_mcp_server=>session_unknown msgv1 = temp11.
+      RAISE EXCEPTION temp18.
+    ENDIF.
   ENDMETHOD.
 ENDCLASS.

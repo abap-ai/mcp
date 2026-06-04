@@ -42,9 +42,12 @@ CLASS zcl_mcp_demo_server_icfsession IMPLEMENTATION.
     DATA temp1 TYPE zcl_mcp_resp_initialize=>capabilities.
     DATA temp2 TYPE zcl_mcp_resp_initialize=>implementation.
     CLEAR temp1.
-    temp1-prompts = abap_true.
-    temp1-resources = abap_true.
-    temp1-tools = abap_true.
+    CLEAR temp1-prompts.
+    temp1-prompts-enabled = abap_true.
+    CLEAR temp1-resources.
+    temp1-resources-enabled = abap_true.
+    CLEAR temp1-tools.
+    temp1-tools-enabled = abap_true.
     response-result->set_capabilities( temp1 ).
     
     CLEAR temp2.

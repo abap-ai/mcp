@@ -27,6 +27,11 @@
      <LANGU>E</LANGU>
      <DESCRIPT>Retrieves current server time</DESCRIPT>
     </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>START_FLIGHT_REPORT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Starts an async flight report task</DESCRIPT>
+    </SEOCOMPOTX>
    </DESCRIPTIONS>
    <DESCRIPTIONS_SUB>
     <SEOSUBCOTX>
@@ -58,6 +63,18 @@
      <SCONAME>RESPONSE</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Response object to be filled with server time</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>START_FLIGHT_REPORT</CMPNAME>
+     <SCONAME>REQUEST</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Request with airline_code input</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>START_FLIGHT_REPORT</CMPNAME>
+     <SCONAME>RESPONSE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Response containing the task ID</DESCRIPT>
     </SEOSUBCOTX>
    </DESCRIPTIONS_SUB>
   </asx:values>

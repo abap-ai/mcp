@@ -7,12 +7,24 @@ CLASS zcl_mcp_resp_list_tools DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_mcp_internal.
 
+    CONSTANTS: BEGIN OF task_support,
+                 forbidden TYPE string VALUE 'forbidden',
+                 optional  TYPE string VALUE 'optional',
+                 required  TYPE string VALUE 'required',
+               END OF task_support.
+
+    TYPES: BEGIN OF execution,
+             task_support TYPE string,
+           END OF execution.
+
     TYPES: BEGIN OF tool_annotations,
-             title           TYPE string,
-             readonlyhint    TYPE abap_bool,
-             destructivehint TYPE abap_bool,
-             idempotenthint  TYPE abap_bool,
-             openworldhint   TYPE abap_bool,
+             title               TYPE string,
+             readonlyhint        TYPE abap_bool,
+             destructivehint     TYPE abap_bool,
+             destructivehint_set TYPE abap_bool,
+             idempotenthint      TYPE abap_bool,
+             openworldhint       TYPE abap_bool,
+             openworldhint_set   TYPE abap_bool,
            END OF tool_annotations.
 
     TYPES: BEGIN OF tool,
@@ -20,14 +32,16 @@ CLASS zcl_mcp_resp_list_tools DEFINITION
              description   TYPE string,
              title         TYPE string,
              input_schema  TYPE REF TO zif_mcp_ajson,
-             annotations   TYPE tool_annotations,
              output_schema TYPE REF TO zif_mcp_ajson,
+             annotations   TYPE tool_annotations,
+             execution     TYPE execution,
+             icons         TYPE zif_mcp_types=>icon_list,
              meta          TYPE REF TO zif_mcp_ajson,
            END OF tool.
 
     "! Table of tools
     TYPES tools       TYPE STANDARD TABLE OF tool WITH KEY name.
-    TYPES next_cursor TYPE string.
+    TYPES next_cursor TYPE zif_mcp_types=>page_cursor.
 
     "! <p class="shorttext synchronized">Set Tools</p>
     "!
@@ -49,9 +63,21 @@ CLASS zcl_mcp_resp_list_tools DEFINITION
     METHODS set_meta
       IMPORTING meta TYPE REF TO zif_mcp_ajson.
 
+    "! <p class="shorttext synchronized">Return tools</p>
+    "!
+    "! @parameter result | <p class="shorttext synchronized">Tools</p>
+    METHODS get_tools
+      RETURNING VALUE(result) TYPE tools.
+
+    "! <p class="shorttext synchronized" lang="en">Get next cursor</p>
+    "!
+    "! @parameter result | <p class="shorttext synchronized" lang="en">Cursor</p>
+    METHODS get_next_cursor
+      RETURNING VALUE(result) TYPE next_cursor.
+
   PRIVATE SECTION.
-    DATA int_tools      TYPE tools.
-    DATA int_next_cursor TYPE string.
+    DATA int_tools       TYPE tools.
+    DATA int_next_cursor TYPE zif_mcp_types=>page_cursor.
     DATA int_meta        TYPE REF TO zif_mcp_ajson.
 ENDCLASS.
 
@@ -59,6 +85,9 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
     FIELD-SYMBOLS <tool> LIKE LINE OF int_tools.
       DATA tool_index LIKE sy-tabix.
+        FIELD-SYMBOLS <icon> LIKE LINE OF <tool>-icons.
+          DATA icon_path TYPE string.
+            FIELD-SYMBOLS <size> LIKE LINE OF <icon>-sizes.
     result = zcl_mcp_ajson=>create_empty( ).
 
     " Create tools array
@@ -111,11 +140,13 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
       ENDIF.
 
       " Add annotations (optional)
-      IF    <tool>-annotations-title           IS NOT INITIAL
-         OR <tool>-annotations-readonlyhint     = abap_true
-         OR <tool>-annotations-destructivehint  = abap_true
-         OR <tool>-annotations-idempotenthint   = abap_true
-         OR <tool>-annotations-openworldhint    = abap_true.
+      IF    <tool>-annotations-title               IS NOT INITIAL
+         OR <tool>-annotations-readonlyhint         = abap_true
+         OR <tool>-annotations-destructivehint      = abap_true
+         OR <tool>-annotations-destructivehint_set  = abap_true
+         OR <tool>-annotations-idempotenthint       = abap_true
+         OR <tool>-annotations-openworldhint        = abap_true
+         OR <tool>-annotations-openworldhint_set    = abap_true.
 
         " Add title if not empty
         IF <tool>-annotations-title IS NOT INITIAL.
@@ -123,29 +154,70 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
                        iv_val  = <tool>-annotations-title ).
         ENDIF.
 
-        " Add readOnlyHint if true
+        " readOnlyHint - spec default false, emit only when true
         IF <tool>-annotations-readonlyhint = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/readOnlyHint|
-                       iv_val  = <tool>-annotations-readonlyhint ).
+                       iv_val  = abap_true ).
         ENDIF.
 
-        " Add destructiveHint if true
-        IF <tool>-annotations-destructivehint = abap_true.
+        " destructiveHint - spec default true; emit explicit override or legacy abap_true
+        IF <tool>-annotations-destructivehint_set = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/destructiveHint|
                        iv_val  = <tool>-annotations-destructivehint ).
+        ELSEIF <tool>-annotations-destructivehint = abap_true.
+          result->set( iv_path = |/tools/{ tool_index }/annotations/destructiveHint|
+                       iv_val  = abap_true ).
         ENDIF.
 
-        " Add idempotentHint if true
+        " idempotentHint - spec default false, emit only when true
         IF <tool>-annotations-idempotenthint = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/idempotentHint|
-                       iv_val  = <tool>-annotations-idempotenthint ).
+                       iv_val  = abap_true ).
         ENDIF.
 
-        " Add openWorldHint if true
-        IF <tool>-annotations-openworldhint = abap_true.
+        " openWorldHint - spec default true; emit explicit override or legacy abap_true
+        IF <tool>-annotations-openworldhint_set = abap_true.
           result->set( iv_path = |/tools/{ tool_index }/annotations/openWorldHint|
                        iv_val  = <tool>-annotations-openworldhint ).
+        ELSEIF <tool>-annotations-openworldhint = abap_true.
+          result->set( iv_path = |/tools/{ tool_index }/annotations/openWorldHint|
+                       iv_val  = abap_true ).
         ENDIF.
+      ENDIF.
+
+      " Add execution (optional, new in MCP 2025-11-25)
+      " Omit entirely when initial - absent execution means forbidden by default.
+      IF <tool>-execution-task_support IS NOT INITIAL.
+        result->set( iv_path = |/tools/{ tool_index }/execution/taskSupport|
+                     iv_val  = <tool>-execution-task_support ).
+      ENDIF.
+
+      " Add icons (optional, new in MCP 2025-11-25)
+      IF <tool>-icons IS NOT INITIAL.
+        result->touch_array( |/tools/{ tool_index }/icons| ).
+        
+        LOOP AT <tool>-icons ASSIGNING <icon>.
+          
+          icon_path = |/tools/{ tool_index }/icons/{ sy-tabix }|.
+          result->set( iv_path = |{ icon_path }/src|
+                       iv_val  = <icon>-src ).
+          IF <icon>-mime_type IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/mimeType|
+                         iv_val  = <icon>-mime_type ).
+          ENDIF.
+          IF <icon>-sizes IS NOT INITIAL.
+            result->touch_array( |{ icon_path }/sizes| ).
+            
+            LOOP AT <icon>-sizes ASSIGNING <size>.
+              result->set( iv_path = |{ icon_path }/sizes/{ sy-tabix }|
+                           iv_val  = <size> ).
+            ENDLOOP.
+          ENDIF.
+          IF <icon>-theme IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/theme|
+                         iv_val  = <icon>-theme ).
+          ENDIF.
+        ENDLOOP.
       ENDIF.
     ENDLOOP.
 
@@ -173,5 +245,13 @@ CLASS zcl_mcp_resp_list_tools IMPLEMENTATION.
 
   METHOD set_meta.
     int_meta = meta.
+  ENDMETHOD.
+
+  METHOD get_tools.
+    result = int_tools.
+  ENDMETHOD.
+
+  METHOD get_next_cursor.
+    result = int_next_cursor.
   ENDMETHOD.
 ENDCLASS.

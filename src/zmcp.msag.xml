@@ -77,6 +77,36 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZMCP</ARBGB>
+     <MSGNR>011</MSGNR>
+     <TEXT>Session with id &amp;1 is expired</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>012</MSGNR>
+     <TEXT>Session &amp;1 unknown</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>013</MSGNR>
+     <TEXT>Session load error &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>014</MSGNR>
+     <TEXT>Session save error &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>015</MSGNR>
+     <TEXT>Task &amp;1 not found</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
      <MSGNR>100</MSGNR>
      <TEXT>Schema root must be of type &quot;object&quot;, but found &amp;1</TEXT>
     </T100>
@@ -247,6 +277,24 @@
      <ARBGB>ZMCP</ARBGB>
      <MSGNR>128</MSGNR>
      <TEXT>Integer must be at most &amp;1, but is &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>200</MSGNR>
+     <TEXT>Structure/table &amp;1 not found</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>201</MSGNR>
+     <TEXT>Invalid override for field &amp;1: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMCP</ARBGB>
+     <MSGNR>202</MSGNR>
+     <TEXT>Error processing &amp;1 field &amp;2: &amp;3</TEXT>
     </T100>
    </T100>
   </asx:values>

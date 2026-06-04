@@ -4,9 +4,11 @@ CLASS zcl_mcp_req_initialize DEFINITION
 
   PUBLIC SECTION.
     TYPES: BEGIN OF implementation,
-             name    TYPE string,
-             version TYPE string,
-             title   TYPE string,
+             name        TYPE string,
+             version     TYPE string,
+             title       TYPE string,
+             description TYPE string,
+             website_url TYPE string,
            END OF implementation.
 
     TYPES: BEGIN OF roots_capability,
@@ -18,7 +20,7 @@ CLASS zcl_mcp_req_initialize DEFINITION
            END OF client_capabilities.
 
     "! <p class="shorttext synchronized">Constructor</p>
-    "! Parses the Initialize Request JSON
+    "! Parses the Initialize Request JSON (MCP 2025-11-25)
     "!
     "! @parameter json | <p class="shorttext synchronized">JSON Request</p>
     METHODS constructor
@@ -38,6 +40,7 @@ CLASS zcl_mcp_req_initialize DEFINITION
       RETURNING VALUE(result) TYPE client_capabilities.
 
     "! <p class="shorttext synchronized">Get Client Info</p>
+    "! Now includes optional description and websiteUrl (MCP 2025-11-25).
     "!
     "! @parameter result | <p class="shorttext synchronized">Client Info</p>
     METHODS get_client_info
@@ -55,6 +58,21 @@ CLASS zcl_mcp_req_initialize DEFINITION
     METHODS has_sampling_capability
       RETURNING VALUE(result) TYPE abap_bool.
 
+    "! <p class="shorttext synchronized">Check if elicitation capability exists</p>
+    "! New in MCP 2025-11-25. The server does not send elicitation requests,
+    "! but this tells you what the client has declared.
+    "!
+    "! @parameter result | <p class="shorttext synchronized">True if exists</p>
+    METHODS has_elicitation_capability
+      RETURNING VALUE(result) TYPE abap_bool.
+
+    "! <p class="shorttext synchronized">Check if tasks capability exists</p>
+    "! New in MCP 2025-11-25. Required for task-augmented tool execution.
+    "!
+    "! @parameter result | <p class="shorttext synchronized">True if exists</p>
+    METHODS has_tasks_capability
+      RETURNING VALUE(result) TYPE abap_bool.
+
     "! <p class="shorttext synchronized">Check if experimental capability exists</p>
     "!
     "! @parameter result | <p class="shorttext synchronized">True if exists</p>
@@ -62,9 +80,25 @@ CLASS zcl_mcp_req_initialize DEFINITION
       RETURNING VALUE(result) TYPE abap_bool.
 
     "! <p class="shorttext synchronized">Get sampling capability JSON</p>
+    "! Contains optional context and tools sub-objects (MCP 2025-11-25).
     "!
     "! @parameter result | <p class="shorttext synchronized">JSON object</p>
     METHODS get_sampling_json
+      RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson.
+
+    "! <p class="shorttext synchronized">Get elicitation capability JSON</p>
+    "! New in MCP 2025-11-25. Contains optional form and url sub-objects.
+    "!
+    "! @parameter result | <p class="shorttext synchronized">JSON object</p>
+    METHODS get_elicitation_json
+      RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson.
+
+    "! <p class="shorttext synchronized">Get tasks capability JSON</p>
+    "! New in MCP 2025-11-25. Contains list, cancel, and requests sub-objects.
+    "! Use to inspect fine-grained task support (e.g. tasks/list, tasks/cancel).
+    "!
+    "! @parameter result | <p class="shorttext synchronized">JSON object</p>
+    METHODS get_tasks_json
       RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson.
 
     "! <p class="shorttext synchronized">Get experimental capability JSON</p>
@@ -80,15 +114,19 @@ CLASS zcl_mcp_req_initialize DEFINITION
       RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson.
 
   PRIVATE SECTION.
-    DATA int_protocol_version  TYPE string.
-    DATA int_capabilities      TYPE client_capabilities.
-    DATA int_client_info       TYPE implementation.
-    DATA int_has_roots         TYPE abap_bool.
-    DATA int_has_sampling      TYPE abap_bool.
-    DATA int_has_experimental  TYPE abap_bool.
-    DATA int_sampling_json     TYPE REF TO zif_mcp_ajson.
-    DATA int_experimental_json TYPE REF TO zif_mcp_ajson.
-    DATA int_meta              TYPE REF TO zif_mcp_ajson.
+    DATA int_protocol_version   TYPE string.
+    DATA int_capabilities       TYPE client_capabilities.
+    DATA int_client_info        TYPE implementation.
+    DATA int_has_roots          TYPE abap_bool.
+    DATA int_has_sampling       TYPE abap_bool.
+    DATA int_has_elicitation    TYPE abap_bool.
+    DATA int_has_tasks          TYPE abap_bool.
+    DATA int_has_experimental   TYPE abap_bool.
+    DATA int_sampling_json      TYPE REF TO zif_mcp_ajson.
+    DATA int_elicitation_json   TYPE REF TO zif_mcp_ajson.
+    DATA int_tasks_json         TYPE REF TO zif_mcp_ajson.
+    DATA int_experimental_json  TYPE REF TO zif_mcp_ajson.
+    DATA int_meta               TYPE REF TO zif_mcp_ajson.
 ENDCLASS.
 
 CLASS zcl_mcp_req_initialize IMPLEMENTATION.
@@ -96,12 +134,23 @@ CLASS zcl_mcp_req_initialize IMPLEMENTATION.
     " Parse protocol version
     int_protocol_version = json->get_string( '/protocolVersion' ).
 
-    " Parse client info
+    " Parse client info - description and websiteUrl are new optional fields
+    " in MCP 2025-11-25 (Implementation now extends BaseMetadata + Icons).
+    " icons is intentionally skipped: it is an array of complex objects
+    " that the server has no use for during initialization.
     int_client_info-name    = json->get_string( '/clientInfo/name' ).
     int_client_info-version = json->get_string( '/clientInfo/version' ).
-    int_client_info-title   = json->get_string( '/clientInfo/title' ).
+    IF json->exists( '/clientInfo/title' ) IS NOT INITIAL.
+      int_client_info-title = json->get_string( '/clientInfo/title' ).
+    ENDIF.
+    IF json->exists( '/clientInfo/description' ) IS NOT INITIAL.
+      int_client_info-description = json->get_string( '/clientInfo/description' ).
+    ENDIF.
+    IF json->exists( '/clientInfo/websiteUrl' ) IS NOT INITIAL.
+      int_client_info-website_url = json->get_string( '/clientInfo/websiteUrl' ).
+    ENDIF.
 
-    " Parse capabilities
+    " Parse capabilities - roots
     IF json->exists( '/capabilities/roots' ) IS NOT INITIAL.
       int_has_roots = abap_true.
       IF json->exists( '/capabilities/roots/listChanged' ) IS NOT INITIAL.
@@ -109,18 +158,38 @@ CLASS zcl_mcp_req_initialize IMPLEMENTATION.
       ENDIF.
     ENDIF.
 
-    " For complex structures, we'll just store the JSON subtree
+    " sampling: stored as JSON slice; in 2025-11-25 it may contain
+    " context and tools sub-objects but their internal structure is
+    " opaque to the server (just presence matters for capability checks).
     IF json->exists( '/capabilities/sampling' ) IS NOT INITIAL.
-      int_has_sampling = abap_true.
+      int_has_sampling  = abap_true.
       int_sampling_json = json->slice( '/capabilities/sampling' ).
     ENDIF.
 
+    " elicitation: new in MCP 2025-11-25.
+    " The server does not send elicitation requests, but we parse this
+    " so callers can inspect what form/url modes the client declared.
+    IF json->exists( '/capabilities/elicitation' ) IS NOT INITIAL.
+      int_has_elicitation  = abap_true.
+      int_elicitation_json = json->slice( '/capabilities/elicitation' ).
+    ENDIF.
+
+    " tasks: new in MCP 2025-11-25.
+    " Stored as JSON slice - the nested structure (list, cancel, requests)
+    " is best inspected by callers via get_tasks_json rather than
+    " pre-flattening into a fixed struct, keeping options open as the
+    " tasks feature evolves.
+    IF json->exists( '/capabilities/tasks' ) IS NOT INITIAL.
+      int_has_tasks  = abap_true.
+      int_tasks_json = json->slice( '/capabilities/tasks' ).
+    ENDIF.
+
     IF json->exists( '/capabilities/experimental' ) IS NOT INITIAL.
-      int_has_experimental = abap_true.
+      int_has_experimental  = abap_true.
       int_experimental_json = json->slice( '/capabilities/experimental' ).
     ENDIF.
 
-    " Check for _meta fields
+    " _meta
     IF json->exists( '/_meta' ) IS NOT INITIAL.
       int_meta = json->slice( '/_meta' ).
     ELSE.
@@ -148,12 +217,28 @@ CLASS zcl_mcp_req_initialize IMPLEMENTATION.
     result = int_has_sampling.
   ENDMETHOD.
 
+  METHOD has_elicitation_capability.
+    result = int_has_elicitation.
+  ENDMETHOD.
+
+  METHOD has_tasks_capability.
+    result = int_has_tasks.
+  ENDMETHOD.
+
   METHOD has_experimental_capability.
     result = int_has_experimental.
   ENDMETHOD.
 
   METHOD get_sampling_json.
     result = int_sampling_json.
+  ENDMETHOD.
+
+  METHOD get_elicitation_json.
+    result = int_elicitation_json.
+  ENDMETHOD.
+
+  METHOD get_tasks_json.
+    result = int_tasks_json.
   ENDMETHOD.
 
   METHOD get_experimental_json.
