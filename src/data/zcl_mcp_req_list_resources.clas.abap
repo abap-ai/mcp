@@ -11,7 +11,7 @@ CLASS zcl_mcp_req_list_resources DEFINITION
     "!
     "! @parameter json | <p class="shorttext synchronized">JSON Request</p>
     METHODS constructor
-      IMPORTING json TYPE REF TO zif_mcp_ajson
+      IMPORTING !json TYPE REF TO zif_mcp_ajson
       RAISING   zcx_mcp_ajson_error.
 
     "! <p class="shorttext synchronized">Get cursor for pagination</p>
@@ -55,7 +55,6 @@ CLASS zcl_mcp_req_list_resources IMPLEMENTATION.
     ELSE.
       int_meta = zcl_mcp_ajson=>create_empty( ).
     ENDIF.
-
   ENDMETHOD.
 
   METHOD get_cursor.

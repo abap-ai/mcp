@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_RESP_COMPLETE</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP Completion Result</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>ADD_VALUE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Add a single completion candidate</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_HAS_MORE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Signal additional candidates exist</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_META</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set meta data</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_TOTAL</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set total candidate count</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_VALUES</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Replace the full candidate list</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_VALUE</CMPNAME>
+     <SCONAME>VALUE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Completion candidate string</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_HAS_MORE</CMPNAME>
+     <SCONAME>HAS_MORE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>True if more candidates exist</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_META</CMPNAME>
+     <SCONAME>META</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Meta data JSON object</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TOTAL</CMPNAME>
+     <SCONAME>TOTAL</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Total candidate count</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_VALUES</CMPNAME>
+     <SCONAME>VALUES</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>List of completion candidates</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

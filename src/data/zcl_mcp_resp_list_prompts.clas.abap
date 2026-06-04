@@ -21,12 +21,13 @@ CLASS zcl_mcp_resp_list_prompts DEFINITION
              description TYPE string,
              arguments   TYPE prompt_arguments,
              title       TYPE string,
+             icons       TYPE zif_mcp_types=>icon_list,
              meta        TYPE REF TO zif_mcp_ajson,
            END OF prompt.
 
     TYPES prompts     TYPE STANDARD TABLE OF prompt WITH KEY name.
 
-    TYPES next_cursor TYPE string.
+    TYPES next_cursor TYPE zif_mcp_types=>page_cursor.
 
     "! <p class="shorttext synchronized">Set Prompts</p>
     "!
@@ -50,7 +51,7 @@ CLASS zcl_mcp_resp_list_prompts DEFINITION
 
   PRIVATE SECTION.
     DATA int_prompts     TYPE prompts.
-    DATA int_next_cursor TYPE string.
+    DATA int_next_cursor TYPE zif_mcp_types=>page_cursor.
     DATA int_meta        TYPE REF TO zif_mcp_ajson.
 ENDCLASS.
 
@@ -58,6 +59,9 @@ CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
     FIELD-SYMBOLS <prompt> LIKE LINE OF int_prompts.
       DATA prompt_index LIKE sy-tabix.
+        FIELD-SYMBOLS <icon> LIKE LINE OF <prompt>-icons.
+          DATA icon_path TYPE string.
+            FIELD-SYMBOLS <size> LIKE LINE OF <icon>-sizes.
       FIELD-SYMBOLS <argument> LIKE LINE OF <prompt>-arguments.
         DATA arg_index LIKE sy-tabix.
     result = zcl_mcp_ajson=>create_empty( ).
@@ -92,6 +96,34 @@ CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
       IF <prompt>-meta IS BOUND.
         result->set( iv_path = |/prompts/{ prompt_index }/_meta|
                      iv_val  = <prompt>-meta ).
+      ENDIF.
+
+      " Add icons (optional, new in MCP 2025-11-25)
+      IF <prompt>-icons IS NOT INITIAL.
+        result->touch_array( |/prompts/{ prompt_index }/icons| ).
+        
+        LOOP AT <prompt>-icons ASSIGNING <icon>.
+          
+          icon_path = |/prompts/{ prompt_index }/icons/{ sy-tabix }|.
+          result->set( iv_path = |{ icon_path }/src|
+                       iv_val  = <icon>-src ).
+          IF <icon>-mime_type IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/mimeType|
+                         iv_val  = <icon>-mime_type ).
+          ENDIF.
+          IF <icon>-sizes IS NOT INITIAL.
+            result->touch_array( |{ icon_path }/sizes| ).
+            
+            LOOP AT <icon>-sizes ASSIGNING <size>.
+              result->set( iv_path = |{ icon_path }/sizes/{ sy-tabix }|
+                           iv_val  = <size> ).
+            ENDLOOP.
+          ENDIF.
+          IF <icon>-theme IS NOT INITIAL.
+            result->set( iv_path = |{ icon_path }/theme|
+                         iv_val  = <icon>-theme ).
+          ENDIF.
+        ENDLOOP.
       ENDIF.
 
       " Create arguments array if there are arguments
