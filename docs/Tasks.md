@@ -33,9 +33,9 @@ The framework handles the `tasks/list`, `tasks/get`, `tasks/result`, and `tasks/
 working → completed
         → failed
         → cancelled       (via tasks/cancel)
-        → input_required → working
-                       → completed / failed / cancelled
 ```
+
+Note: This ABAP implementation does not support the MCP `input_required` task state. The current HTTP transport does not keep an SSE or long-lived response channel open for task-related follow-up messages. Tasks therefore remain `working` until they reach `completed`, `failed`, or `cancelled`.
 
 Status constants are available on `ZCL_MCP_TASKS` and mirrored in `ZIF_MCP_TYPES=>task_states`:
 
@@ -45,7 +45,6 @@ Status constants are available on `ZCL_MCP_TASKS` and mirrored in `ZIF_MCP_TYPES
 | `status_completed`      | `completed`      | Payload is ready for retrieval |
 | `status_failed`         | `failed`         | Job encountered a non-recoverable error |
 | `status_cancelled`      | `cancelled`      | Client requested cancellation |
-| `status_input_required` | `input_required` | Job is waiting for additional client input |
 
 ## Database Table
 
@@ -83,11 +82,6 @@ DATA(task_id) = tasks->create_task(
 From the background job (class methods — safe to call without an HTTP context):
 
 ```abap
-" Signal work is underway
-zcl_mcp_tasks=>update_status(
-    task_id = p_taskid
-    status  = zcl_mcp_tasks=>status_working ).
-
 " Report completion with a CallToolResult-shaped payload
 DATA(task_result) = NEW zcl_mcp_resp_task_payload( ).
 task_result->add_text_content( 'Export finished' ).
@@ -233,7 +227,7 @@ Use the report `ZMCP_CLEAR_MCP_TASKS` to remove outdated records:
 
 - Completed, failed, and cancelled tasks whose TTL has elapsed are deleted.
 - Terminal tasks without a TTL are deleted after the default retention period.
-- Working and input-required tasks older than the maximum lifetime are also deleted.
+- Working tasks older than the maximum lifetime are also deleted.
 
 Schedule this report as a regular background job.
 

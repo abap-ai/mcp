@@ -134,7 +134,7 @@ To install the MCP Server SDK, follow these steps:
 
 You can use the report `zmcp_clear_mcp_sessions` to get rid of outdated MCP sessions. Ideally run it regularly as a background job if you use MCP sessions.
 
-Use the report `zmcp_clear_mcp_tasks` to remove outdated task records from `ZMCP_TASKS`. It deletes completed, failed, and cancelled tasks whose TTL has elapsed, terminal tasks without a TTL after the default retention period, and working/input-required tasks older than the maximum lifetime. Schedule it as a regular background job if you use the tasks feature.
+Use the report `zmcp_clear_mcp_tasks` to remove outdated task records from `ZMCP_TASKS`. It deletes completed, failed, and cancelled tasks whose TTL has elapsed, terminal tasks without a TTL after the default retention period, and working tasks older than the maximum lifetime. Schedule it as a regular background job if you use the tasks feature.
 
 ### Prerequisites
 

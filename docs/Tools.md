@@ -362,6 +362,8 @@ APPEND VALUE #(
 | `task_support-optional`  | Client may poll for a task; a synchronous result is also acceptable |
 | `task_support-required`  | Tool requires task-augmented execution and returns a task object |
 
+The framework validates task support when the client explicitly sends a `task` block and rejects calls to tools that advertise `task_support-forbidden`. To keep normal synchronous `tools/call` requests cheap, the base class does not rebuild the full tool catalogue just to enforce `task_support-required`; tools that truly cannot run synchronously should reject non-task calls in `handle_call_tool`.
+
 See [Tasks](Tasks.md) for the full task lifecycle API.
 
 ## Examples
