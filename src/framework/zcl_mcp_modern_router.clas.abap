@@ -18,7 +18,7 @@ CREATE PUBLIC.
       RETURNING VALUE(response) TYPE zcl_mcp_jsonrpc=>response.
 
   PRIVATE SECTION.
-    CONSTANTS c_error_param_header TYPE symsgv VALUE 'PARAM_HEADER'.
+    CONSTANTS error_param_header TYPE symsgv VALUE 'PARAM_HEADER'.
 
     CLASS-METHODS apply_v2_response
       IMPORTING server      TYPE REF TO zif_mcp_server_v2
@@ -156,7 +156,7 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
                                         call_request = call_request ).
               CATCH zcx_mcp_server INTO DATA(header_error).
                 response = error_response( request = request
-                                           code    = COND #( WHEN header_error->msgv2 = c_error_param_header
+                                           code    = COND #( WHEN header_error->msgv2 = error_param_header
                                                              THEN zcl_mcp_jsonrpc=>error_codes-header_mismatch
                                                              ELSE zcl_mcp_jsonrpc=>error_codes-invalid_params )
                                            message = header_error->get_text( ) ).
@@ -180,7 +180,7 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
           WHEN OTHERS.
             response = error_response( request = request
                                        code    = zcl_mcp_jsonrpc=>error_codes-method_not_found
-                                       message = |Method { request-method } not found.| ).
+                                       message = |Method { request-method } not found.| ) ##NO_TEXT.
             RETURN.
         ENDCASE.
 
@@ -231,7 +231,7 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
          OR context-extensions->exists( '/io.modelcontextprotocol~1tasks' )  = abap_false.
 
         response-error-code    = zcl_mcp_jsonrpc=>error_codes-missing_client_capability.
-        response-error-message = `Client did not declare io.modelcontextprotocol/tasks.`.
+        response-error-message = `Client did not declare io.modelcontextprotocol/tasks.` ##NO_TEXT.
 
         TRY.
             error_data = zcl_mcp_ajson=>create_empty( ).
@@ -294,22 +294,22 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
           argument_path = |/{ header_param-property }|.
 
           IF arguments IS NOT BOUND OR arguments->exists( argument_path ) = abap_false.
-            header_value = context-http_request->get_header_field( header_param-header_name ) ##NO_TEXT.
+            header_value = context-http_request->get_header_field( header_param-header_name ).
 
             IF header_value IS NOT INITIAL.
               RAISE EXCEPTION NEW zcx_mcp_server(
                   textid = zcx_mcp_server=>invalid_arguments
-                  msgv1  = CONV #( |{ header_param-header_name } supplied but argument { argument_path } is missing| ) ).
+                  msgv1  = CONV #( |{ header_param-header_name } supplied but argument { argument_path } is missing| ) ) ##NO_TEXT.
             ENDIF.
 
             CONTINUE.
           ENDIF.
 
-          header_value = context-http_request->get_header_field( header_param-header_name ) ##NO_TEXT.
+          header_value = context-http_request->get_header_field( header_param-header_name ).
 
           IF header_value IS INITIAL.
             RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                                msgv1  = CONV #( |Missing { header_param-header_name } header| ) ).
+                                                msgv1  = CONV #( |Missing { header_param-header_name } header| ) ) ##NO_TEXT.
           ENDIF.
 
           body_value = argument_to_header_value( arguments = arguments
@@ -324,7 +324,7 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
       CATCH zcx_mcp_server INTO DATA(param_error).
         RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
                                             msgv1  = param_error->msgv1
-                                            msgv2  = c_error_param_header ).
+                                            msgv2  = error_param_header ).
     ENDTRY.
   ENDMETHOD.
 
@@ -373,7 +373,7 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
                                            path   = nested_path ) = abap_true.
             RAISE EXCEPTION NEW zcx_mcp_server(
                 textid = zcx_mcp_server=>invalid_arguments
-                msgv1  = CONV #( |Nested x-mcp-header annotations are not supported: { nested_path }| ) ).
+                msgv1  = CONV #( |Nested x-mcp-header annotations are not supported: { nested_path }| ) ) ##NO_TEXT.
           ENDIF.
         ENDLOOP.
       ENDIF.
@@ -383,7 +383,7 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
                                            path   = |{ property_path }/items| ) = abap_true.
         RAISE EXCEPTION NEW zcx_mcp_server(
             textid = zcx_mcp_server=>invalid_arguments
-            msgv1  = CONV #( |Nested x-mcp-header annotations are not supported: { property_path }/items| ) ).
+            msgv1  = CONV #( |Nested x-mcp-header annotations are not supported: { property_path }/items| ) ) ##NO_TEXT.
       ENDIF.
 
       IF schema->exists( |{ property_path }/x-mcp-header| ) = abap_false.
@@ -392,24 +392,24 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
 
       header_suffix = schema->get_string( |{ property_path }/x-mcp-header| ).
 
-      IF     header_suffix IS INITIAL
-         AND schema->get_node_type( |{ property_path }/x-mcp-header| )  = 'bool'
-         AND schema->get_boolean( |{ property_path }/x-mcp-header| )    = abap_true.
+      IF     schema->get_node_type( |{ property_path }/x-mcp-header| ) = 'bool'
+         AND schema->get_boolean( |{ property_path }/x-mcp-header| )   = abap_true.
         header_suffix = property.
+      ELSE.
+        header_suffix = schema->get_string( |{ property_path }/x-mcp-header| ).
       ENDIF.
-
       property_type = schema->get_string( |{ property_path }/type| ).
 
       IF property_type <> 'string' AND property_type <> 'integer' AND property_type <> 'boolean'.
         RAISE EXCEPTION NEW zcx_mcp_server(
             textid = zcx_mcp_server=>invalid_arguments
-            msgv1  = CONV #( |x-mcp-header is not allowed on { property_type } property { property }| ) ).
+            msgv1  = CONV #( |x-mcp-header is not allowed on { property_type } property { property }| ) ) ##NO_TEXT.
       ENDIF.
 
       IF is_valid_header_suffix( header_suffix ) = abap_false.
         RAISE EXCEPTION NEW zcx_mcp_server(
                                 textid = zcx_mcp_server=>invalid_arguments
-                                msgv1  = CONV #( |Invalid x-mcp-header value for { property }: { header_suffix }| ) ).
+                                msgv1  = CONV #( |Invalid x-mcp-header value for { property }: { header_suffix }| ) ) ##NO_TEXT.
       ENDIF.
 
       header_key = header_suffix.
@@ -417,7 +417,7 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
 
       IF line_exists( seen_headers[ table_line = header_key ] ).
         RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                            msgv1  = CONV #( |Duplicate x-mcp-header value: { header_suffix }| ) ).
+                                            msgv1  = CONV #( |Duplicate x-mcp-header value: { header_suffix }| ) ) ##NO_TEXT.
       ENDIF.
 
       APPEND header_key TO seen_headers.
@@ -426,13 +426,13 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
       header_param-property      = property.
       header_param-property_type = property_type.
       header_param-header_suffix = header_suffix.
-      header_param-header_name   = |Mcp-Param-{ header_suffix }|.
+      header_param-header_name   = |Mcp-Param-{ header_suffix }| ##NO_TEXT.
       APPEND header_param TO result.
     ENDLOOP.
   ENDMETHOD.
 
   METHOD is_valid_header_suffix.
-    DATA allowed TYPE string VALUE 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&''*+-.^_`|~'.
+    DATA allowed TYPE string VALUE 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&''*+-.^_`|~' ##NO_TEXT.
 
     result = abap_false.
 
@@ -479,7 +479,6 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
 
   METHOD normalize_header_value.
     DATA encoded     TYPE string.
-    DATA decoded     TYPE xstring.
     DATA encoded_len TYPE i.
     DATA value_len   TYPE i.
     DATA end_offset  TYPE i.
@@ -496,29 +495,18 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
         encoded_len = value_len - 11.
         encoded = header_value+9(encoded_len).
 
-        IF    encoded IS INITIAL
-           OR encoded CN `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=`.
+        IF    encoded           IS INITIAL
+           OR encoded           CN `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=`
+           OR encoded_len MOD 4 <> 0.
           RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                              msgv1  = CONV #( |Invalid { header_name } base64 value| ) ).
-        ENDIF.
-
-        CALL FUNCTION 'SCMS_BASE64_DECODE_STR'
-          EXPORTING  input    = encoded
-                     unescape = ``
-          IMPORTING  output   = decoded
-          EXCEPTIONS failed   = 1
-                     OTHERS   = 2.
-
-        IF sy-subrc <> 0.
-          RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                              msgv1  = CONV #( |Invalid { header_name } base64 value| ) ).
+                                              msgv1  = CONV #( |Invalid { header_name } base64 value| ) ) ##NO_TEXT.
         ENDIF.
 
         TRY.
-            result = cl_abap_codepage=>convert_from( source = decoded ).
+            result = cl_http_utility=>decode_base64( encoded = encoded ).
           CATCH cx_root.
             RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                                msgv1  = CONV #( |Invalid { header_name } base64 text| ) ).
+                                                msgv1  = CONV #( |Invalid { header_name } base64 value| ) ) ##NO_TEXT.
         ENDTRY.
       ENDIF.
     ENDIF.
@@ -532,7 +520,7 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
        OR header_value CS cl_abap_char_utilities=>cr_lf
        OR header_value CS cl_abap_char_utilities=>horizontal_tab.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                          msgv1  = CONV #( |Unsafe control character in { header_name }| ) ).
+                                          msgv1  = CONV #( |Unsafe control character in { header_name }| ) ) ##NO_TEXT.
     ENDIF.
   ENDMETHOD.
 
@@ -543,25 +531,25 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
 
     IF value IS INITIAL.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                          msgv1  = CONV #( |Invalid integer value in { header_name }| ) ).
+                                          msgv1  = CONV #( |Invalid integer value in { header_name }| ) ) ##NO_TEXT.
     ENDIF.
 
     FIND REGEX `^-?[0-9]+$` IN value.
     IF sy-subrc <> 0.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                          msgv1  = CONV #( |Invalid integer value in { header_name }| ) ).
+                                          msgv1  = CONV #( |Invalid integer value in { header_name }| ) ) ##NO_TEXT.
     ENDIF.
 
     TRY.
         numeric_value = CONV decfloat34( value ).
       CATCH cx_root.
         RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                            msgv1  = CONV #( |Invalid integer value in { header_name }| ) ).
+                                            msgv1  = CONV #( |Invalid integer value in { header_name }| ) ) ##NO_TEXT.
     ENDTRY.
 
     IF numeric_value > max_safe OR numeric_value < min_safe.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                          msgv1  = CONV #( |Unsafe integer value in { header_name }| ) ).
+                                          msgv1  = CONV #( |Unsafe integer value in { header_name }| ) ) ##NO_TEXT.
     ENDIF.
   ENDMETHOD.
 
@@ -592,7 +580,7 @@ CLASS zcl_mcp_modern_router IMPLEMENTATION.
       WHEN `boolean`.
         IF normalized_header <> `true` AND normalized_header <> `false`.
           RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                              msgv1  = CONV #( |Invalid boolean value in { header_name }| ) ).
+                                              msgv1  = CONV #( |Invalid boolean value in { header_name }| ) ) ##NO_TEXT.
         ENDIF.
 
         IF normalized_header <> body_value.

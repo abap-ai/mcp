@@ -334,7 +334,7 @@ CLASS ltcl_mcp_resp_list_prompts IMPLEMENTATION.
     cut->set_prompts( prompts ).
     json = cut->zif_mcp_internal~generate_json( ).
 
-    cl_abap_unit_assert=>assert_false( act = json->exists( '/prompts/1/arguments/1/required' ) ).
+    cl_abap_unit_assert=>assert_false( json->exists( '/prompts/1/arguments/1/required' ) ).
   ENDMETHOD.
 
   METHOD required_false_emitted_when_st.
@@ -354,9 +354,9 @@ CLASS ltcl_mcp_resp_list_prompts IMPLEMENTATION.
     cut->set_prompts( prompts ).
     json = cut->zif_mcp_internal~generate_json( ).
 
-    cl_abap_unit_assert=>assert_true( act = json->exists( '/prompts/1/arguments/1/required' ) ).
+    cl_abap_unit_assert=>assert_true( json->exists( '/prompts/1/arguments/1/required' ) ).
 
-    cl_abap_unit_assert=>assert_false( act = json->get_boolean( '/prompts/1/arguments/1/required' ) ).
+    cl_abap_unit_assert=>assert_false( json->get_boolean( '/prompts/1/arguments/1/required' ) ).
   ENDMETHOD.
 
 ENDCLASS.

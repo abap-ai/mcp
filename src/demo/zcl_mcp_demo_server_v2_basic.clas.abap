@@ -22,13 +22,13 @@ CREATE PUBLIC.
     METHODS handle_tool_input_schema REDEFINITION.
 
   PRIVATE SECTION.
-    CONSTANTS c_tool_echo        TYPE string VALUE `echo`.
-    CONSTANTS c_tool_server_time TYPE string VALUE `server_time`.
-    CONSTANTS c_tool_cache_meta  TYPE string VALUE `cache_meta`.
+    CONSTANTS tool_echo        TYPE string VALUE `echo`.
+    CONSTANTS tool_server_time TYPE string VALUE `server_time`.
+    CONSTANTS tool_cache_meta  TYPE string VALUE `cache_meta`.
 
-    CONSTANTS c_prompt_summary   TYPE string VALUE `summary_prompt`.
-    CONSTANTS c_resource_about   TYPE string VALUE `demo://v2/about`.
-    CONSTANTS c_resource_notes   TYPE string VALUE `demo://v2/notes/{name}`.
+    CONSTANTS prompt_summary   TYPE string VALUE `summary_prompt`.
+    CONSTANTS resource_about   TYPE string VALUE `demo://v2/about`.
+    CONSTANTS resource_notes   TYPE string VALUE `demo://v2/notes/{name}`.
 
     "! <p class="shorttext synchronized">Convert exception into v2 error</p>
     "!
@@ -135,16 +135,22 @@ CREATE PUBLIC.
     METHODS build_completion_result
       RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson
       RAISING   zcx_mcp_ajson_error.
+
+    METHODS build_tool_output_schema
+      IMPORTING tool_name     TYPE string
+      RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson
+      RAISING   zcx_mcp_ajson_error.
+
 ENDCLASS.
 
 
 CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
   METHOD get_implementation.
-    result-name        = `ABAP MCP V2 Basic Demo`.
+    result-name        = `ABAP MCP V2 Basic Demo` ##NO_TEXT.
     result-version     = `1.0.0`.
-    result-title       = `ABAP MCP V2 Basic Demo`.
-    result-description = `Basic stateless MCP draft v2 demo server.`.
-    result-website_url = `https://github.com/b-tocs/abap_mcp`.
+    result-title       = `ABAP MCP V2 Basic Demo` ##NO_TEXT.
+    result-description = `Basic stateless MCP draft v2 demo server.` ##NO_TEXT.
+    result-website_url = `https://github.com/b-tocs/abap_mcp` ##NO_TEXT.
   ENDMETHOD.
 
   METHOD get_capabilities.
@@ -156,7 +162,7 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_instructions.
-    result = `Use this server to explore normal stateless MCP v2 tools, prompts, resources, templates, and completions.`.
+    result = `Use this server to explore normal stateless MCP v2 tools, prompts, resources, templates, and completions.` ##NO_TEXT.
   ENDMETHOD.
 
   METHOD handle_tools_list.
@@ -174,20 +180,20 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
   METHOD handle_tools_call.
     TRY.
         CASE request->get_name( ).
-          WHEN c_tool_echo.
+          WHEN tool_echo.
             DATA(arguments) = request->get_arguments( ).
-            DATA(message) = arguments->get_string( `/message` ).
+            DATA(msg) = arguments->get_string( `/message` ).
 
-            IF message IS INITIAL.
-              message = `Hello from the ABAP MCP V2 basic demo.`.
+            IF msg IS INITIAL.
+              msg = `Hello from the ABAP MCP V2 basic demo.` ##NO_TEXT.
             ENDIF.
 
-            response-result = build_text_tool_result( |Echo: { message }| ).
+            response-result = build_text_tool_result( |Echo: { msg }| ) ##NO_TEXT.
 
-          WHEN c_tool_server_time.
-            response-result = build_text_tool_result( |ABAP server date { sy-datum }, time { sy-uzeit }.| ).
+          WHEN tool_server_time.
+            response-result = build_text_tool_result( |ABAP server date { sy-datum }, time { sy-uzeit }.| ) ##NO_TEXT.
 
-          WHEN c_tool_cache_meta.
+          WHEN tool_cache_meta.
             response-result = build_cache_meta_result( ).
 
           WHEN OTHERS.
@@ -211,9 +217,9 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
     DATA topic TYPE string VALUE `ABAP MCP`.
 
     TRY.
-        IF request->get_name( ) <> c_prompt_summary.
+        IF request->get_name( ) <> prompt_summary.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-          response-error-message = |Prompt { request->get_name( ) } unknown.|.
+          response-error-message = |Prompt { request->get_name( ) } unknown.| ##NO_TEXT.
           RETURN.
         ENDIF.
 
@@ -255,15 +261,15 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
     uri = request->get_uri( ).
 
     TRY.
-        IF uri = c_resource_about.
-          text = `This resource is served by the ABAP MCP V2 basic demo server.`.
+        IF uri = resource_about.
+          text = `This resource is served by the ABAP MCP V2 basic demo server.` ##NO_TEXT.
 
         ELSEIF uri CP `demo://v2/notes/*`.
-          text = |Generated demo note for URI { uri }.|.
+          text = |Generated demo note for URI { uri }.| ##NO_TEXT.
 
         ELSE.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-resource_not_found.
-          response-error-message = |Resource { uri } not found.|.
+          response-error-message = |Resource { uri } not found.| ##NO_TEXT.
           RETURN.
         ENDIF.
 
@@ -304,23 +310,14 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
 
     builder = NEW zcl_mcp_schema_builder( ).
 
-    CASE tool_name.
-      WHEN c_tool_echo.
-        builder->add_string( name         = `message`
-                             description  = `Message to return from the demo server.`
-                             required     = abap_false
-                             x_mcp_header = `Message` ).
+    IF tool_name = tool_echo.
 
-      WHEN c_tool_server_time.
-        " Empty object schema.
+      builder->add_string( name         = `message`
+                           description  = `Message to return from the demo server.`
+                           required     = abap_false
+                           x_mcp_header = `Message` ) ##NO_TEXT.
 
-      WHEN c_tool_cache_meta.
-        " Empty object schema.
-
-      WHEN OTHERS.
-        " Empty object schema lets tools/list remain robust; tools/call still rejects unknown tools.
-    ENDCASE.
-
+    ENDIF.
     result = builder->to_json( ).
   ENDMETHOD.
 
@@ -331,28 +328,30 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
 
     list_tools = NEW zcl_mcp_resp_list_tools( ).
 
-    CLEAR tool.
-    tool-name         = c_tool_echo.
-    tool-title        = `Echo`.
-    tool-description  = `Returns a text message. The message can also be mirrored through Mcp-Param-Message.`.
-    tool-input_schema = build_tool_schema( c_tool_echo ).
+    tool-name         = tool_echo.
+    tool-title        = `Echo` ##NO_TEXT.
+    tool-description  = `Returns a text message. The message can also be mirrored through Mcp-Param-Message.` ##NO_TEXT.
+    tool-input_schema = build_tool_schema( tool_echo ).
     tool-annotations-readonlyhint = abap_true.
+    tool-output_schema = build_tool_output_schema( tool_echo ).
     APPEND tool TO tools.
 
     CLEAR tool.
-    tool-name         = c_tool_server_time.
-    tool-title        = `Server Time`.
-    tool-description  = `Returns the current ABAP server date and time.`.
-    tool-input_schema = build_tool_schema( c_tool_server_time ).
+    tool-name         = tool_server_time.
+    tool-title        = `Server Time` ##NO_TEXT.
+    tool-description  = `Returns the current ABAP server date and time.` ##NO_TEXT.
+    tool-input_schema = build_tool_schema( tool_server_time ).
     tool-annotations-readonlyhint = abap_true.
+    tool-output_schema = build_tool_output_schema( tool_server_time ).
     APPEND tool TO tools.
 
     CLEAR tool.
-    tool-name         = c_tool_cache_meta.
-    tool-title        = `Cache And Metadata`.
-    tool-description  = `Returns a normal v2 complete result with ttlMs, cacheScope, and _meta.`.
-    tool-input_schema = build_tool_schema( c_tool_cache_meta ).
+    tool-name         = tool_cache_meta.
+    tool-title        = `Cache And Metadata` ##NO_TEXT.
+    tool-description  = `Returns a normal v2 complete result with ttlMs, cacheScope, and _meta.` ##NO_TEXT.
+    tool-input_schema = build_tool_schema( tool_cache_meta ).
     tool-annotations-readonlyhint = abap_true.
+    tool-output_schema = build_tool_output_schema( tool_cache_meta ).
     APPEND tool TO tools.
 
     list_tools->set_tools( tools ).
@@ -363,10 +362,18 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
 
   METHOD build_text_tool_result.
     DATA tool_result TYPE REF TO zcl_mcp_resp_v2_tool.
+    DATA structured  TYPE REF TO zif_mcp_ajson.
 
     tool_result = NEW zcl_mcp_resp_v2_tool( ).
+    structured = zcl_mcp_ajson=>create_empty( ).
+
+    structured->set_string( iv_path = `/message`
+                            iv_val  = text ).
+
     tool_result->set_complete( ).
     tool_result->set_error( abap_false ).
+    tool_result->set_structured_content( structured_content = structured
+                                         add_text_content   = abap_false ).
     tool_result->add_text_content( text ).
 
     result = tool_result->generate_json( ).
@@ -375,9 +382,14 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
   METHOD build_cache_meta_result.
     DATA tool_result TYPE REF TO zcl_mcp_resp_v2_tool.
     DATA meta        TYPE REF TO zif_mcp_ajson.
+    DATA structured  TYPE REF TO zif_mcp_ajson.
+    DATA message     TYPE string.
+
+    message = `This result demonstrates v2 cache hints and result metadata.`.
 
     tool_result = NEW zcl_mcp_resp_v2_tool( ).
     meta = zcl_mcp_ajson=>create_empty( ).
+    structured = zcl_mcp_ajson=>create_empty( ).
 
     meta->set_string( iv_path = `/abap.demo~1kind`
                       iv_val  = `basic-v2-demo` ).
@@ -385,9 +397,20 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
     meta->set_string( iv_path = `/abap.demo~1feature`
                       iv_val  = `cache-meta` ).
 
+    structured->set_string( iv_path = `/message`
+                            iv_val  = message ).
+
+    structured->set_string( iv_path = `/kind`
+                            iv_val  = `basic-v2-demo` ).
+
+    structured->set_string( iv_path = `/feature`
+                            iv_val  = `cache-meta` ).
+
     tool_result->set_complete( ).
     tool_result->set_error( abap_false ).
-    tool_result->add_text_content( `This result demonstrates v2 cache hints and result metadata.` ).
+    tool_result->set_structured_content( structured_content = structured
+                                         add_text_content   = abap_false ).
+    tool_result->add_text_content( message ).
     tool_result->set_cache( ttl_ms      = 30000
                             cache_scope = zif_mcp_constants=>cache_scopes-private ).
     tool_result->set_meta( meta ).
@@ -404,14 +427,14 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
     list_prompts = NEW zcl_mcp_resp_list_prompts( ).
 
     argument-name         = `topic`.
-    argument-title        = `Topic`.
-    argument-description  = `Topic to summarize.`.
+    argument-title        = `Topic` ##NO_TEXT.
+    argument-description  = `Topic to summarize.` ##NO_TEXT.
     argument-required     = abap_false.
     argument-required_set = abap_true.
 
-    prompt-name        = c_prompt_summary.
-    prompt-title       = `Summary Prompt`.
-    prompt-description = `Creates a short summary prompt for a topic.`.
+    prompt-name        = prompt_summary.
+    prompt-title       = `Summary Prompt` ##NO_TEXT.
+    prompt-description = `Creates a short summary prompt for a topic.` ##NO_TEXT.
     APPEND argument TO prompt-arguments.
     APPEND prompt TO prompts.
 
@@ -425,9 +448,9 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
     DATA get_prompt TYPE REF TO zcl_mcp_resp_get_prompt.
 
     get_prompt = NEW zcl_mcp_resp_get_prompt( ).
-    get_prompt->set_description( `Basic v2 demo prompt.` ).
+    get_prompt->set_description( `Basic v2 demo prompt.` ) ##NO_TEXT.
     get_prompt->add_text_message( role = zif_mcp_types=>role_user
-                                  text = |Write a concise technical summary about { topic }.| ).
+                                  text = |Write a concise technical summary about { topic }.| ) ##NO_TEXT.
 
     result = get_prompt->zif_mcp_internal~generate_json( ).
     set_complete_fields( result ).
@@ -440,10 +463,10 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
 
     list_resources = NEW zcl_mcp_resp_list_resources( ).
 
-    resource-uri         = c_resource_about.
+    resource-uri         = resource_about.
     resource-name        = `about-v2-basic-demo`.
-    resource-title       = `About V2 Basic Demo`.
-    resource-description = `Static text resource from the ABAP MCP V2 basic demo.`.
+    resource-title       = `About V2 Basic Demo` ##NO_TEXT.
+    resource-description = `Static text resource from the ABAP MCP V2 basic demo.` ##NO_TEXT.
     resource-mime_type   = `text/plain`.
     APPEND resource TO resources.
 
@@ -460,10 +483,10 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
 
     list_templates = NEW zcl_mcp_resp_list_res_tmpl( ).
 
-    template-uritemplate = c_resource_notes.
+    template-uritemplate = resource_notes.
     template-name        = `demo-note`.
-    template-title       = `Demo Note`.
-    template-description = `Generated text resource for demo://v2/notes/{name}.`.
+    template-title       = `Demo Note` ##NO_TEXT.
+    template-description = `Generated text resource for demo://v2/notes/{name}.` ##NO_TEXT.
     template-mime_type   = `text/plain`.
     APPEND template TO templates.
 
@@ -492,11 +515,33 @@ CLASS zcl_mcp_demo_server_v2_basic IMPLEMENTATION.
     complete->add_value( `ABAP` ).
     complete->add_value( `MCP` ).
     complete->add_value( `V2` ).
-    complete->add_value( `Stateless HTTP` ).
+    complete->add_value( `Stateless HTTP` ) ##NO_TEXT.
     complete->set_total( 4 ).
     complete->set_has_more( abap_false ).
 
     result = complete->zif_mcp_internal~generate_json( ).
     set_complete_fields( result ).
+  ENDMETHOD.
+
+  METHOD build_tool_output_schema.
+    DATA builder TYPE REF TO zcl_mcp_schema_builder.
+
+    builder = NEW zcl_mcp_schema_builder( ).
+
+    builder->add_string( name        = `message`
+                         description = `Human-readable tool result message.`
+                         required    = abap_true ).
+
+    IF tool_name = tool_cache_meta.
+      builder->add_string( name        = `kind`
+                           description = `Demo result kind.`
+                           required    = abap_false ).
+
+      builder->add_string( name        = `feature`
+                           description = `Demo feature name.`
+                           required    = abap_false ).
+    ENDIF.
+
+    result = builder->to_json( ).
   ENDMETHOD.
 ENDCLASS.

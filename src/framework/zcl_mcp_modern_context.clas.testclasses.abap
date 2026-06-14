@@ -17,15 +17,21 @@ CLASS ltcl_mcp_modern_context DEFINITION FINAL
       RETURNING VALUE(result) TYPE zcl_mcp_jsonrpc=>request
       RAISING   zcx_mcp_ajson_error.
 
-    METHODS is_modern_by_method       FOR TESTING.
-    METHODS is_modern_by_meta         FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS not_modern_without_meta   FOR TESTING.
-    METHODS supported_version         FOR TESTING.
-    METHODS build_context_full_meta   FOR TESTING RAISING zcx_mcp_ajson_error zcx_mcp_server.
-    METHODS build_context_no_meta     FOR TESTING.
-    METHODS unsupported_version       FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS error_mapping_required    FOR TESTING.
-    METHODS error_mapping_bad_version FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS is_modern_by_method           FOR TESTING.
+    METHODS is_modern_by_meta             FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS not_modern_without_meta       FOR TESTING.
+    METHODS supported_version             FOR TESTING.
+    METHODS build_context_full_meta       FOR TESTING RAISING zcx_mcp_ajson_error zcx_mcp_server.
+    METHODS build_context_no_meta         FOR TESTING.
+    METHODS unsupported_version           FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS error_mapping_required        FOR TESTING.
+    METHODS error_mapping_bad_version     FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS required_name_by_method       FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS invalid_client_info_meta      FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS invalid_client_caps_meta      FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS invalid_extensions_meta       FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS error_mapping_header_mismatch FOR TESTING.
+    METHODS error_mapping_invalid_meta    FOR TESTING.
 ENDCLASS.
 
 CLASS ltcl_mcp_modern_context IMPLEMENTATION.
@@ -92,7 +98,7 @@ CLASS ltcl_mcp_modern_context IMPLEMENTATION.
     DATA(is_modern) = zcl_mcp_modern_context=>is_modern_request( request      = request
                                                                  http_request = http_request ).
 
-    cl_abap_unit_assert=>assert_true( act = is_modern ).
+    cl_abap_unit_assert=>assert_true( is_modern ).
   ENDMETHOD.
 
   METHOD is_modern_by_meta.
@@ -103,7 +109,7 @@ CLASS ltcl_mcp_modern_context IMPLEMENTATION.
     DATA(is_modern) = zcl_mcp_modern_context=>is_modern_request( request      = request
                                                                  http_request = http_request ).
 
-    cl_abap_unit_assert=>assert_true( act = is_modern ).
+    cl_abap_unit_assert=>assert_true( is_modern ).
   ENDMETHOD.
 
   METHOD not_modern_without_meta.
@@ -114,7 +120,7 @@ CLASS ltcl_mcp_modern_context IMPLEMENTATION.
     DATA(is_modern) = zcl_mcp_modern_context=>is_modern_request( request      = request
                                                                  http_request = http_request ).
 
-    cl_abap_unit_assert=>assert_false( act = is_modern ).
+    cl_abap_unit_assert=>assert_false( is_modern ).
   ENDMETHOD.
 
   METHOD supported_version.
@@ -149,10 +155,10 @@ CLASS ltcl_mcp_modern_context IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = zif_mcp_constants=>latest_modern_protocol_version
                                         act = context-protocol_ver ).
 
-    cl_abap_unit_assert=>assert_bound( act = context-meta ).
-    cl_abap_unit_assert=>assert_bound( act = context-client_info ).
-    cl_abap_unit_assert=>assert_bound( act = context-client_caps ).
-    cl_abap_unit_assert=>assert_bound( act = context-extensions ).
+    cl_abap_unit_assert=>assert_bound( context-meta ).
+    cl_abap_unit_assert=>assert_bound( context-client_info ).
+    cl_abap_unit_assert=>assert_bound( context-client_caps ).
+    cl_abap_unit_assert=>assert_bound( context-extensions ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'UnitTestClient'
                                         act = context-client_info->get_string( '/name' ) ).
@@ -160,7 +166,7 @@ CLASS ltcl_mcp_modern_context IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = '1.0.0'
                                         act = context-client_info->get_string( '/version' ) ).
 
-    cl_abap_unit_assert=>assert_true( act = context-extensions->exists( '/io.modelcontextprotocol~1tasks' ) ).
+    cl_abap_unit_assert=>assert_true( context-extensions->exists( '/io.modelcontextprotocol~1tasks' ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'debug'
                                         act = context-log_level ).
@@ -264,5 +270,146 @@ CLASS ltcl_mcp_modern_context IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( exp = zcl_mcp_jsonrpc=>error_codes-unsupported_protocol_version
                                             act = mapped-code ).
     ENDTRY.
+  ENDMETHOD.
+
+  METHOD required_name_by_method.
+    DATA(request) = create_request_no_meta( ).
+
+    request-method = 'tools/call'.
+    request-params->set_string( iv_path = '/name'
+                                iv_val  = 'calculator' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'calculator'
+                                        act = zcl_mcp_modern_context=>get_required_name( request ) ).
+
+    request-method = 'prompts/get'.
+    request-params->set_string( iv_path = '/name'
+                                iv_val  = 'greeting' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'greeting'
+                                        act = zcl_mcp_modern_context=>get_required_name( request ) ).
+
+    request-method = 'resources/read'.
+    request-params->set_string( iv_path = '/uri'
+                                iv_val  = 'file:///demo.txt' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'file:///demo.txt'
+                                        act = zcl_mcp_modern_context=>get_required_name( request ) ).
+
+    request-method = 'tools/list'.
+
+    cl_abap_unit_assert=>assert_initial( act = zcl_mcp_modern_context=>get_required_name( request ) ).
+  ENDMETHOD.
+
+  METHOD invalid_client_info_meta.
+    DATA(meta) = create_request( )-params->slice( '/_meta' ).
+
+    meta->delete( zif_mcp_constants=>meta_member_paths-client_info ).
+
+    TRY.
+        zcl_mcp_modern_context=>validate_client_info( meta ).
+        cl_abap_unit_assert=>fail( 'Expected missing clientInfo error' ).
+      CATCH zcx_mcp_server INTO DATA(error).
+        cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>required_params
+                                            act = error->if_t100_message~t100key ).
+    ENDTRY.
+
+    meta = create_request( )-params->slice( '/_meta' ).
+    meta->set_string( iv_path = zif_mcp_constants=>meta_member_paths-client_info
+                      iv_val  = 'bad' ).
+
+    TRY.
+        zcl_mcp_modern_context=>validate_client_info( meta ).
+        cl_abap_unit_assert=>fail( 'Expected invalid clientInfo type error' ).
+      CATCH zcx_mcp_server INTO error.
+        cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>invalid_arguments
+                                            act = error->if_t100_message~t100key ).
+    ENDTRY.
+
+    meta = create_request( )-params->slice( '/_meta' ).
+    meta->delete( |{ zif_mcp_constants=>meta_member_paths-client_info }/name| ).
+
+    TRY.
+        zcl_mcp_modern_context=>validate_client_info( meta ).
+        cl_abap_unit_assert=>fail( 'Expected missing clientInfo.name error' ).
+      CATCH zcx_mcp_server INTO error.
+        cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>invalid_arguments
+                                            act = error->if_t100_message~t100key ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD invalid_client_caps_meta.
+    DATA(meta) = create_request( )-params->slice( '/_meta' ).
+
+    meta->delete( zif_mcp_constants=>meta_member_paths-client_capabilities ).
+
+    TRY.
+        zcl_mcp_modern_context=>validate_client_capabilities( meta ).
+        cl_abap_unit_assert=>fail( 'Expected missing clientCapabilities error' ).
+      CATCH zcx_mcp_server INTO DATA(error).
+        cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>required_params
+                                            act = error->if_t100_message~t100key ).
+    ENDTRY.
+
+    meta = create_request( )-params->slice( '/_meta' ).
+    meta->set_string( iv_path = zif_mcp_constants=>meta_member_paths-client_capabilities
+                      iv_val  = 'bad' ).
+
+    TRY.
+        zcl_mcp_modern_context=>validate_client_capabilities( meta ).
+        cl_abap_unit_assert=>fail( 'Expected invalid clientCapabilities type error' ).
+      CATCH zcx_mcp_server INTO error.
+        cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>invalid_arguments
+                                            act = error->if_t100_message~t100key ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD invalid_extensions_meta.
+    DATA http_request  TYPE REF TO if_http_request.
+    DATA http_response TYPE REF TO if_http_response.
+    DATA http_server   TYPE REF TO if_http_server.
+
+    DATA(request) = create_request( ).
+
+    request-params->set_string( iv_path = |{ zif_mcp_constants=>meta_paths-client_capabilities }/extensions|
+                                iv_val  = 'bad' ).
+
+    TRY.
+        zcl_mcp_modern_context=>build_context( area          = 'AREA'
+                                               mcp_server    = 'SERVER'
+                                               request       = request
+                                               http_request  = http_request
+                                               http_response = http_response
+                                               http_server   = http_server
+                                               cors_mode     = zcl_mcp_configuration=>cors_mode_ignore ).
+
+        cl_abap_unit_assert=>fail( 'Expected invalid extensions type error' ).
+
+      CATCH zcx_mcp_server INTO DATA(error).
+        cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>invalid_arguments
+                                            act = error->if_t100_message~t100key ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD error_mapping_header_mismatch.
+    DATA(error) = NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
+                                      msgv1  = 'Mcp-Method mismatch'
+                                      msgv2  = 'HEADER_MISMATCH' ).
+
+    DATA(mapped) = zcl_mcp_modern_context=>error_from_exception( error ).
+
+    cl_abap_unit_assert=>assert_equals( exp = zcl_mcp_jsonrpc=>error_codes-header_mismatch
+                                        act = mapped-code ).
+  ENDMETHOD.
+
+  METHOD error_mapping_invalid_meta.
+    DATA(error) = NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
+                                      msgv1  = 'clientInfo must be an object'
+                                      msgv2  = 'INVALID_META' ).
+
+    DATA(mapped) = zcl_mcp_modern_context=>error_from_exception( error ).
+
+    cl_abap_unit_assert=>assert_equals( exp = zcl_mcp_jsonrpc=>error_codes-invalid_params
+                                        act = mapped-code ).
   ENDMETHOD.
 ENDCLASS.

@@ -250,8 +250,8 @@ CLASS zcl_mcp_resp_call_tool IMPLEMENTATION.
   METHOD zif_mcp_internal~generate_json.
     result = zcl_mcp_ajson=>create_empty( ).
 
-  " Task-deferred response: tools/call returns CreateTaskResult.
-  " The actual CallToolResult payload is retrieved later via tasks/result.
+    " Task-deferred response: tools/call returns CreateTaskResult.
+    " The actual CallToolResult payload is retrieved later via tasks/result.
     IF int_task-task_id IS NOT INITIAL.
       result->set( iv_path = 'task/taskId'
                    iv_val  = int_task-task_id ).

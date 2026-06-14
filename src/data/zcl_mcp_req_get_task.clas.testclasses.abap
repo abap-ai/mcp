@@ -66,7 +66,6 @@ CLASS ltcl_req_get_task IMPLEMENTATION.
     DATA(json) = zcl_mcp_ajson=>parse( '{"taskId":"task-1"}' ).
 
     TRY.
-        " TODO: variable is assigned but never used (ABAP cleaner)
         DATA(req) = NEW zcl_mcp_req_get_task( json ).
         cl_abap_unit_assert=>fail( 'Expected exception for invalid taskId' ).
       CATCH zcx_mcp_server INTO DATA(error).

@@ -10,11 +10,11 @@ CLASS ltcl_mcp_resp_v2_task_get DEFINITION FINAL FOR TESTING
     CONSTANTS c_task_input_id TYPE string VALUE `00000000000000000000000000000002`.
     CONSTANTS c_task_error_id TYPE string VALUE `00000000000000000000000000000003`.
 
-    CONSTANTS c_text_done     TYPE string VALUE `Task complete`.
-    CONSTANTS c_msg_completed TYPE string VALUE `Task completed.`.
-    CONSTANTS c_msg_waiting   TYPE string VALUE `Task is waiting for client input.`.
-    CONSTANTS c_msg_failed    TYPE string VALUE `Task failed.`.
-    CONSTANTS c_error_text    TYPE string VALUE `Task failed in ABAP v2 test server.`.
+    CONSTANTS c_text_done     TYPE string VALUE `Task complete` ##NO_TEXT.
+    CONSTANTS c_msg_completed TYPE string VALUE `Task completed.` ##NO_TEXT.
+    CONSTANTS c_msg_waiting   TYPE string VALUE `Task is waiting for client input.` ##NO_TEXT.
+    CONSTANTS c_msg_failed    TYPE string VALUE `Task failed.` ##NO_TEXT.
+    CONSTANTS c_error_text    TYPE string VALUE `Task failed in ABAP v2 test server.` ##NO_TEXT.
 
     METHODS completed_task      FOR TESTING RAISING zcx_mcp_ajson_error.
     METHODS input_required_task FOR TESTING RAISING zcx_mcp_ajson_error.
@@ -45,7 +45,8 @@ CLASS ltcl_mcp_resp_v2_task_get IMPLEMENTATION.
 
     assert_json_equals(
         actual   = result->stringify( )
-        expected = `{"task":{"taskId":"00000000000000000000000000000001","status":"completed","statusMessage":"Task completed."},"result":{"content":[{"type":"text","text":"Task complete"}],"isError":false}}` ).
+        expected = |\{"resultType":"complete","task":\{"taskId":"00000000000000000000000000000001","status":|
+        && |"completed","statusMessage":"Task completed."\},"result":\{"content":[\{"type":"text","text":"Task complete"\}],"isError":false\}\}| ).
   ENDMETHOD.
 
   METHOD input_required_task.

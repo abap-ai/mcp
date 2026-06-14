@@ -226,7 +226,7 @@ CLASS zcl_mcp_demo_server_mcpsession IMPLEMENTATION.
              WITH p_taskid = task_id
              WITH p_value  = value
              VIA JOB job_name NUMBER job_count
-             AND RETURN.
+             AND RETURN. "#EC CI_SUBMIT
 
       CALL FUNCTION 'JOB_CLOSE'
         EXPORTING  jobname   = job_name

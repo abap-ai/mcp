@@ -3,8 +3,10 @@ CLASS ltcl_mcp_req_list_prompts DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
-    METHODS test_with_cursor    FOR TESTING RAISING zcx_mcp_ajson_error zcx_mcp_server.
-    METHODS test_without_cursor FOR TESTING RAISING zcx_mcp_ajson_error zcx_mcp_server.
+    METHODS test_with_cursor           FOR TESTING RAISING zcx_mcp_ajson_error zcx_mcp_server.
+    METHODS test_without_cursor        FOR TESTING RAISING zcx_mcp_ajson_error zcx_mcp_server.
+    METHODS test_meta_default          FOR TESTING RAISING zcx_mcp_ajson_error zcx_mcp_server.
+    METHODS test_meta_provided         FOR TESTING RAISING zcx_mcp_ajson_error zcx_mcp_server.
 ENDCLASS.
 
 CLASS ltcl_mcp_req_list_prompts IMPLEMENTATION.
@@ -43,4 +45,34 @@ CLASS ltcl_mcp_req_list_prompts IMPLEMENTATION.
     cl_abap_unit_assert=>assert_initial( act = req->get_cursor( )
                                          msg = 'Cursor value should be initial' ).
   ENDMETHOD.
+
+  METHOD test_meta_default.
+    DATA(json) = zcl_mcp_ajson=>create_empty( ).
+
+    DATA(req) = NEW zcl_mcp_req_list_prompts( json ).
+    DATA(meta) = req->get_meta( ).
+
+    cl_abap_unit_assert=>assert_bound( act = meta
+                                       msg = '_meta should always be bound' ).
+    cl_abap_unit_assert=>assert_true( act = meta->is_empty( )
+                                      msg = '_meta should be empty when not supplied' ).
+  ENDMETHOD.
+
+  METHOD test_meta_provided.
+    DATA(json) = zcl_mcp_ajson=>create_empty( ).
+    json->set_string( iv_path = '/_meta/client'
+                      iv_val  = 'adt' ).
+    json->set_string( iv_path = '/_meta/trace_id'
+                      iv_val  = 'trace-1' ).
+
+    DATA(req) = NEW zcl_mcp_req_list_prompts( json ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'adt'
+                                        act = req->get_meta( )->get_string( '/client' )
+                                        msg = '_meta client should be parsed' ).
+    cl_abap_unit_assert=>assert_equals( exp = 'trace-1'
+                                        act = req->get_meta( )->get_string( '/trace_id' )
+                                        msg = '_meta trace should be parsed' ).
+  ENDMETHOD.
+
 ENDCLASS.

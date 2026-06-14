@@ -1,5 +1,5 @@
- CLASS ltcl_mcp_req_state DEFINITION FINAL
-    FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+CLASS ltcl_mcp_req_state DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
   PRIVATE SECTION.
     CONSTANTS c_area   TYPE string VALUE `UT_AREA`.
@@ -7,8 +7,12 @@
     CONSTANTS c_method TYPE string VALUE `tools/call`.
     CONSTANTS c_data   TYPE string VALUE `unit-test-state`.
 
+    CLASS-DATA sql_env TYPE REF TO if_osql_test_environment.
+
+    CLASS-METHODS class_setup RAISING cx_static_check.
+    CLASS-METHODS class_teardown.
+
     METHODS setup.
-    METHODS teardown.
 
     METHODS valid_roundtrip              FOR TESTING RAISING zcx_mcp_ajson_error zcx_mcp_server.
     METHODS tampered_payload_rejected    FOR TESTING RAISING zcx_mcp_ajson_error zcx_mcp_server.
@@ -48,29 +52,20 @@
                 !path         TYPE string
       RETURNING VALUE(result) TYPE string
       RAISING   zcx_mcp_ajson_error.
- ENDCLASS.
+ENDCLASS.
 
 
- CLASS ltcl_mcp_req_state IMPLEMENTATION.
-  METHOD setup.
-    DELETE FROM zmcp_req_nonces
-      WHERE area   = @c_area
-        AND server = @c_server
-        AND uname  = @sy-uname.
-    COMMIT WORK AND WAIT.
+CLASS ltcl_mcp_req_state IMPLEMENTATION.
+  METHOD class_setup.
+    sql_env = cl_osql_test_environment=>create( VALUE #( ( 'ZMCP_REQ_NONCES' ) ) ).
   ENDMETHOD.
 
-  METHOD teardown.
-    DELETE FROM zmcp_req_nonces
-      WHERE area   = @c_area
-        AND server = @c_server
-        AND uname  = @sy-uname.
+  METHOD class_teardown.
+    sql_env->destroy( ).
+  ENDMETHOD.
 
-    DELETE FROM zmcp_req_nonces
-      WHERE nonce = 'UT_EXPIRED_NONCE'
-         OR nonce = 'UT_ACTIVE_NONCE'.
-
-    COMMIT WORK AND WAIT.
+  METHOD setup.
+    sql_env->clear_doubles( ).
   ENDMETHOD.
 
   METHOD create_state.
@@ -89,10 +84,9 @@
                                      method        = method
                                      uname         = uname ).
 
-        cl_abap_unit_assert=>fail( msg = 'requestState should have been rejected' ).
+        cl_abap_unit_assert=>fail( 'requestState should have been rejected' ).
 
-      CATCH zcx_mcp_server.
-        " Expected.
+      CATCH zcx_mcp_server. "#EC EMPTY_CATCH
     ENDTRY.
   ENDMETHOD.
 
@@ -260,6 +254,7 @@
   METHOD delete_expired_nonces.
     DATA expired TYPE zmcp_req_nonces.
     DATA active  TYPE zmcp_req_nonces.
+    DATA rows    TYPE TABLE OF zmcp_req_nonces.
 
     expired-client      = sy-mandt.
     expired-nonce       = 'UT_EXPIRED_NONCE'.
@@ -279,28 +274,27 @@
     active-expires_at  = '99991231235959'.
     active-consumed_at = '20000101000000'.
 
-    INSERT zmcp_req_nonces FROM @expired.
-    INSERT zmcp_req_nonces FROM @active.
-    COMMIT WORK AND WAIT.
+    APPEND expired TO rows.
+    APPEND active TO rows.
+    sql_env->insert_test_data( rows ).
 
     DATA(deleted) = zcl_mcp_req_state=>delete_expired_nonces( ).
 
-    cl_abap_unit_assert=>assert_true( act = xsdbool( deleted >= 1 ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 1
+                                        act = deleted ).
 
-    SELECT SINGLE nonce FROM zmcp_req_nonces
+    SELECT COUNT( * ) FROM zmcp_req_nonces
       WHERE nonce = 'UT_EXPIRED_NONCE'
-      " TODO: variable is assigned but never used (ABAP cleaner)
-      INTO @DATA(expired_nonce).
+      INTO @DATA(expired_count).
 
-    cl_abap_unit_assert=>assert_subrc( exp = 4 ).
+    cl_abap_unit_assert=>assert_equals( exp = 0
+                                        act = expired_count ).
 
-    SELECT SINGLE nonce FROM zmcp_req_nonces
+    SELECT COUNT( * ) FROM zmcp_req_nonces
       WHERE nonce = 'UT_ACTIVE_NONCE'
-      INTO @DATA(active_nonce).
+      INTO @DATA(active_count).
 
-    cl_abap_unit_assert=>assert_subrc( exp = 0 ).
-
-    cl_abap_unit_assert=>assert_equals( exp = 'UT_ACTIVE_NONCE'
-                                        act = active_nonce ).
+    cl_abap_unit_assert=>assert_equals( exp = 1
+                                        act = active_count ).
   ENDMETHOD.
 ENDCLASS.

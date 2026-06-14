@@ -5,9 +5,12 @@ CLASS ltcl_mcp_resp_v2_ack DEFINITION FINAL
 FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
   PRIVATE SECTION.
-    METHODS empty_ack      FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS complete_ack   FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS cache_and_meta FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS empty_ack               FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS complete_ack            FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS cache_and_meta          FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS content_variants        FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS cache_default_scope     FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS modern_result_interface FOR TESTING RAISING zcx_mcp_ajson_error.
 
     METHODS assert_json_equals
       IMPORTING !actual  TYPE string
@@ -75,5 +78,115 @@ CLASS ltcl_mcp_resp_v2_ack IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( exp = expected_obj->stringify( )
                                         act = actual_obj->stringify( ) ).
+  ENDMETHOD.
+
+  METHOD content_variants.
+    DATA(result_builder) = NEW zcl_mcp_resp_v2_tool( ).
+
+    result_builder->add_image_content( data      = `aW1hZ2U=`
+                                       mime_type = `image/png` ).
+    result_builder->add_audio_content( data      = `YXVkaW8=`
+                                       mime_type = `audio/wav` ).
+    result_builder->add_resource_link( uri         = `file:///report.pdf`
+                                       name        = `report`
+                                       title       = `Report`
+                                       description = `Monthly report`
+                                       mime_type   = `application/pdf`
+                                       size        = 42 ).
+    result_builder->add_text_resource( uri       = `file:///readme.txt`
+                                       text      = `Read me`
+                                       mime_type = `text/plain` ).
+    result_builder->add_blob_resource( uri       = `file:///archive.bin`
+                                       blob      = `YmxvYg==`
+                                       mime_type = `application/octet-stream` ).
+
+    DATA(result) = result_builder->generate_json( ).
+
+    cl_abap_unit_assert=>assert_equals( exp = `image`
+                                        act = result->get_string( `/content/1/type` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `aW1hZ2U=`
+                                        act = result->get_string( `/content/1/data` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `image/png`
+                                        act = result->get_string( `/content/1/mimeType` ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = `audio`
+                                        act = result->get_string( `/content/2/type` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `YXVkaW8=`
+                                        act = result->get_string( `/content/2/data` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `audio/wav`
+                                        act = result->get_string( `/content/2/mimeType` ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = `resource_link`
+                                        act = result->get_string( `/content/3/type` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `file:///report.pdf`
+                                        act = result->get_string( `/content/3/uri` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `report`
+                                        act = result->get_string( `/content/3/name` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `Report`
+                                        act = result->get_string( `/content/3/title` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `Monthly report`
+                                        act = result->get_string( `/content/3/description` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `application/pdf`
+                                        act = result->get_string( `/content/3/mimeType` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 42
+                                        act = result->get_integer( `/content/3/size` ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = `resource`
+                                        act = result->get_string( `/content/4/type` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `file:///readme.txt`
+                                        act = result->get_string( `/content/4/resource/uri` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `Read me`
+                                        act = result->get_string( `/content/4/resource/text` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `text/plain`
+                                        act = result->get_string( `/content/4/resource/mimeType` ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = `resource`
+                                        act = result->get_string( `/content/5/type` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `file:///archive.bin`
+                                        act = result->get_string( `/content/5/resource/uri` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `YmxvYg==`
+                                        act = result->get_string( `/content/5/resource/blob` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `application/octet-stream`
+                                        act = result->get_string( `/content/5/resource/mimeType` ) ).
+  ENDMETHOD.
+
+  METHOD cache_default_scope.
+    DATA(result_builder) = NEW zcl_mcp_resp_v2_tool( ).
+
+    result_builder->add_text_content( `cache default` ).
+    result_builder->set_cache( ttl_ms      = 100
+                               cache_scope = `` ).
+
+    DATA(result) = result_builder->generate_json( ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 100
+                                        act = result->get_integer( `/ttlMs` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = zif_mcp_constants=>cache_scopes-private
+                                        act = result->get_string( `/cacheScope` ) ).
+  ENDMETHOD.
+
+  METHOD modern_result_interface.
+    DATA(result_builder) = NEW zcl_mcp_resp_v2_tool( ).
+    DATA(modern_result) = CAST zif_mcp_modern_result( result_builder ).
+    DATA(meta) = zcl_mcp_ajson=>create_empty( ).
+
+    meta->set_string( iv_path = `/source`
+                      iv_val  = `interface` ).
+
+    result_builder->add_text_content( `from interface` ).
+    modern_result->set_cache( ttl_ms      = 750
+                              cache_scope = zif_mcp_constants=>cache_scopes-private ).
+    modern_result->set_meta( meta ).
+
+    DATA(result) = modern_result->generate_json( ).
+
+    cl_abap_unit_assert=>assert_equals( exp = `from interface`
+                                        act = result->get_string( `/content/1/text` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 750
+                                        act = result->get_integer( `/ttlMs` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = zif_mcp_constants=>cache_scopes-private
+                                        act = result->get_string( `/cacheScope` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = `interface`
+                                        act = result->get_string( `/_meta/source` ) ).
   ENDMETHOD.
 ENDCLASS.

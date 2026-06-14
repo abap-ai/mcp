@@ -55,7 +55,8 @@ CLASS ltcl_mcp_resp_v2_input_req IMPLEMENTATION.
 
         assert_json_equals(
             actual   = json->stringify( )
-            expected = `{"resultType":"input_required","requestState":"state-1","inputRequests":{"confirm":{"method":"elicitation/create","params":{"message":"Confirm","requestedSchema":{"type":"object"}}}}}` ).
+            expected = |\{"resultType":"input_required","requestState":"state-1","inputRequests":\{"confirm":| &&
+                |\{"method":"elicitation/create","params":\{"message":"Confirm","requestedSchema":\{"type":"object"\}\}\}\}\}| ).
       CATCH zcx_mcp_ajson_error INTO DATA(error).
         cl_abap_unit_assert=>fail( error->get_text( ) ).
     ENDTRY.

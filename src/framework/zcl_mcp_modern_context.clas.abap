@@ -191,7 +191,7 @@ CLASS zcl_mcp_modern_context IMPLEMENTATION.
 
     IF result-client_caps->exists( '/extensions' ).
       IF result-client_caps->get_node_type( '/extensions' ) <> zif_mcp_ajson_types=>node_type-object.
-        raise_invalid_meta( 'clientCapabilities.extensions must be an object' ).
+        raise_invalid_meta( 'clientCapabilities.extensions must be an object' ) ##NO_TEXT.
       ENDIF.
       result-extensions = result-client_caps->slice( '/extensions' ).
     ELSE.
@@ -226,7 +226,7 @@ CLASS zcl_mcp_modern_context IMPLEMENTATION.
             response-code = zcl_mcp_jsonrpc=>error_codes-header_mismatch.
 
           WHEN 'UNSUPPORTED_PROTOCOL'.
-            response-message = |Unsupported protocol version { error->msgv1 }|.
+            response-message = |Unsupported protocol version { error->msgv1 }| ##NO_TEXT.
             response-code    = zcl_mcp_jsonrpc=>error_codes-unsupported_protocol_version.
 
             TRY.
@@ -333,17 +333,17 @@ CLASS zcl_mcp_modern_context IMPLEMENTATION.
     ENDIF.
 
     IF meta->get_node_type( zif_mcp_constants=>meta_member_paths-client_info ) <> zif_mcp_ajson_types=>node_type-object.
-      raise_invalid_meta( 'clientInfo must be an object' ).
+      raise_invalid_meta( 'clientInfo must be an object' ) ##NO_TEXT.
     ENDIF.
 
     result = meta->slice( zif_mcp_constants=>meta_member_paths-client_info ).
 
     IF result->get_string( '/name' ) IS INITIAL.
-      raise_invalid_meta( 'clientInfo.name must be a non-empty string' ).
+      raise_invalid_meta( 'clientInfo.name must be a non-empty string' ) ##NO_TEXT.
     ENDIF.
 
     IF result->get_string( '/version' ) IS INITIAL.
-      raise_invalid_meta( 'clientInfo.version must be a non-empty string' ).
+      raise_invalid_meta( 'clientInfo.version must be a non-empty string' ) ##NO_TEXT.
     ENDIF.
   ENDMETHOD.
 
@@ -355,7 +355,7 @@ CLASS zcl_mcp_modern_context IMPLEMENTATION.
     ENDIF.
 
     IF meta->get_node_type( zif_mcp_constants=>meta_member_paths-client_capabilities ) <> zif_mcp_ajson_types=>node_type-object.
-      raise_invalid_meta( 'clientCapabilities must be an object' ).
+      raise_invalid_meta( 'clientCapabilities must be an object' ) ##NO_TEXT.
     ENDIF.
 
     result = meta->slice( zif_mcp_constants=>meta_member_paths-client_capabilities ).

@@ -57,7 +57,7 @@ CLASS ltcl_mcp_input_elicitation IMPLEMENTATION.
 
     params = cut->get_params( ).
 
-    cl_abap_unit_assert=>assert_false( act = params->exists( `/mode` ) ).
+    cl_abap_unit_assert=>assert_false( params->exists( `/mode` ) ).
     cl_abap_unit_assert=>assert_equals( exp = `Optional comment.`
                                         act = params->get_string( `/message` ) ).
     cl_abap_unit_assert=>assert_equals( exp = `string`

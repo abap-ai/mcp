@@ -1,4 +1,4 @@
-  CLASS tlcl_mcp_test_req_complete DEFINITION
+  CLASS ltcl_mcp_test_req_complete DEFINITION
     FINAL
     FOR TESTING
     RISK LEVEL HARMLESS
@@ -38,7 +38,7 @@
     METHODS empty_argument_value    FOR TESTING RAISING cx_static_check.
   ENDCLASS.
 
-  CLASS tlcl_mcp_test_req_complete IMPLEMENTATION.
+  CLASS ltcl_mcp_test_req_complete IMPLEMENTATION.
   METHOD prompt_json.
     result = zcl_mcp_ajson=>create_empty( ).
     result->set_string( iv_path = '/ref/type'

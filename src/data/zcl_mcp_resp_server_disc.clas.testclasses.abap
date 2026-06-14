@@ -51,7 +51,7 @@ FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
     cl_abap_unit_assert=>assert_equals( exp = zif_mcp_constants=>cache_scopes-private
                                         act = json->get_string( '/cacheScope' ) ).
 
-    cl_abap_unit_assert=>assert_true( act = json->exists( '/capabilities' ) ).
+    cl_abap_unit_assert=>assert_true( json->exists( '/capabilities' ) ).
   ENDMETHOD.
 
   METHOD generate_with_capabilities.
@@ -72,15 +72,15 @@ FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
     DATA(json) = cut->zif_mcp_modern_result~generate_json( ).
 
-    cl_abap_unit_assert=>assert_true( act = json->exists( '/capabilities/prompts' ) ).
+    cl_abap_unit_assert=>assert_true( json->exists( '/capabilities/prompts' ) ).
 
-    cl_abap_unit_assert=>assert_true( act = json->exists( '/capabilities/resources' ) ).
+    cl_abap_unit_assert=>assert_true( json->exists( '/capabilities/resources' ) ).
 
-    cl_abap_unit_assert=>assert_true( act = json->exists( '/capabilities/tools' ) ).
+    cl_abap_unit_assert=>assert_true( json->exists( '/capabilities/tools' ) ).
 
-    cl_abap_unit_assert=>assert_true( act = json->exists( '/capabilities/completions' ) ).
+    cl_abap_unit_assert=>assert_true( json->exists( '/capabilities/completions' ) ).
 
-    cl_abap_unit_assert=>assert_true( act = json->exists( '/capabilities/extensions/io.modelcontextprotocol~1tasks' ) ).
+    cl_abap_unit_assert=>assert_true( json->exists( '/capabilities/extensions/io.modelcontextprotocol~1tasks' ) ).
   ENDMETHOD.
 
   METHOD generate_with_instructions.

@@ -45,13 +45,13 @@ CLASS zcl_mcp_req_get_task IMPLEMENTATION.
                                           msgv1  = CONV #( |Invalid taskId: { int_task_id }| ) ) ##NO_TEXT.
     ENDIF.
 
-    FIND REGEX '^[0-9A-Fa-f]{32}$' IN int_task_id.
+    FIND REGEX '^[0-9A-Fa-f]{32}$' IN int_task_id ##NO_TEXT.
     IF sy-subrc <> 0.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
                                           msgv1  = CONV #( |Invalid taskId: { int_task_id }| ) ) ##NO_TEXT.
     ENDIF.
 
-    TRANSLATE int_task_id TO UPPER CASE.
+    int_task_id = to_upper( int_task_id ).
 
     IF json->exists( '/_meta' ).
       int_meta = json->slice( '/_meta' ).

@@ -74,13 +74,9 @@ CLASS zcl_mcp_legacy_v2_adapter DEFINITION
                 zcx_mcp_server.
 
     CLASS-METHODS apply_v2_response
-      IMPORTING server              TYPE REF TO zif_mcp_server_v2
-                v2_response         TYPE zif_mcp_server_v2=>v2_response
-                !request            TYPE zcl_mcp_jsonrpc=>request
-                legacy_protocol_ver TYPE string
-                !area               TYPE zmcp_area
-                servername          TYPE zmcp_server
-      RETURNING VALUE(response)     TYPE zcl_mcp_jsonrpc=>response
+      IMPORTING v2_response     TYPE zif_mcp_server_v2=>v2_response
+                !request        TYPE zcl_mcp_jsonrpc=>request
+      RETURNING VALUE(response) TYPE zcl_mcp_jsonrpc=>response
       RAISING   zcx_mcp_ajson_error
                 zcx_mcp_server.
 
@@ -88,14 +84,6 @@ CLASS zcl_mcp_legacy_v2_adapter DEFINITION
       IMPORTING !json         TYPE REF TO zif_mcp_ajson
       RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson
       RAISING   zcx_mcp_ajson_error.
-
-    CLASS-METHODS task_from_manager
-      IMPORTING task_id       TYPE string
-                !area         TYPE zmcp_area
-                servername    TYPE zmcp_server
-      RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson
-      RAISING   zcx_mcp_ajson_error
-                zcx_mcp_server.
 
     CLASS-METHODS list_tasks
       IMPORTING !request      TYPE zcl_mcp_jsonrpc=>request
@@ -108,8 +96,6 @@ CLASS zcl_mcp_legacy_v2_adapter DEFINITION
     CLASS-METHODS task_result
       IMPORTING server          TYPE REF TO zif_mcp_server_v2
                 !request        TYPE zcl_mcp_jsonrpc=>request
-                !area           TYPE zmcp_area
-                servername      TYPE zmcp_server
       RETURNING VALUE(response) TYPE zcl_mcp_jsonrpc=>response
       RAISING   zcx_mcp_ajson_error
                 zcx_mcp_server.
@@ -125,6 +111,14 @@ CLASS zcl_mcp_legacy_v2_adapter DEFINITION
       IMPORTING v2_result     TYPE REF TO zif_mcp_ajson
       RETURNING VALUE(result) TYPE zif_mcp_types=>task
       RAISING   zcx_mcp_server.
+
+    CLASS-METHODS translate_legacy_task_update
+      IMPORTING !request      TYPE zcl_mcp_jsonrpc=>request
+                !area         TYPE zmcp_area
+                servername    TYPE zmcp_server
+      RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson
+      RAISING   zcx_mcp_ajson_error
+                zcx_mcp_server.
 ENDCLASS.
 
 
@@ -335,6 +329,8 @@ CLASS zcl_mcp_legacy_v2_adapter IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD dispatch_v2.
+    " TODO: parameter LEGACY_PROTOCOL_VER is never used (ABAP cleaner)
+
     DATA v2_response TYPE zif_mcp_server_v2=>v2_response.
     DATA result      TYPE REF TO zif_mcp_ajson.
 
@@ -386,20 +382,41 @@ CLASS zcl_mcp_legacy_v2_adapter IMPLEMENTATION.
         v2_response = server->tasks_get( NEW zcl_mcp_req_get_task( request-params ) ).
 
       WHEN 'tasks/result'.
-        response = task_result( server     = server
-                                request    = request
-                                area       = area
-                                servername = servername ).
+        response = task_result( server  = server
+                                request = request ).
         RETURN.
 
       WHEN 'tasks/cancel'.
-        v2_response = server->tasks_cancel( NEW zcl_mcp_req_cancel_task( request-params ) ).
+        DATA(cancel_request) = NEW zcl_mcp_req_cancel_task( request-params ).
+
+        v2_response = server->tasks_cancel( cancel_request ).
+
+        response-jsonrpc    = zcl_mcp_jsonrpc=>jsonrpc_version.
+        response-id         = request-id.
+        response-id_present = request-id_present.
+
+        IF v2_response-error-code IS NOT INITIAL OR v2_response-error-message IS NOT INITIAL.
+          response-error = v2_response-error.
+          RETURN.
+        ENDIF.
+
+        DATA(tasks) = NEW zcl_mcp_tasks( area   = area
+                                         server = servername ).
+
+        DATA(cancelled_task) = tasks->get( CONV #( cancel_request->get_task_id( ) ) ).
+
+        DATA(cancel_response) = NEW zcl_mcp_resp_cancel_task( ).
+        cancel_response->set_task( cancelled_task ).
+
+        response-result = cancel_response->zif_mcp_internal~generate_json( ).
+        RETURN.
 
       WHEN 'tasks/update'.
-        response = error_response( request = request
-                                   code    = zcl_mcp_jsonrpc=>error_codes-method_not_found
-                                   message = 'tasks/update is not available to legacy clients' ) ##NO_TEXT.
-        RETURN.
+        DATA(update_params) = translate_legacy_task_update( request    = request
+                                                            area       = area
+                                                            servername = servername ).
+
+        v2_response = server->tasks_update( NEW zcl_mcp_req_update_task( update_params ) ).
 
       WHEN OTHERS.
         response = error_response( request = request
@@ -408,18 +425,12 @@ CLASS zcl_mcp_legacy_v2_adapter IMPLEMENTATION.
         RETURN.
     ENDCASE.
 
-    response = apply_v2_response( server              = server
-                                  v2_response         = v2_response
-                                  request             = request
-                                  legacy_protocol_ver = legacy_protocol_ver
-                                  area                = area
-                                  servername          = servername ).
+    response = apply_v2_response( v2_response = v2_response
+                                  request     = request ).
   ENDMETHOD.
 
   METHOD apply_v2_response.
-
     DATA result_type TYPE string.
-    DATA task_id     TYPE string.
 
     response-jsonrpc    = zcl_mcp_jsonrpc=>jsonrpc_version.
     response-id         = request-id.
@@ -461,13 +472,13 @@ CLASS zcl_mcp_legacy_v2_adapter IMPLEMENTATION.
           RETURN.
         ENDIF.
 
-        IF request-method = 'tasks/get' OR request-method = 'tasks/cancel'.
-          task_id = v2_response-result->get_string( '/task/taskId' ).
+        IF request-method = 'tasks/get'.
           response-result = task_from_v2_result( v2_result = v2_response-result
                                                  nested    = abap_false ).
         ELSE.
           response-result = strip_v2_envelope( v2_response-result ).
         ENDIF.
+
     ENDCASE.
   ENDMETHOD.
 
@@ -483,25 +494,6 @@ CLASS zcl_mcp_legacy_v2_adapter IMPLEMENTATION.
     IF result->exists( '/cacheScope' ).
       result->delete( '/cacheScope' ).
     ENDIF.
-  ENDMETHOD.
-
-  METHOD task_from_manager.
-    DATA task     TYPE zif_mcp_types=>task.
-    DATA response TYPE REF TO zcl_mcp_resp_create_task.
-
-    DATA(tasks) = NEW zcl_mcp_tasks( area   = area
-                                     server = servername ).
-
-    task = tasks->get( CONV #( task_id ) ).
-
-    IF task-status = zcl_mcp_tasks=>status_input_required.
-      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                          msgv1  = CONV #( 'Task requires v2 tasks/update input' ) ) ##NO_TEXT.
-    ENDIF.
-
-    response = NEW zcl_mcp_resp_create_task( ).
-    response->set_task( task ).
-    result = response->zif_mcp_internal~generate_json( ).
   ENDMETHOD.
 
   METHOD list_tasks.
@@ -633,8 +625,12 @@ CLASS zcl_mcp_legacy_v2_adapter IMPLEMENTATION.
     task = legacy_task_from_v2( v2_result ).
 
     IF task-status = zif_mcp_types=>task_states-input_required.
-      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                          msgv1  = CONV #( 'Task requires v2 tasks/update input' ) ) ##NO_TEXT.
+      IF nested = abap_true.
+        task-status = zif_mcp_types=>task_states-working.
+      ELSE.
+        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
+                                            msgv1  = CONV #( 'Task requires v2 tasks/update input' ) ) ##NO_TEXT.
+      ENDIF.
     ENDIF.
 
     IF nested = abap_true.
@@ -645,6 +641,87 @@ CLASS zcl_mcp_legacy_v2_adapter IMPLEMENTATION.
       DATA(get_response) = NEW zcl_mcp_resp_get_task( ).
       get_response->set_task( task ).
       result = get_response->zif_mcp_internal~generate_json( ).
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD translate_legacy_task_update.
+    DATA task_id   TYPE string.
+    DATA candidate TYPE REF TO zif_mcp_ajson.
+    DATA confirm   TYPE REF TO zif_mcp_ajson.
+    DATA pending   TYPE REF TO zif_mcp_ajson.
+
+    IF request-params IS NOT BOUND.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
+                                          msgv1  = 'params' ).
+    ENDIF.
+
+    IF request-params->exists( '/taskId' ) = abap_false.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
+                                          msgv1  = 'taskId' ).
+    ENDIF.
+
+    task_id = request-params->get_string( '/taskId' ).
+
+    result = zcl_mcp_ajson=>create_empty( ).
+    result->set_string( iv_path = '/taskId'
+                        iv_val  = task_id ).
+
+    IF request-params->exists( '/inputResponses' ).
+      result->set( iv_path = '/inputResponses'
+                   iv_val  = request-params->slice( '/inputResponses' ) ).
+    ELSE.
+      IF request-params->exists( '/input' ).
+        candidate = request-params->slice( '/input' ).
+      ELSEIF request-params->exists( '/response' ).
+        candidate = request-params->slice( '/response' ).
+      ELSEIF request-params->exists( '/inputResponse' ).
+        candidate = request-params->slice( '/inputResponse' ).
+      ELSE.
+        candidate = request-params->clone( ).
+        IF candidate->exists( '/taskId' ).
+          candidate->delete( '/taskId' ).
+        ENDIF.
+        IF candidate->exists( '/requestState' ).
+          candidate->delete( '/requestState' ).
+        ENDIF.
+        IF candidate->exists( '/_meta' ).
+          candidate->delete( '/_meta' ).
+        ENDIF.
+      ENDIF.
+
+      IF candidate->exists( '/action' ) OR candidate->exists( '/content' ).
+        result->set( iv_path = '/inputResponses/confirm'
+                     iv_val  = candidate ).
+      ELSE.
+        confirm = zcl_mcp_ajson=>create_empty( ).
+        confirm->set_string( iv_path = '/action'
+                             iv_val  = zcl_mcp_elicit_result=>actions-accept ).
+        confirm->set( iv_path = '/content'
+                      iv_val  = candidate ).
+
+        result->set( iv_path = '/inputResponses/confirm'
+                     iv_val  = confirm ).
+      ENDIF.
+    ENDIF.
+
+    IF request-params->exists( '/requestState' ).
+      result->set_string( iv_path = '/requestState'
+                          iv_val  = request-params->get_string( '/requestState' ) ).
+    ELSE.
+      DATA(tasks) = NEW zcl_mcp_tasks( area   = area
+                                       server = servername ).
+
+      pending = tasks->get_payload( CONV #( task_id ) ).
+
+      IF pending->exists( '/requestState' ).
+        result->set_string( iv_path = '/requestState'
+                            iv_val  = pending->get_string( '/requestState' ) ).
+      ENDIF.
+    ENDIF.
+
+    IF request-params->exists( '/_meta' ).
+      result->set( iv_path = '/_meta'
+                   iv_val  = request-params->slice( '/_meta' ) ).
     ENDIF.
   ENDMETHOD.
 ENDCLASS.

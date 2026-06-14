@@ -108,7 +108,7 @@ CREATE PUBLIC.
         int_ref_uri = json->get_string( '/ref/uri' ).
       WHEN OTHERS.
         RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                            msgv1  = CONV #( |Unknown ref type: { int_ref_type }| ) ).
+                                            msgv1  = CONV #( |Unknown ref type: { int_ref_type }| ) ) ##NO_TEXT.
     ENDCASE.
 
     IF json->exists( '/argument/name' ) = abap_false.

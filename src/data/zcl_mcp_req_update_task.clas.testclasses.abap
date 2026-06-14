@@ -19,7 +19,7 @@ CLASS ltcl_mcp_req_update_task IMPLEMENTATION.
 
     TRY.
         json = zcl_mcp_ajson=>parse(
-          `{"taskId":"00000000000000000000000000000001","inputResponses":{"confirm":{"approved":true}},"requestState":"state-1","_meta":{"vendor/trace":"abc"}}` ).
+                   `{"taskId":"00000000000000000000000000000001","inputResponses":{"confirm":{"approved":true}},"requestState":"state-1","_meta":{"vendor/trace":"abc"}}` ).
 
         cut = NEW zcl_mcp_req_update_task( json ).
 
@@ -32,7 +32,8 @@ CLASS ltcl_mcp_req_update_task IMPLEMENTATION.
                                             act = cut->get_request_state( ) ).
         cl_abap_unit_assert=>assert_equals( exp = `abc`
                                             act = cut->get_meta( )->get_string( `/vendor~1trace` ) ).
-      CATCH cx_root INTO DATA(error).
+      CATCH zcx_mcp_ajson_error
+            zcx_mcp_server INTO DATA(error).
         cl_abap_unit_assert=>fail( error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
@@ -42,15 +43,15 @@ CLASS ltcl_mcp_req_update_task IMPLEMENTATION.
     DATA cut  TYPE REF TO zcl_mcp_req_update_task.
 
     TRY.
-        json = zcl_mcp_ajson=>parse(
-          `{"taskId":"abcdefabcdefabcdefabcdefabcdef12","inputResponses":{}}` ).
+        json = zcl_mcp_ajson=>parse( `{"taskId":"abcdefabcdefabcdefabcdefabcdef12","inputResponses":{}}` ).
 
         cut = NEW zcl_mcp_req_update_task( json ).
 
         cl_abap_unit_assert=>assert_equals( exp = `ABCDEFABCDEFABCDEFABCDEFABCDEF12`
                                             act = cut->get_task_id( ) ).
         cl_abap_unit_assert=>assert_bound( cut->get_meta( ) ).
-      CATCH cx_root INTO DATA(error).
+      CATCH zcx_mcp_ajson_error
+            zcx_mcp_server INTO DATA(error).
         cl_abap_unit_assert=>fail( error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
@@ -63,7 +64,7 @@ CLASS ltcl_mcp_req_update_task IMPLEMENTATION.
       CATCH zcx_mcp_server INTO DATA(error).
         cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>required_params
                                             act = error->if_t100_message~t100key ).
-      CATCH cx_root INTO DATA(root_error).
+      CATCH zcx_mcp_ajson_error INTO DATA(root_error).
         cl_abap_unit_assert=>fail( root_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
@@ -76,7 +77,7 @@ CLASS ltcl_mcp_req_update_task IMPLEMENTATION.
       CATCH zcx_mcp_server INTO DATA(error).
         cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>invalid_arguments
                                             act = error->if_t100_message~t100key ).
-      CATCH cx_root INTO DATA(root_error).
+      CATCH zcx_mcp_ajson_error INTO DATA(root_error).
         cl_abap_unit_assert=>fail( root_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
@@ -89,7 +90,7 @@ CLASS ltcl_mcp_req_update_task IMPLEMENTATION.
       CATCH zcx_mcp_server INTO DATA(error).
         cl_abap_unit_assert=>assert_equals( exp = zcx_mcp_server=>required_params
                                             act = error->if_t100_message~t100key ).
-      CATCH cx_root INTO DATA(root_error).
+      CATCH zcx_mcp_ajson_error INTO DATA(root_error).
         cl_abap_unit_assert=>fail( root_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.

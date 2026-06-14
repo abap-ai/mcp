@@ -53,7 +53,8 @@ CLASS ltcl_mcp_resp_v2_task IMPLEMENTATION.
 
         assert_json_equals(
             actual   = json->stringify( )
-            expected = `{"resultType":"task","task":{"taskId":"00000000000000000000000000000001","status":"working","statusMessage":"Task accepted.","ttlMs":60000,"pollIntervalMs":1000}}` ).
+            expected = |\{"resultType":"task","task":\{"taskId":"00000000000000000000000000000001","status"|
+                && |:"working","statusMessage":"Task accepted.","ttlMs":60000,"pollIntervalMs":1000\}\}| ).
       CATCH zcx_mcp_ajson_error INTO DATA(error).
         cl_abap_unit_assert=>fail( error->get_text( ) ).
     ENDTRY.
@@ -81,7 +82,8 @@ CLASS ltcl_mcp_resp_v2_task IMPLEMENTATION.
 
         assert_json_equals(
             actual   = json->stringify( )
-            expected = `{"resultType":"task","task":{"taskId":"00000000000000000000000000000001","status":"working"},"ttlMs":1000,"cacheScope":"private","_meta":{"vendor/trace":"abc"}}` ).
+            expected = |\{"resultType":"task","task":\{"taskId":"00000000000000000000000000000001",|
+            && |"status":"working"\},"ttlMs":1000,"cacheScope":"private","_meta":\{"vendor/trace":"abc"\}\}| ).
       CATCH zcx_mcp_ajson_error INTO DATA(error).
         cl_abap_unit_assert=>fail( error->get_text( ) ).
     ENDTRY.

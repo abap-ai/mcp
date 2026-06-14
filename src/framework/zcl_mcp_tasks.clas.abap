@@ -243,7 +243,7 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
 
     IF row-payload IS INITIAL.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
-                                          msgv1  = CONV #( |Task { task_id } has no stored result| ) ).
+                                          msgv1  = CONV #( |Task { task_id } has no stored result| ) ) ##NO_TEXT.
     ENDIF.
 
     TRY.
@@ -284,7 +284,7 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
         " Backward compatibility for timestamp-only cursors.
         cursor_task_id = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'.
       ELSE.
-        FIND REGEX '^[0-9A-Fa-f]{32}$' IN cursor_task_id_text.
+        FIND REGEX '^[0-9A-Fa-f]{32}$' IN cursor_task_id_text ##NO_TEXT.
         IF sy-subrc <> 0.
           RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
                                               msgv1  = 'Invalid cursor' ) ##NO_TEXT.

@@ -18,10 +18,10 @@ ENDCLASS.
 CLASS lcl_test_server IMPLEMENTATION.
 
   METHOD get_implementation.
-    result-name        = 'Test Draft Server'.
+    result-name        = 'Test Draft Server' ##NO_TEXT.
     result-version     = '1.2.3'.
-    result-title       = 'Draft Test'.
-    result-description = 'Test server for draft MCP base class'.
+    result-title       = 'Draft Test' ##NO_TEXT.
+    result-description = 'Test server for draft MCP base class' ##NO_TEXT.
     result-website_url = 'https://example.invalid/test'.
   ENDMETHOD.
 
@@ -34,7 +34,7 @@ CLASS lcl_test_server IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_instructions.
-    result = 'Use this server only in unit tests.'.
+    result = 'Use this server only in unit tests.' ##NO_TEXT.
   ENDMETHOD.
 
   METHOD handle_tools_list.
@@ -172,7 +172,7 @@ CLASS ltcl_mcp_server_base_v2 IMPLEMENTATION.
     context-server       = 'SERVER'.
     context-protocol_ver = zif_mcp_constants=>latest_modern_protocol_version.
     context-log_level    = 'debug'.
-    context-traceparent  = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00'.
+    context-traceparent  = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00' ##NO_TEXT.
 
     cut->zif_mcp_server_v2~set_v2_context( context ).
 
@@ -197,9 +197,9 @@ CLASS ltcl_mcp_server_base_v2 IMPLEMENTATION.
   METHOD server_discover.
     DATA(response) = cut->zif_mcp_server_v2~server_discover( ).
 
-    cl_abap_unit_assert=>assert_initial( act = response-error-code ).
+    cl_abap_unit_assert=>assert_initial( response-error-code ).
 
-    cl_abap_unit_assert=>assert_bound( act = response-result ).
+    cl_abap_unit_assert=>assert_bound( response-result ).
 
     cl_abap_unit_assert=>assert_equals( exp = zif_mcp_constants=>result_types-complete
                                         act = response-result->get_string( '/resultType' ) ).
@@ -225,14 +225,14 @@ CLASS ltcl_mcp_server_base_v2 IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = 'Use this server only in unit tests.'
                                         act = response-result->get_string( '/instructions' ) ).
 
-    cl_abap_unit_assert=>assert_true( act = response-result->exists( '/capabilities/prompts' ) ).
+    cl_abap_unit_assert=>assert_true( response-result->exists( '/capabilities/prompts' ) ).
 
-    cl_abap_unit_assert=>assert_true( act = response-result->exists( '/capabilities/resources' ) ).
+    cl_abap_unit_assert=>assert_true( response-result->exists( '/capabilities/resources' ) ).
 
-    cl_abap_unit_assert=>assert_true( act = response-result->exists( '/capabilities/completions' ) ).
+    cl_abap_unit_assert=>assert_true( response-result->exists( '/capabilities/completions' ) ).
 
     cl_abap_unit_assert=>assert_true(
-        act = response-result->exists( '/capabilities/extensions/io.modelcontextprotocol~1tasks' ) ).
+        response-result->exists( '/capabilities/extensions/io.modelcontextprotocol~1tasks' ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = 0
                                         act = response-result->get_integer( '/ttlMs' ) ).
@@ -258,16 +258,16 @@ CLASS ltcl_mcp_server_base_v2 IMPLEMENTATION.
 
     response = cut->zif_mcp_server_v2~tools_list( NEW zcl_mcp_req_list_tools( zcl_mcp_ajson=>create_empty( ) ) ).
 
-    cl_abap_unit_assert=>assert_true( act = cut->tools_called ).
+    cl_abap_unit_assert=>assert_true( cut->tools_called ).
 
-    cl_abap_unit_assert=>assert_initial( act = response-error-code ).
+    cl_abap_unit_assert=>assert_initial( response-error-code ).
 
-    cl_abap_unit_assert=>assert_bound( act = response-result ).
+    cl_abap_unit_assert=>assert_bound( response-result ).
 
     cl_abap_unit_assert=>assert_equals( exp = zif_mcp_constants=>result_types-complete
                                         act = response-result->get_string( '/resultType' ) ).
 
-    cl_abap_unit_assert=>assert_true( act = response-result->exists( '/tools' ) ).
+    cl_abap_unit_assert=>assert_true( response-result->exists( '/tools' ) ).
   ENDMETHOD.
 
   METHOD tasks_get_completed.

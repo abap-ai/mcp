@@ -293,9 +293,10 @@ CLASS zcl_mcp_http_handler DEFINITION
     "! @parameter response | <p class="shorttext synchronized">Error response when validation fails</p>
     "! @parameter result   | <p class="shorttext synchronized">True if request processing should continue</p>
     METHODS validate_legacy_session
-      IMPORTING !request      TYPE zcl_mcp_jsonrpc=>request
-      CHANGING  !response     TYPE zcl_mcp_jsonrpc=>response
-      RETURNING VALUE(result) TYPE abap_bool.
+      IMPORTING !request  TYPE zcl_mcp_jsonrpc=>request
+      EXPORTING result    TYPE abap_bool
+      CHANGING  !response TYPE zcl_mcp_jsonrpc=>response.
+    .
 
     "! <p class="shorttext synchronized">Negotiate legacy protocol version</p>
     "! Reads, restores, defaults, or validates the legacy protocol version.
@@ -304,9 +305,9 @@ CLASS zcl_mcp_http_handler DEFINITION
     "! @parameter response | <p class="shorttext synchronized">Error response when negotiation fails</p>
     "! @parameter result   | <p class="shorttext synchronized">True if request processing should continue</p>
     METHODS negotiate_legacy_protocol
-      IMPORTING !request      TYPE zcl_mcp_jsonrpc=>request
-      CHANGING  !response     TYPE zcl_mcp_jsonrpc=>response
-      RETURNING VALUE(result) TYPE abap_bool.
+      IMPORTING !request  TYPE zcl_mcp_jsonrpc=>request
+      EXPORTING result    TYPE abap_bool
+      CHANGING  !response TYPE zcl_mcp_jsonrpc=>response.
 
     "! <p class="shorttext synchronized">Dispatch legacy MCP request</p>
     "! Routes a parsed legacy JSON-RPC request to the configured v1 server.
@@ -366,7 +367,6 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
         RETURN.
       CATCH cx_root.                                  "#EC NEED_CX_ROOT
         " Defensive fallback: invalid input is handled by caller.
-        RETURN.
     ENDTRY.
   ENDMETHOD.
 
@@ -555,7 +555,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                                       value = 'application/json' ) ##NO_TEXT.
           response->set_cdata( create_error_json( code    = mapped_error-code
                                                   message = mapped_error-message
-                                                  json    = json ) ) ##NO_TEXT.
+                                                  json    = json ) ).
 
         CATCH zcx_mcp_ajson_error.
           response->set_status( code   = 400
@@ -762,14 +762,20 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    IF validate_legacy_session( EXPORTING request  = request
-                                CHANGING  response = response ) = abap_false.
+    validate_legacy_session( EXPORTING request  = request
+                             IMPORTING result   = DATA(legacy_check)
+                             CHANGING  response = response ).
+
+    IF legacy_check = abap_false.
       result = jsonrpc->serialize_response( response ).
       RETURN.
     ENDIF.
 
-    IF negotiate_legacy_protocol( EXPORTING request  = request
-                                  CHANGING  response = response ) = abap_false.
+    negotiate_legacy_protocol( EXPORTING request  = request
+                               IMPORTING result   = DATA(negotiate_check)
+                               CHANGING  response = response ).
+
+    IF negotiate_check = abap_false.
       result = jsonrpc->serialize_response( response ).
       RETURN.
     ENDIF.
@@ -810,9 +816,9 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                                 value = allow_methods ) ##NO_TEXT.
 
     IF mcp_server_v2 IS BOUND AND mcp_server IS NOT BOUND.
-      allow_headers = `Content-Type, Accept, Authorization, Mcp-Protocol-Version, Mcp-Method, Mcp-Name`.
+      allow_headers = `Content-Type, Accept, Authorization, Mcp-Protocol-Version, Mcp-Method, Mcp-Name` ##NO_TEXT.
     ELSE.
-      allow_headers = `Content-Type, Accept, Authorization, Mcp-Session-Id, Mcp-Protocol-Version`.
+      allow_headers = `Content-Type, Accept, Authorization, Mcp-Session-Id, Mcp-Protocol-Version` ##NO_TEXT.
     ENDIF.
 
     requested_headers = request->get_header_field( `Access-Control-Request-Headers` ) ##NO_TEXT.
@@ -914,7 +920,7 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
                                           msgv1  = CONV #( session_id ) ).
     ENDIF.
 
-    FIND REGEX '^[0-9A-Fa-f]{32}$' IN session_id.
+    FIND REGEX '^[0-9A-Fa-f]{32}$' IN session_id ##NO_TEXT.
     IF sy-subrc <> 0.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>session_unknown
                                           msgv1  = CONV #( session_id ) ).
@@ -1185,13 +1191,13 @@ CLASS zcl_mcp_http_handler IMPLEMENTATION.
 
     IF protocol_version IS NOT INITIAL.
       http_server->response->set_header_field( name  = zif_mcp_constants=>header_names-protocol_version
-                                               value = protocol_version ) ##NO_TEXT.
+                                               value = protocol_version ).
     ENDIF.
 
     IF     mcp_server                    IS BOUND
        AND mcp_server->server-session_id IS NOT INITIAL.
       http_server->response->set_header_field( name  = zif_mcp_constants=>header_names-session_id
-                                               value = CONV #( mcp_server->server-session_id ) ) ##NO_TEXT.
+                                               value = CONV #( mcp_server->server-session_id ) ).
     ENDIF.
   ENDMETHOD.
 

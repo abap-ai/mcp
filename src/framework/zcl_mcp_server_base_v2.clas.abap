@@ -38,7 +38,7 @@ CREATE PUBLIC.
     "! @parameter request  | <p class="shorttext synchronized">Prompt list request</p>
     "! @parameter response | <p class="shorttext synchronized">Prompt list response</p>
     METHODS handle_prompts_list
-      IMPORTING !request        TYPE REF TO zcl_mcp_req_list_prompts
+      IMPORTING !request        TYPE REF TO zcl_mcp_req_list_prompts ##NEEDED
       RETURNING VALUE(response) TYPE zif_mcp_server_v2=>v2_response.
 
     "! <p class="shorttext synchronized">Handle prompts/get</p>
@@ -56,7 +56,7 @@ CREATE PUBLIC.
     "! @parameter request  | <p class="shorttext synchronized">Resource list request</p>
     "! @parameter response | <p class="shorttext synchronized">Resource list response</p>
     METHODS handle_resources_list
-      IMPORTING !request        TYPE REF TO zcl_mcp_req_list_resources
+      IMPORTING !request        TYPE REF TO zcl_mcp_req_list_resources ##NEEDED
       RETURNING VALUE(response) TYPE zif_mcp_server_v2=>v2_response.
 
     "! <p class="shorttext synchronized">Handle resources/read</p>
@@ -74,7 +74,7 @@ CREATE PUBLIC.
     "! @parameter request  | <p class="shorttext synchronized">Resource template list request</p>
     "! @parameter response | <p class="shorttext synchronized">Resource template list response</p>
     METHODS handle_res_tmpls_list
-      IMPORTING !request        TYPE REF TO zcl_mcp_req_list_res_tmpls
+      IMPORTING !request        TYPE REF TO zcl_mcp_req_list_res_tmpls ##NEEDED
       RETURNING VALUE(response) TYPE zif_mcp_server_v2=>v2_response.
 
     "! <p class="shorttext synchronized">Handle tools/list</p>
@@ -83,7 +83,7 @@ CREATE PUBLIC.
     "! @parameter request  | <p class="shorttext synchronized">Tool list request</p>
     "! @parameter response | <p class="shorttext synchronized">Tool list response</p>
     METHODS handle_tools_list
-      IMPORTING !request        TYPE REF TO zcl_mcp_req_list_tools
+      IMPORTING !request        TYPE REF TO zcl_mcp_req_list_tools ##NEEDED
       RETURNING VALUE(response) TYPE zif_mcp_server_v2=>v2_response.
 
     "! <p class="shorttext synchronized">Get tool input schema</p>
@@ -115,7 +115,7 @@ CREATE PUBLIC.
     "! @parameter request  | <p class="shorttext synchronized">Completion request</p>
     "! @parameter response | <p class="shorttext synchronized">Completion response</p>
     METHODS handle_completion
-      IMPORTING !request        TYPE REF TO zcl_mcp_req_complete
+      IMPORTING !request        TYPE REF TO zcl_mcp_req_complete ##NEEDED
       RETURNING VALUE(response) TYPE zif_mcp_server_v2=>v2_response.
 
     "! <p class="shorttext synchronized">Handle tasks/get</p>
@@ -323,7 +323,7 @@ CLASS zcl_mcp_server_base_v2 IMPLEMENTATION.
                               textid = zcx_mcp_server=>invalid_arguments
                               msgv1  = COND #( WHEN list_result-error-message IS NOT INITIAL
                                                THEN CONV #( list_result-error-message )
-                                               ELSE CONV #( |tools/list failed while loading tool schema| ) ) ).
+                                               ELSE CONV #( |tools/list failed while loading tool schema| ) ) ) ##NO_TEXT.
     ENDIF.
 
     IF list_result-result IS NOT BOUND OR list_result-result->exists( '/tools' ) = abap_false.
@@ -382,12 +382,12 @@ CLASS zcl_mcp_server_base_v2 IMPLEMENTATION.
                 task_get->set_error( code    = zcl_mcp_jsonrpc=>error_codes-internal_error
                                      message = COND #( WHEN task-status_message IS NOT INITIAL
                                                        THEN task-status_message
-                                                       ELSE |Task { task_id } failed| ) ).
+                                                       ELSE |Task { task_id } failed| ) ) ##NO_TEXT.
             ENDTRY.
 
           WHEN zif_mcp_types=>task_states-cancelled.
             task_get->set_error( code    = zcl_mcp_jsonrpc=>error_codes-internal_error
-                                 message = |Task { task_id } was cancelled| ).
+                                 message = |Task { task_id } was cancelled| ) ##NO_TEXT.
 
           WHEN zif_mcp_types=>task_states-input_required.
             DATA(pending) = get_tasks( )->get_payload( CONV #( task_id ) ).
@@ -435,7 +435,7 @@ CLASS zcl_mcp_server_base_v2 IMPLEMENTATION.
 
         IF task-status <> zif_mcp_types=>task_states-input_required.
           response-error-code    = zcl_mcp_jsonrpc=>error_codes-invalid_params.
-          response-error-message = |Task { task_id } is not waiting for input|.
+          response-error-message = |Task { task_id } is not waiting for input| ##NO_TEXT.
           RETURN.
         ENDIF.
 
@@ -480,7 +480,7 @@ CLASS zcl_mcp_server_base_v2 IMPLEMENTATION.
 
   METHOD method_not_found.
     response-error-code    = zcl_mcp_jsonrpc=>error_codes-method_not_found.
-    response-error-message = |Method { method } not found.|.
+    response-error-message = |Method { method } not found.| ##NO_TEXT.
   ENDMETHOD.
 
   METHOD create_request_state.
@@ -488,7 +488,7 @@ CLASS zcl_mcp_server_base_v2 IMPLEMENTATION.
        OR int_context-server             IS INITIAL
        OR int_context-mcp_request-method IS INITIAL.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
-                                          msgv1  = `Missing v2 context for requestState` ).
+                                          msgv1  = `Missing v2 context for requestState` ) ##NO_TEXT.
     ENDIF.
 
     result = zcl_mcp_req_state=>create( area        = CONV #( int_context-area )
@@ -505,7 +505,7 @@ CLASS zcl_mcp_server_base_v2 IMPLEMENTATION.
        OR int_context-server             IS INITIAL
        OR int_context-mcp_request-method IS INITIAL.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
-                                          msgv1  = `Missing v2 context for requestState` ).
+                                          msgv1  = `Missing v2 context for requestState` ) ##NO_TEXT.
     ENDIF.
 
     expected_method = method.
@@ -522,7 +522,7 @@ CLASS zcl_mcp_server_base_v2 IMPLEMENTATION.
   METHOD get_tasks.
     IF int_context-area IS INITIAL OR int_context-server IS INITIAL.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
-                                          msgv1  = `Missing v2 context for task manager` ).
+                                          msgv1  = `Missing v2 context for task manager` ) ##NO_TEXT.
     ENDIF.
 
     IF tasks IS NOT BOUND.

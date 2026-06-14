@@ -103,7 +103,7 @@ CLASS zcl_mcp_elicit_result IMPLEMENTATION.
   METHOD constructor.
     IF json IS NOT BOUND.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>required_params
-                                          msgv1  = `elicitation result` ).
+                                          msgv1  = `elicitation result` ) ##NO_TEXT.
     ENDIF.
 
     IF json->exists( `/action` ) = abap_false.
@@ -113,12 +113,11 @@ CLASS zcl_mcp_elicit_result IMPLEMENTATION.
 
     int_action = json->get_string( `/action` ).
 
-    CASE int_action.
-      WHEN actions-accept OR actions-decline OR actions-cancel.
-      WHEN OTHERS.
-        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                            msgv1  = |Invalid elicitation action { int_action }| ) ##NO_TEXT.
-    ENDCASE.
+
+    IF int_action <> actions-accept AND int_action <> actions-decline AND int_action <> actions-cancel.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
+                                          msgv1  = |Invalid elicitation action { int_action }| ) ##NO_TEXT.
+    ENDIF.
 
     IF json->exists( `/content` ).
       int_has_content = abap_true.

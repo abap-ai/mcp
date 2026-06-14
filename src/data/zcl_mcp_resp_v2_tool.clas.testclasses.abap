@@ -60,7 +60,8 @@ CLASS ltcl_mcp_resp_v2_tool IMPLEMENTATION.
 
     assert_json_equals(
         actual   = result->stringify( )
-        expected = `{"content":[{"type":"text","text":"Cacheable result"}],"isError":false,"resultType":"complete","ttlMs":2500,"cacheScope":"private","_meta":{"source":"unit-test"}}` ).
+        expected = |\{"content":[\{"type":"text","text":"Cacheable result"\}],"isError":false,|
+         && |"resultType":"complete","ttlMs":2500,"cacheScope":"private","_meta":\{"source":"unit-test"\}\}| ).
   ENDMETHOD.
 
   METHOD structured_content.

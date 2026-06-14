@@ -113,7 +113,7 @@ CLASS zcl_mcp_req_state IMPLEMENTATION.
 
     IF ttl_seconds <= 0.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
-                                          msgv1  = `ttl_seconds must be positive` ).
+                                          msgv1  = `ttl_seconds must be positive` ) ##NO_TEXT.
     ENDIF.
 
     GET TIME STAMP FIELD now.
@@ -148,13 +148,13 @@ CLASS zcl_mcp_req_state IMPLEMENTATION.
     DATA now                TYPE timestampl.
 
     IF request_state IS INITIAL.
-      raise_invalid( `Missing requestState` ).
+      raise_invalid( `Missing requestState` ) ##NO_TEXT.
     ENDIF.
 
     token = zcl_mcp_ajson=>parse( request_state ).
 
     IF token->exists( `/payload` ) = abap_false OR token->exists( `/sig` ) = abap_false.
-      raise_invalid( `Invalid requestState format` ).
+      raise_invalid( `Invalid requestState format` ) ##NO_TEXT.
     ENDIF.
 
     payload = token->slice( `/payload` ).
@@ -164,14 +164,14 @@ CLASS zcl_mcp_req_state IMPLEMENTATION.
     actual_signature = to_upper( actual_signature ).
 
     IF actual_signature IS INITIAL OR actual_signature CN `0123456789ABCDEF`.
-      raise_invalid( `Invalid requestState signature format` ).
+      raise_invalid( `Invalid requestState signature format` ) ##NO_TEXT.
     ENDIF.
 
     expected_signature = sign_payload( payload ).
 
     IF signatures_equal( expected = expected_signature
                          actual   = actual_signature ) = abap_false.
-      raise_invalid( `Invalid requestState signature` ).
+      raise_invalid( `Invalid requestState signature` ) ##NO_TEXT.
     ENDIF.
 
     result-area       = payload->get_string( `/area` ).
@@ -183,24 +183,24 @@ CLASS zcl_mcp_req_state IMPLEMENTATION.
     result-data       = payload->get_string( `/data` ).
 
     IF result-area <> area.
-      raise_invalid( `requestState area mismatch` ).
+      raise_invalid( `requestState area mismatch` ) ##NO_TEXT.
     ENDIF.
 
     IF result-server <> server.
-      raise_invalid( `requestState server mismatch` ).
+      raise_invalid( `requestState server mismatch` ) ##NO_TEXT.
     ENDIF.
 
     IF result-method <> method.
-      raise_invalid( `requestState method mismatch` ).
+      raise_invalid( `requestState method mismatch` ) ##NO_TEXT.
     ENDIF.
 
     IF result-uname <> uname.
-      raise_invalid( `requestState user mismatch` ).
+      raise_invalid( `requestState user mismatch` ) ##NO_TEXT.
     ENDIF.
 
     GET TIME STAMP FIELD now.
     IF result-expires_at < now.
-      raise_invalid( `requestState expired` ).
+      raise_invalid( `requestState expired` ) ##NO_TEXT.
     ENDIF.
 
     consume_nonce( result ).
@@ -241,7 +241,7 @@ CLASS zcl_mcp_req_state IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
-                                          msgv1  = `Could not sign requestState` ).
+                                          msgv1  = `Could not sign requestState` ) ##NO_TEXT.
     ENDIF.
 
     result = hmac.
@@ -268,45 +268,45 @@ CLASS zcl_mcp_req_state IMPLEMENTATION.
     DATA expires_at TYPE timestampl.
 
     IF payload IS NOT BOUND.
-      raise_invalid( `Invalid requestState payload` ).
+      raise_invalid( `Invalid requestState payload` ) ##NO_TEXT.
     ENDIF.
 
     IF payload->get_string( `/v` ) <> version.
-      raise_invalid( `Unsupported requestState version` ).
+      raise_invalid( `Unsupported requestState version` ) ##NO_TEXT.
     ENDIF.
 
     IF payload->get_string( `/area` ) IS INITIAL.
-      raise_invalid( `Missing requestState area` ).
+      raise_invalid( `Missing requestState area` ) ##NO_TEXT.
     ENDIF.
 
     IF payload->get_string( `/server` ) IS INITIAL.
-      raise_invalid( `Missing requestState server` ).
+      raise_invalid( `Missing requestState server` ) ##NO_TEXT.
     ENDIF.
 
     IF payload->get_string( `/method` ) IS INITIAL.
-      raise_invalid( `Missing requestState method` ).
+      raise_invalid( `Missing requestState method` ) ##NO_TEXT.
     ENDIF.
 
     IF payload->get_string( `/uname` ) IS INITIAL.
-      raise_invalid( `Missing requestState user` ).
+      raise_invalid( `Missing requestState user` ) ##NO_TEXT.
     ENDIF.
 
     IF payload->get_string( `/expiresAt` ) IS INITIAL.
-      raise_invalid( `Missing requestState expiry` ).
+      raise_invalid( `Missing requestState expiry` ) ##NO_TEXT.
     ENDIF.
 
     IF payload->get_string( `/nonce` ) IS INITIAL.
-      raise_invalid( `Missing requestState nonce` ).
+      raise_invalid( `Missing requestState nonce` ) ##NO_TEXT.
     ENDIF.
 
     IF payload->exists( `/data` ) = abap_false.
-      raise_invalid( `Missing requestState data` ).
+      raise_invalid( `Missing requestState data` ) ##NO_TEXT.
     ENDIF.
 
     TRY.
         expires_at = payload->get_string( `/expiresAt` ).
       CATCH cx_sy_conversion_no_number cx_sy_conversion_overflow.
-        raise_invalid( `Invalid requestState expiry` ).
+        raise_invalid( `Invalid requestState expiry` ) ##NO_TEXT.
     ENDTRY.
   ENDMETHOD.
 
@@ -342,7 +342,7 @@ CLASS zcl_mcp_req_state IMPLEMENTATION.
     DATA now         TYPE timestampl.
 
     IF state-nonce IS INITIAL OR strlen( state-nonce ) > 64.
-      raise_invalid( `Invalid requestState nonce` ).
+      raise_invalid( `Invalid requestState nonce` ) ##NO_TEXT.
     ENDIF.
 
     GET TIME STAMP FIELD now.
@@ -365,7 +365,7 @@ CLASS zcl_mcp_req_state IMPLEMENTATION.
     INSERT zmcp_req_nonces FROM @db_nonce.
 
     IF sy-subrc <> 0.
-      raise_invalid( `requestState replayed` ).
+      raise_invalid( `requestState replayed` ) ##NO_TEXT.
     ENDIF.
   ENDMETHOD.
 
@@ -379,7 +379,7 @@ CLASS zcl_mcp_req_state IMPLEMENTATION.
                          IMPORTING tstmp_tgt = now ).
 
     DELETE FROM zmcp_req_nonces
-      WHERE expires_at < @now.
+      WHERE expires_at < @now.  "#EC CI_NOFIELD
 
     result = sy-dbcnt.
 

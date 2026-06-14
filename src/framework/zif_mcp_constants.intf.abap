@@ -31,10 +31,10 @@ INTERFACE zif_mcp_constants
              END OF cache_scopes.
 
   CONSTANTS: BEGIN OF header_names,
-               protocol_version TYPE string VALUE `Mcp-Protocol-Version`,
-               session_id       TYPE string VALUE `Mcp-Session-Id`,
-               method           TYPE string VALUE `Mcp-Method`,
-               name             TYPE string VALUE `Mcp-Name`,
+               protocol_version TYPE string VALUE `Mcp-Protocol-Version` ##NO_TEXT,
+               session_id       TYPE string VALUE `Mcp-Session-Id` ##NO_TEXT,
+               method           TYPE string VALUE `Mcp-Method` ##NO_TEXT,
+               name             TYPE string VALUE `Mcp-Name` ##NO_TEXT,
              END OF header_names.
 
   CONSTANTS: BEGIN OF meta_keys,
