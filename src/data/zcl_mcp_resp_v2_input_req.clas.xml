@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_RESP_V2_INPUT_REQ</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP draft input required result</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>ADD_INPUT_REQUEST</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Add input request</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_INPUT_REQUESTS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set input requests</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_REQUEST_STATE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set request state</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_INPUT_REQUEST</CMPNAME>
+     <SCONAME>METHOD</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>MCP method to call for input</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_INPUT_REQUEST</CMPNAME>
+     <SCONAME>PARAMS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Input request parameters</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_INPUT_REQUEST</CMPNAME>
+     <SCONAME>REQUEST_KEY</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Input request key</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_INPUT_REQUESTS</CMPNAME>
+     <SCONAME>REQUESTS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Input request entries</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_REQUEST_STATE</CMPNAME>
+     <SCONAME>REQUEST_STATE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Opaque request state</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

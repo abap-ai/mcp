@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_RESP_V2_ACK</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP draft acknowledgement result</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>GENERATE_JSON</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Generate JSON result</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_CACHE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set cache hint</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_COMPLETE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set complete result envelope</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_META</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set result metadata</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>GENERATE_JSON</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Acknowledgement result JSON</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GENERATE_JSON</CMPNAME>
+     <SCONAME>ZCX_MCP_AJSON_ERROR</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Raised when JSON generation fails</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_CACHE</CMPNAME>
+     <SCONAME>CACHE_SCOPE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Cache scope</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_CACHE</CMPNAME>
+     <SCONAME>TTL_MS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Cache time-to-live in milliseconds</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_COMPLETE</CMPNAME>
+     <SCONAME>ENABLED</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Whether to emit resultType=complete</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_META</CMPNAME>
+     <SCONAME>META</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Result metadata</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

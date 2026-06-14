@@ -1,0 +1,152 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_RESP_V2_TASK_GET</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP draft tasks/get result</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>ADD_INPUT_REQUEST</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Add input request</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_CACHE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set cache hint</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_ERROR</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set failed task error</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_META</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set result metadata</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_REQUEST_STATE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set request state</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_RESULT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set completed result</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set task state</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_INPUT_REQUEST</CMPNAME>
+     <SCONAME>METHOD</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>MCP method the client should call</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_INPUT_REQUEST</CMPNAME>
+     <SCONAME>PARAMS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Input request parameters</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_INPUT_REQUEST</CMPNAME>
+     <SCONAME>REQUEST_KEY</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Input request key</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_CACHE</CMPNAME>
+     <SCONAME>CACHE_SCOPE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Cache scope</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_CACHE</CMPNAME>
+     <SCONAME>TTL_MS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Cache time-to-live in milliseconds</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_ERROR</CMPNAME>
+     <SCONAME>CODE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>JSON-RPC error code</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_ERROR</CMPNAME>
+     <SCONAME>DATA</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Optional JSON-RPC error data</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_ERROR</CMPNAME>
+     <SCONAME>MESSAGE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>JSON-RPC error message</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_META</CMPNAME>
+     <SCONAME>META</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Result metadata</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_REQUEST_STATE</CMPNAME>
+     <SCONAME>REQUEST_STATE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Opaque input request state</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_RESULT</CMPNAME>
+     <SCONAME>PAYLOAD</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Final result payload of the original request</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <SCONAME>POLL_INTERVAL_MS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Optional polling interval in milliseconds</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <SCONAME>STATUS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Task status</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <SCONAME>STATUS_MESSAGE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Optional status message</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <SCONAME>TASK_ID</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Task id</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <SCONAME>TTL_MS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Optional task TTL in milliseconds</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

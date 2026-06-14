@@ -9,13 +9,14 @@ CLASS zcl_mcp_tasks DEFINITION
 
   PUBLIC SECTION.
     "! Status constants - match wire values in zmcp_task_status domain
-    CONSTANTS status_working   TYPE zmcp_task_status VALUE 'working'.
-    CONSTANTS status_completed TYPE zmcp_task_status VALUE 'completed'.
-    CONSTANTS status_failed    TYPE zmcp_task_status VALUE 'failed'.
-    CONSTANTS status_cancelled TYPE zmcp_task_status VALUE 'cancelled'.
+    CONSTANTS status_working        TYPE zmcp_task_status VALUE 'working'.
+    CONSTANTS status_completed      TYPE zmcp_task_status VALUE 'completed'.
+    CONSTANTS status_failed         TYPE zmcp_task_status VALUE 'failed'.
+    CONSTANTS status_cancelled      TYPE zmcp_task_status VALUE 'cancelled'.
+    CONSTANTS status_input_required TYPE zmcp_task_status VALUE 'input_req'.
 
     "! Page size for tasks/list
-    CONSTANTS page_size        TYPE i                VALUE 50.
+    CONSTANTS page_size             TYPE i                VALUE 50.
 
     "! <p class="shorttext synchronized">Constructor</p>
     "! @parameter area   | <p class="shorttext synchronized">MCP area</p>
@@ -82,6 +83,28 @@ CLASS zcl_mcp_tasks DEFINITION
       IMPORTING task_id  TYPE sysuuid_c32
                 !status  TYPE zmcp_task_status
                 !message TYPE string OPTIONAL
+      RAISING   zcx_mcp_server.
+
+    "! <p class="shorttext synchronized">Request client input for a task</p>
+    "! Stores pending input request JSON and moves the task to input_required.
+    "! Safe to call from batch jobs and background RFCs.
+    "! @parameter task_id        | <p class="shorttext synchronized">Task ID</p>
+    "! @parameter input_required | <p class="shorttext synchronized">InputRequiredResult JSON</p>
+    CLASS-METHODS request_input
+      IMPORTING task_id        TYPE sysuuid_c32
+                input_required TYPE REF TO zif_mcp_ajson
+      RAISING   zcx_mcp_server.
+
+    "! <p class="shorttext synchronized">Consume client input for a task</p>
+    "! Stores task input responses and moves the task back to working.
+    "! Safe to call from batch jobs and background RFCs.
+    "! @parameter task_id         | <p class="shorttext synchronized">Task ID</p>
+    "! @parameter input_responses | <p class="shorttext synchronized">Input responses JSON</p>
+    "! @parameter request_state   | <p class="shorttext synchronized">Opaque request state</p>
+    CLASS-METHODS consume_update
+      IMPORTING task_id         TYPE sysuuid_c32
+                input_responses TYPE REF TO zif_mcp_ajson
+                request_state   TYPE string OPTIONAL
       RAISING   zcx_mcp_server.
 
     "! <p class="shorttext synchronized">Store task payload</p>
@@ -515,8 +538,8 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
                          IMPORTING tstmp_tgt = db_cutoff ).
 
     DELETE FROM zmcp_tasks
-      WHERE status     = @status_working
-        AND created_at < @db_cutoff.                    "#EC CI_NOFIELD
+      WHERE status     IN ( @status_working, @status_input_required )
+        AND created_at  < @db_cutoff.                    "#EC CI_NOFIELD
     result = result + sy-dbcnt.
 
     IF result > 0.
@@ -526,11 +549,17 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
 
   METHOD is_valid_transition.
     result = xsdbool(
-          current = status_working
-      AND (    next = status_working
-            OR next = status_completed
-            OR next = status_failed
-            OR next = status_cancelled ) ).
+         (     current = status_working
+           AND (    next = status_working
+                 OR next = status_input_required
+                 OR next = status_completed
+                 OR next = status_failed
+                 OR next = status_cancelled ) )
+      OR (     current = status_input_required
+           AND (    next = status_working
+                 OR next = status_completed
+                 OR next = status_failed
+                 OR next = status_cancelled ) ) ).
   ENDMETHOD.
 
   METHOD read_task_row.
@@ -546,7 +575,10 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
 
   METHOD row_to_task.
     result-task_id        = row-task_id.
-    result-status         = row-status.
+    result-status         = COND #(
+             WHEN row-status = status_input_required
+             THEN zif_mcp_types=>task_states-input_required
+             ELSE row-status ).
     result-status_message = row-status_message.
     result-created_at     = row-created_at.
     result-last_updated   = row-last_updated.
@@ -564,4 +596,89 @@ CLASS zcl_mcp_tasks IMPLEMENTATION.
     result = read_task_row( task_id )-status.
   ENDMETHOD.
 
+  METHOD request_input.
+    DATA(row) = read_task_row( task_id ).
+
+    IF is_valid_transition( current = row-status
+                            next    = status_input_required ) = abap_false.
+      RAISE EXCEPTION NEW zcx_mcp_server(
+          textid = zcx_mcp_server=>internal_error
+          msgv1  = CONV #( |Invalid status transition { row-status } -> { status_input_required }| ) ) ##NO_TEXT.
+    ENDIF.
+
+    IF input_required IS NOT BOUND.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
+                                          msgv1  = 'input_required' ) ##NO_TEXT.
+    ENDIF.
+
+    TRY.
+        DATA(payload_str) = input_required->stringify( ).
+      CATCH zcx_mcp_ajson_error INTO DATA(error).
+        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
+                                            msgv1  = CONV #( error->get_text( ) ) ).
+    ENDTRY.
+
+    GET TIME STAMP FIELD DATA(now).
+
+    UPDATE zmcp_tasks
+      SET payload      = @payload_str,
+          status       = @status_input_required,
+          last_updated = @now
+      WHERE task_id = @task_id
+        AND status  = @row-status.
+
+    IF sy-subrc <> 0.
+      DATA(current_row) = read_task_row( task_id ).
+      RAISE EXCEPTION NEW zcx_mcp_server(
+          textid = zcx_mcp_server=>internal_error
+          msgv1  = CONV #( |Invalid status transition { current_row-status } -> { status_input_required }| ) ) ##NO_TEXT.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD consume_update.
+    DATA(row) = read_task_row( task_id ).
+
+    IF row-status <> status_input_required.
+      RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>invalid_arguments
+                                          msgv1  = CONV #( |Task { task_id } is not waiting for input| ) ) ##NO_TEXT.
+    ENDIF.
+
+    TRY.
+        DATA(payload) = zcl_mcp_ajson=>create_empty( ).
+
+        IF input_responses IS BOUND.
+          payload->set( iv_path = `/inputResponses`
+                        iv_val  = input_responses ).
+        ELSE.
+          payload->touch_object( `/inputResponses` ).
+        ENDIF.
+
+        IF request_state IS NOT INITIAL.
+          payload->set_string( iv_path = `/requestState`
+                               iv_val  = request_state ).
+        ENDIF.
+
+        DATA(payload_str) = payload->stringify( ).
+
+      CATCH zcx_mcp_ajson_error INTO DATA(error).
+        RAISE EXCEPTION NEW zcx_mcp_server( textid = zcx_mcp_server=>internal_error
+                                            msgv1  = CONV #( error->get_text( ) ) ).
+    ENDTRY.
+
+    GET TIME STAMP FIELD DATA(now).
+
+    UPDATE zmcp_tasks
+      SET payload      = @payload_str,
+          status       = @status_working,
+          last_updated = @now
+      WHERE task_id = @task_id
+        AND status  = @status_input_required.
+
+    IF sy-subrc <> 0.
+      DATA(current_row) = read_task_row( task_id ).
+      RAISE EXCEPTION NEW zcx_mcp_server(
+          textid = zcx_mcp_server=>internal_error
+          msgv1  = CONV #( |Invalid status transition { current_row-status } -> { status_working }| ) ) ##NO_TEXT.
+    ENDIF.
+  ENDMETHOD.
 ENDCLASS.

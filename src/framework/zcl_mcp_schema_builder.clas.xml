@@ -121,6 +121,12 @@
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>ADD_BOOLEAN</CMPNAME>
+     <SCONAME>X_MCP_HEADER</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Expose property through Mcp-Param-* header mirroring</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_BOOLEAN</CMPNAME>
      <SCONAME>ZCX_MCP_AJSON_ERROR</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>JSON error</DESCRIPT>
@@ -163,6 +169,12 @@
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>ADD_INTEGER</CMPNAME>
+     <SCONAME>X_MCP_HEADER</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Expose property through Mcp-Param-* header mirroring</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_INTEGER</CMPNAME>
      <SCONAME>ZCX_MCP_AJSON_ERROR</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>JSON error</DESCRIPT>
@@ -202,6 +214,12 @@
      <SCONAME>SELF</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Builder instance for chaining</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_NUMBER</CMPNAME>
+     <SCONAME>X_MCP_HEADER</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Expose property through Mcp-Param-* header mirroring</DESCRIPT>
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>ADD_NUMBER</CMPNAME>
@@ -232,6 +250,12 @@
      <SCONAME>TYPE</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Property type</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_PROPERTY</CMPNAME>
+     <SCONAME>X_MCP_HEADER</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Expose property through Mcp-Param-* header mirroring</DESCRIPT>
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>ADD_PROPERTY</CMPNAME>
@@ -280,6 +304,12 @@
      <SCONAME>SELF</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Builder instance for chaining</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>ADD_STRING</CMPNAME>
+     <SCONAME>X_MCP_HEADER</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Expose property through Mcp-Param-* header mirroring</DESCRIPT>
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>ADD_STRING</CMPNAME>

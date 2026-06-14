@@ -14,13 +14,14 @@ CLASS ltcl_mcp_test_resp_complete DEFINITION FINAL
     METHODS total_emitted_when_set    FOR TESTING RAISING cx_static_check.
     METHODS total_omitted_when_zero   FOR TESTING RAISING cx_static_check.
     METHODS has_more_emitted_true     FOR TESTING RAISING cx_static_check.
-    METHODS has_more_omitted_false    FOR TESTING RAISING cx_static_check.
+    METHODS has_more_emitted_false    FOR TESTING RAISING cx_static_check.
+    METHODS has_more_omitted_default  FOR TESTING RAISING cx_static_check.
     METHODS meta_emitted_when_bound   FOR TESTING RAISING cx_static_check.
     METHODS meta_omitted_when_unbound FOR TESTING RAISING cx_static_check.
     METHODS all_fields_combined       FOR TESTING RAISING cx_static_check.
-  ENDCLASS.
+ENDCLASS.
 
-  CLASS ltcl_mcp_test_resp_complete IMPLEMENTATION.
+CLASS ltcl_mcp_test_resp_complete IMPLEMENTATION.
   METHOD setup.
     cut  = NEW zcl_mcp_resp_complete( ).
     json = zcl_mcp_ajson=>create_empty( ).
@@ -97,21 +98,32 @@ CLASS ltcl_mcp_test_resp_complete DEFINITION FINAL
                                        msg = 'total must be absent when zero' ).
   ENDMETHOD.
 
-    METHOD has_more_emitted_true.
-      cut->set_has_more( abap_true ).
-      json = cut->zif_mcp_internal~generate_json( ).
-      cl_abap_unit_assert=>assert_true(
-        act = json->exists( '/completion/hasMore' )
-        msg = 'hasMore must be present' ).
+  METHOD has_more_emitted_true.
+    cut->set_has_more( abap_true ).
+    json = cut->zif_mcp_internal~generate_json( ).
+    cl_abap_unit_assert=>assert_true(
+      act = json->exists( '/completion/hasMore' )
+      msg = 'hasMore must be present' ).
     cl_abap_unit_assert=>assert_true( act = json->get_boolean( '/completion/hasMore' )
                                       msg = 'hasMore value' ).
-    ENDMETHOD.
+  ENDMETHOD.
 
-  METHOD has_more_omitted_false.
+  METHOD has_more_emitted_false.
     cut->set_has_more( abap_false ).
     json = cut->zif_mcp_internal~generate_json( ).
+
+    cl_abap_unit_assert=>assert_true( act = json->exists( '/completion/hasMore' )
+                                      msg = 'hasMore must be present when explicitly set' ).
+
+    cl_abap_unit_assert=>assert_false( act = json->get_boolean( '/completion/hasMore' )
+                                       msg = 'hasMore value' ).
+  ENDMETHOD.
+
+  METHOD has_more_omitted_default.
+    json = cut->zif_mcp_internal~generate_json( ).
+
     cl_abap_unit_assert=>assert_false( act = json->exists( '/completion/hasMore' )
-                                       msg = 'hasMore must be absent when false' ).
+                                       msg = 'hasMore must be absent when never set' ).
   ENDMETHOD.
 
   METHOD meta_emitted_when_bound.

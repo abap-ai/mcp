@@ -16,5 +16,17 @@
     "area": "demo",
     "server": "demo_standard",
     "class": "ZCL_MCP_DEMO_SERVER_STATELESS"
+  },
+  {
+    "client": "001",
+    "area": "demo",
+    "server": "demo_v2_basic",
+    "class": "ZCL_MCP_DEMO_SERVER_V2_BASIC"
+  },
+  {
+    "client": "001",
+    "area": "demo",
+    "server": "demo_v2_workflow",
+    "class": "ZCL_MCP_DEMO_SERVER_V2_WF"
   }
 ]

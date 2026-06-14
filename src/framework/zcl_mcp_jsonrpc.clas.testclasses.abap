@@ -34,6 +34,8 @@ CLASS ltcl_mcp_jsonrpc DEFINITION FINAL FOR TESTING
     METHODS parse_request_bad_version      FOR TESTING.
     METHODS parse_request_missing_method   FOR TESTING.
 
+    METHODS draft_error_code_constants     FOR TESTING.
+
     " Helper methods
     METHODS assert_json_equals
       IMPORTING !actual  TYPE string
@@ -378,5 +380,19 @@ CLASS ltcl_mcp_jsonrpc IMPLEMENTATION.
         cl_abap_unit_assert=>fail( 'Expected zcx_mcp_ajson_error for missing method' ).
       CATCH zcx_mcp_ajson_error ##NO_HANDLER.
     ENDTRY.
+  ENDMETHOD.
+
+  METHOD draft_error_code_constants.
+    cl_abap_unit_assert=>assert_equals( exp = -32001
+                                        act = zcl_mcp_jsonrpc=>error_codes-header_mismatch ).
+
+    cl_abap_unit_assert=>assert_equals( exp = -32002
+                                        act = zcl_mcp_jsonrpc=>error_codes-resource_not_found ).
+
+    cl_abap_unit_assert=>assert_equals( exp = -32003
+                                        act = zcl_mcp_jsonrpc=>error_codes-missing_client_capability ).
+
+    cl_abap_unit_assert=>assert_equals( exp = -32004
+                                        act = zcl_mcp_jsonrpc=>error_codes-unsupported_protocol_version ).
   ENDMETHOD.
 ENDCLASS.

@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_RESP_V2_TASK</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP draft task result</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Set task metadata</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <SCONAME>POLL_INTERVAL_MS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Recommended poll interval in milliseconds</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <SCONAME>STATUS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Task status</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <SCONAME>STATUS_MESSAGE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Optional status message</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <SCONAME>TASK_ID</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Task id</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>SET_TASK</CMPNAME>
+     <SCONAME>TTL_MS</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Task TTL in milliseconds</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
+  </asx:values>
+ </asx:abap>
+</abapGit>

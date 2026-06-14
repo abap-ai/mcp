@@ -42,34 +42,36 @@
       METHODS set_meta
         IMPORTING meta TYPE REF TO zif_mcp_ajson.
 
-    PRIVATE SECTION.
-      DATA int_values   TYPE completion_values.
-      DATA int_total    TYPE i.
-      DATA int_has_more TYPE abap_bool.
-      DATA int_meta     TYPE REF TO zif_mcp_ajson.
+  PRIVATE SECTION.
+    DATA int_values       TYPE completion_values.
+    DATA int_total        TYPE i.
+    DATA int_has_more     TYPE abap_bool.
+    DATA int_has_more_set TYPE abap_bool.
+    DATA int_meta         TYPE REF TO zif_mcp_ajson.
   ENDCLASS.
 
   CLASS zcl_mcp_resp_complete IMPLEMENTATION.
-    METHOD zif_mcp_internal~generate_json.
-      result = zcl_mcp_ajson=>create_empty( ).
-      result->touch_array( '/completion/values' ).
-      LOOP AT int_values INTO DATA(val).
-        result->set( iv_path = |/completion/values/{ sy-tabix }|
-                     iv_val  = val ).
-      ENDLOOP.
-      IF int_total > 0.
-        result->set_integer( iv_path = '/completion/total'
-                             iv_val  = int_total ).
-      ENDIF.
-      IF int_has_more = abap_true.
-        result->set( iv_path = '/completion/hasMore'
-                     iv_val  = abap_true ).
-      ENDIF.
-      IF int_meta IS BOUND.
-        result->set( iv_path = '/_meta'
-                     iv_val  = int_meta ).
-      ENDIF.
-    ENDMETHOD.
+  METHOD zif_mcp_internal~generate_json.
+    result = zcl_mcp_ajson=>create_empty( ).
+    result->touch_array( '/completion/values' ).
+    LOOP AT int_values INTO DATA(val).
+      result->set( iv_path = |/completion/values/{ sy-tabix }|
+                   iv_val  = val ).
+    ENDLOOP.
+    IF int_total > 0.
+      result->set_integer( iv_path = '/completion/total'
+                           iv_val  = int_total ).
+    ENDIF.
+    IF int_has_more = abap_true OR int_has_more_set = abap_true.
+      result->set( iv_path         = '/completion/hasMore'
+                   iv_val          = int_has_more
+                   iv_ignore_empty = abap_false ).
+    ENDIF.
+    IF int_meta IS BOUND.
+      result->set( iv_path = '/_meta'
+                   iv_val  = int_meta ).
+    ENDIF.
+  ENDMETHOD.
 
   METHOD add_value.
     APPEND value TO int_values.
@@ -84,7 +86,8 @@
   ENDMETHOD.
 
   METHOD set_has_more.
-    int_has_more = has_more.
+    int_has_more     = has_more.
+    int_has_more_set = abap_true.
   ENDMETHOD.
 
   METHOD set_meta.

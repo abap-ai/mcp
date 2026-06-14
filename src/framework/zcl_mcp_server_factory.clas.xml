@@ -15,7 +15,12 @@
     <SEOCOMPOTX>
      <CMPNAME>GET_SERVER</CMPNAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Get an MCP Server</DESCRIPT>
+     <DESCRIPT>Get a legacy MCP server</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>GET_SERVER_V2</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Get a draft MCP server</DESCRIPT>
     </SEOCOMPOTX>
    </DESCRIPTIONS>
    <DESCRIPTIONS_SUB>
@@ -23,19 +28,37 @@
      <CMPNAME>GET_SERVER</CMPNAME>
      <SCONAME>AREA</SCONAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>MCP Area</DESCRIPT>
+     <DESCRIPT>MCP area</DESCRIPT>
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>GET_SERVER</CMPNAME>
      <SCONAME>RESULT</SCONAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Server instance - initial means not found</DESCRIPT>
+     <DESCRIPT>Server instance, initial if not found or wrong type</DESCRIPT>
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>GET_SERVER</CMPNAME>
      <SCONAME>SERVER</SCONAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>MCP Server</DESCRIPT>
+     <DESCRIPT>MCP server</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_SERVER_V2</CMPNAME>
+     <SCONAME>AREA</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>MCP area</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_SERVER_V2</CMPNAME>
+     <SCONAME>RESULT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>V2 server instance, initial if not found or wrong type</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_SERVER_V2</CMPNAME>
+     <SCONAME>SERVER</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>MCP server</DESCRIPT>
     </SEOSUBCOTX>
    </DESCRIPTIONS_SUB>
   </asx:values>

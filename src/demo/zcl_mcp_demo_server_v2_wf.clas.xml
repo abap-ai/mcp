@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MCP_DEMO_SERVER_V2_WF</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>MCP V2 workflow demo server</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>BUILD_ACK</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Build acknowledgement result</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>BUILD_COMPLETED_PAYLOAD</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Create completed task payload</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>BUILD_INPUT_REQUIRED</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Build elicitation input_required result</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>BUILD_TASK_RESULT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Build task creation result</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>BUILD_TEXT_RESULT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Build text tool result</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>BUILD_TOOLS_RESULT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Build tools/list result</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>BUILD_TOOL_SCHEMA</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Build tool input schema</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>CLIENT_SUPPORTS_TASKS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Check task extension capability</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>JSON_ERROR</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Convert exception into v2 response</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>MISSING_TASKS_CAPABILITY</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Return missing task capability error</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+  </asx:values>
+ </asx:abap>
+</abapGit>

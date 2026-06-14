@@ -6,12 +6,14 @@ CLASS ltcl_mcp_resp_list_prompts DEFINITION FINAL FOR TESTING
     DATA cut TYPE REF TO zcl_mcp_resp_list_prompts.
 
     METHODS setup.
-    METHODS test_empty_response   FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS test_with_prompts     FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS test_with_next_cursor FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS test_with_meta        FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS test_with_all_fields  FOR TESTING RAISING zcx_mcp_ajson_error.
-    METHODS test_with_prompt_icons FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS test_empty_response            FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS test_with_prompts              FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS test_with_next_cursor          FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS test_with_meta                 FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS test_with_all_fields           FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS test_with_prompt_icons         FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS required_false_omitted_by_def  FOR TESTING RAISING zcx_mcp_ajson_error.
+    METHODS required_false_emitted_when_st FOR TESTING RAISING zcx_mcp_ajson_error.
 
 ENDCLASS.
 
@@ -314,6 +316,47 @@ CLASS ltcl_mcp_resp_list_prompts IMPLEMENTATION.
                                        msg = 'mimeType absent when not set' ).
     cl_abap_unit_assert=>assert_false( act = json->exists( '/prompts/1/icons/2/theme' )
                                        msg = 'theme absent when not set' ).
+  ENDMETHOD.
+
+  METHOD required_false_omitted_by_def.
+    DATA prompts  TYPE zcl_mcp_resp_list_prompts=>prompts.
+    DATA prompt   TYPE zcl_mcp_resp_list_prompts=>prompt.
+    DATA argument TYPE zcl_mcp_resp_list_prompts=>prompt_argument.
+    DATA json     TYPE REF TO zif_mcp_ajson.
+
+    argument-name     = 'topic'.
+    argument-required = abap_false.
+
+    prompt-name = 'test_prompt'.
+    APPEND argument TO prompt-arguments.
+    APPEND prompt TO prompts.
+
+    cut->set_prompts( prompts ).
+    json = cut->zif_mcp_internal~generate_json( ).
+
+    cl_abap_unit_assert=>assert_false( act = json->exists( '/prompts/1/arguments/1/required' ) ).
+  ENDMETHOD.
+
+  METHOD required_false_emitted_when_st.
+    DATA prompts  TYPE zcl_mcp_resp_list_prompts=>prompts.
+    DATA prompt   TYPE zcl_mcp_resp_list_prompts=>prompt.
+    DATA argument TYPE zcl_mcp_resp_list_prompts=>prompt_argument.
+    DATA json     TYPE REF TO zif_mcp_ajson.
+
+    argument-name         = 'topic'.
+    argument-required     = abap_false.
+    argument-required_set = abap_true.
+
+    prompt-name = 'test_prompt'.
+    APPEND argument TO prompt-arguments.
+    APPEND prompt TO prompts.
+
+    cut->set_prompts( prompts ).
+    json = cut->zif_mcp_internal~generate_json( ).
+
+    cl_abap_unit_assert=>assert_true( act = json->exists( '/prompts/1/arguments/1/required' ) ).
+
+    cl_abap_unit_assert=>assert_false( act = json->get_boolean( '/prompts/1/arguments/1/required' ) ).
   ENDMETHOD.
 
 ENDCLASS.

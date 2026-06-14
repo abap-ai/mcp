@@ -8,10 +8,12 @@ CLASS zcl_mcp_resp_list_prompts DEFINITION
     INTERFACES zif_mcp_internal.
 
     TYPES: BEGIN OF prompt_argument,
-             name        TYPE string,
-             description TYPE string,
-             title       TYPE string,
-             required    TYPE abap_bool,
+             name         TYPE string,
+             description  TYPE string,
+             title        TYPE string,
+             required     TYPE abap_bool,
+             " Emit required even when false if the caller explicitly wants it.
+             required_set TYPE abap_bool,
            END OF prompt_argument.
 
     TYPES prompt_arguments TYPE STANDARD TABLE OF prompt_argument WITH KEY name.
@@ -143,10 +145,12 @@ CLASS zcl_mcp_resp_list_prompts IMPLEMENTATION.
         ENDIF.
 
         " Add required flag (optional)
-        IF <argument>-required = abap_true.
-          result->set( iv_path = |/prompts/{ prompt_index }/arguments/{ arg_index }/required|
-                       iv_val  = <argument>-required ).
+        IF <argument>-required = abap_true OR <argument>-required_set = abap_true.
+          result->set( iv_path         = |/prompts/{ prompt_index }/arguments/{ arg_index }/required|
+                       iv_val          = <argument>-required
+                       iv_ignore_empty = abap_false ).
         ENDIF.
+
       ENDLOOP.
     ENDLOOP.
 

@@ -9,7 +9,7 @@ INTERFACE zif_mcp_types
 
   " Optional annotations attached to content blocks, resources,
   " resource templates, and resource links.
-  " last_modified is stored as ABAP timestamp and serialised to
+  " last_modified is stored as ABAP timestamp and serialized to
   " ISO 8601 by the response classes.
   TYPES: BEGIN OF annotations,
            audience      TYPE STANDARD TABLE OF message_role WITH EMPTY KEY,
@@ -27,17 +27,18 @@ INTERFACE zif_mcp_types
            theme     TYPE string,
          END OF icon.
 
-  TYPES icon_list TYPE STANDARD TABLE OF icon WITH EMPTY KEY.
+  TYPES icon_list   TYPE STANDARD TABLE OF icon WITH EMPTY KEY.
 
   " Opaque pagination cursor - used in all paginated
   " request and response classes.
   TYPES page_cursor TYPE string.
 
   " Task execution state (MCP 2025-11-25).
-  TYPES task_state TYPE string.
+  TYPES task_state  TYPE string.
 
   CONSTANTS: BEGIN OF task_states,
                working        TYPE task_state VALUE 'working',
+               input_required TYPE task_state VALUE 'input_required',
                completed      TYPE task_state VALUE 'completed',
                failed         TYPE task_state VALUE 'failed',
                cancelled      TYPE task_state VALUE 'cancelled',
@@ -55,7 +56,7 @@ INTERFACE zif_mcp_types
            poll_interval  TYPE i,
          END OF task.
 
-  TYPES: task_list TYPE STANDARD TABLE OF task WITH EMPTY KEY.
+  TYPES task_list TYPE STANDARD TABLE OF task WITH EMPTY KEY.
 
   TYPES: BEGIN OF task_list_result,
            tasks       TYPE task_list,

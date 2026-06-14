@@ -9,7 +9,7 @@ CLASS zcl_mcp_req_call_tool DEFINITION
     "!
     "! @parameter json | <p class="__shorttext__ synchronized">JSON Request</p>
     METHODS constructor
-      IMPORTING json TYPE REF TO zif_mcp_ajson
+      IMPORTING !json TYPE REF TO zif_mcp_ajson
       RAISING   zcx_mcp_ajson_error
                 zcx_mcp_server.
 
@@ -53,6 +53,30 @@ CLASS zcl_mcp_req_call_tool DEFINITION
     METHODS get_task_ttl
       RETURNING VALUE(result) TYPE i.
 
+    "! <p class="__shorttext__ synchronized">Check retry input responses</p>
+    "!
+    "! @parameter result | <p class="__shorttext__ synchronized">True if inputResponses was supplied</p>
+    METHODS has_input_responses
+      RETURNING VALUE(result) TYPE abap_bool.
+
+    "! <p class="__shorttext__ synchronized">Get input responses</p>
+    "!
+    "! @parameter result | <p class="__shorttext__ synchronized">Input responses JSON object</p>
+    METHODS get_input_responses
+      RETURNING VALUE(result) TYPE REF TO zif_mcp_ajson.
+
+    "! <p class="__shorttext__ synchronized">Get request state</p>
+    "!
+    "! @parameter result | <p class="__shorttext__ synchronized">Opaque MRTR requestState token</p>
+    METHODS get_request_state
+      RETURNING VALUE(result) TYPE string.
+
+    "! <p class="__shorttext__ synchronized">Check retry request</p>
+    "!
+    "! @parameter result | <p class="__shorttext__ synchronized">True if MRTR retry data was supplied</p>
+    METHODS is_retry
+      RETURNING VALUE(result) TYPE abap_bool.
+
   PRIVATE SECTION.
     DATA int_name          TYPE string.
     DATA int_arguments     TYPE REF TO zif_mcp_ajson.
@@ -60,6 +84,7 @@ CLASS zcl_mcp_req_call_tool DEFINITION
     DATA int_meta          TYPE REF TO zif_mcp_ajson.
     DATA int_has_task      TYPE abap_bool.
     DATA int_task_ttl      TYPE i.
+    DATA int_retry         TYPE REF TO zcl_mcp_req_mrtr_retry.
 ENDCLASS.
 
 CLASS zcl_mcp_req_call_tool IMPLEMENTATION.
@@ -92,6 +117,8 @@ CLASS zcl_mcp_req_call_tool IMPLEMENTATION.
     ELSE.
       int_meta = zcl_mcp_ajson=>create_empty( ).
     ENDIF.
+
+    int_retry = NEW zcl_mcp_req_mrtr_retry( json ).
 
     " --- task (optional, new in MCP 2025-11-25) ---
     " Present when the client requests task-augmented (async) execution.
@@ -129,6 +156,22 @@ CLASS zcl_mcp_req_call_tool IMPLEMENTATION.
 
   METHOD get_task_ttl.
     result = int_task_ttl.
+  ENDMETHOD.
+
+  METHOD has_input_responses.
+    result = int_retry->has_input_responses( ).
+  ENDMETHOD.
+
+  METHOD get_input_responses.
+    result = int_retry->get_input_responses( ).
+  ENDMETHOD.
+
+  METHOD get_request_state.
+    result = int_retry->get_request_state( ).
+  ENDMETHOD.
+
+  METHOD is_retry.
+    result = int_retry->is_retry( ).
   ENDMETHOD.
 
 ENDCLASS.

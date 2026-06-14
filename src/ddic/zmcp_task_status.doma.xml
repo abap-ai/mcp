@@ -38,6 +38,12 @@
      <DOMVALUE_L>cancelled</DOMVALUE_L>
      <DDTEXT>Cancelled</DDTEXT>
     </DD07V>
+    <DD07V>
+     <VALPOS>0005</VALPOS>
+     <DDLANGUAGE>E</DDLANGUAGE>
+     <DOMVALUE_L>input_req</DOMVALUE_L>
+     <DDTEXT>Input Required</DDTEXT>
+    </DD07V>
    </DD07V_TAB>
   </asx:values>
  </asx:abap>

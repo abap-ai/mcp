@@ -11,12 +11,15 @@ CLASS zcl_mcp_jsonrpc DEFINITION
     " Constants for JSON-RPC protocol
     CONSTANTS jsonrpc_version TYPE string VALUE '2.0'.
     CONSTANTS: BEGIN OF error_codes,
-                 parse_error        TYPE i VALUE -32700,
-                 invalid_request    TYPE i VALUE -32600,
-                 method_not_found   TYPE i VALUE -32601,
-                 invalid_params     TYPE i VALUE -32602,
-                 internal_error     TYPE i VALUE -32603,
-                 resource_not_found TYPE i VALUE -32002,
+                 parse_error                  TYPE i VALUE -32700,
+                 invalid_request              TYPE i VALUE -32600,
+                 method_not_found             TYPE i VALUE -32601,
+                 invalid_params               TYPE i VALUE -32602,
+                 internal_error               TYPE i VALUE -32603,
+                 header_mismatch              TYPE i VALUE -32001,
+                 resource_not_found           TYPE i VALUE -32002,
+                 missing_client_capability    TYPE i VALUE -32003,
+                 unsupported_protocol_version TYPE i VALUE -32004,
                END OF error_codes.
 
     " Core data types

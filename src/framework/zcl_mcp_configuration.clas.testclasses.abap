@@ -27,6 +27,8 @@ CLASS ltcl_mcp_configuration DEFINITION FINAL
     " Tests for get_logger
     METHODS test_get_logger                FOR TESTING.
     METHODS test_get_logger_caching        FOR TESTING.
+
+    METHODS test_get_origins_server_wldcrd FOR TESTING.
 ENDCLASS.
 
 
@@ -301,5 +303,33 @@ CLASS ltcl_mcp_configuration IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = logger1
                                         act = logger2
                                         msg = 'Repeated calls to get_logger should return the same instance' ).
+  ENDMETHOD.
+
+  METHOD test_get_origins_server_wldcrd.
+    " Arrange: Specific area, wildcard server
+    DATA test_origins TYPE TABLE OF zmcp_origins.
+
+    APPEND VALUE #( area   = test_area
+                    server = '*'
+                    origin = 'https://area-wide.example.com'
+                    id     = 1 ) TO test_origins.
+    sql_environment->insert_test_data( test_origins ).
+
+    DATA test_config TYPE TABLE OF zmcp_config.
+    APPEND VALUE #( cors_mode = 'C' ) TO test_config.
+    sql_environment->insert_test_data( test_config ).
+
+    cut = NEW #( area   = test_area
+                 server = test_server ).
+
+    DATA(origins) = cut->get_allowed_origins( ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 1
+                                        act = lines( origins )
+                                        msg = 'Should return exactly 1 area-wide origin' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'https://area-wide.example.com'
+                                        act = origins[ 1 ]
+                                        msg = 'Should return the area-wide wildcard server origin' ).
   ENDMETHOD.
 ENDCLASS.

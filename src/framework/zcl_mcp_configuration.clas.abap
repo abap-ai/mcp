@@ -56,12 +56,22 @@ CLASS zcl_mcp_configuration IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    " Check settings on lowest level first, if none found, check on higher level
+    " Specific endpoint wins first, then area-wide, server-wide, and global entries.
     SELECT origin FROM zmcp_origins
       WHERE area   = @area
         AND server = @server
-        ORDER BY PRIMARY KEY
-        INTO TABLE @allowed_origins.
+      ORDER BY PRIMARY KEY
+      INTO TABLE @allowed_origins.
+    IF sy-subrc = 0.
+      result = allowed_origins.
+      RETURN.
+    ENDIF.
+
+    SELECT origin FROM zmcp_origins
+      WHERE area   = @area
+        AND server = '*'
+      ORDER BY PRIMARY KEY
+      INTO TABLE @allowed_origins.
     IF sy-subrc = 0.
       result = allowed_origins.
       RETURN.
@@ -70,8 +80,8 @@ CLASS zcl_mcp_configuration IMPLEMENTATION.
     SELECT origin FROM zmcp_origins
       WHERE area   = '*'
         AND server = @server
-        ORDER BY PRIMARY KEY
-        INTO TABLE @allowed_origins.
+      ORDER BY PRIMARY KEY
+      INTO TABLE @allowed_origins.
     IF sy-subrc = 0.
       result = allowed_origins.
       RETURN.
@@ -80,14 +90,14 @@ CLASS zcl_mcp_configuration IMPLEMENTATION.
     SELECT origin FROM zmcp_origins
       WHERE area   = '*'
         AND server = '*'
-        ORDER BY PRIMARY KEY
-        INTO TABLE @allowed_origins.
+      ORDER BY PRIMARY KEY
+      INTO TABLE @allowed_origins.
     IF sy-subrc = 0.
       result = allowed_origins.
       RETURN.
     ENDIF.
 
-    " If no origins found, all are allowed
+    " If no origins found, all are allowed.
     allowed_origins = VALUE #( ( `*` ) ).
     result = allowed_origins.
   ENDMETHOD.

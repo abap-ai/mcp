@@ -17,6 +17,7 @@ CLASS zcl_mcp_schema_builder DEFINITION
     "! @parameter required            | <p class="shorttext synchronized">Whether property is required</p>
     "! @parameter min_length          | <p class="shorttext synchronized">Minimum length</p>
     "! @parameter max_length          | <p class="shorttext synchronized">Maximum length</p>
+    "! @parameter x_mcp_header        | <p class="shorttext synchronized">Expose property through Mcp-Param-* header mirroring</p>
     "! @parameter self                | <p class="shorttext synchronized">Builder instance for chaining</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS add_string
@@ -26,6 +27,7 @@ CLASS zcl_mcp_schema_builder DEFINITION
                 !required    TYPE abap_bool    DEFAULT abap_false
                 min_length   TYPE i            OPTIONAL
                 max_length   TYPE i            OPTIONAL
+                x_mcp_header TYPE string       OPTIONAL
       RETURNING VALUE(self)  TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -36,6 +38,7 @@ CLASS zcl_mcp_schema_builder DEFINITION
     "! @parameter required            | <p class="shorttext synchronized">Whether property is required</p>
     "! @parameter minimum             | <p class="shorttext synchronized">Minimum value</p>
     "! @parameter maximum             | <p class="shorttext synchronized">Maximum value</p>
+    "! @parameter x_mcp_header        | <p class="shorttext synchronized">Expose property through Mcp-Param-* header mirroring</p>
     "! @parameter self                | <p class="shorttext synchronized">Builder instance for chaining</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS add_number
@@ -44,6 +47,7 @@ CLASS zcl_mcp_schema_builder DEFINITION
                 !required    TYPE abap_bool DEFAULT abap_false
                 !minimum     TYPE f         OPTIONAL
                 !maximum     TYPE f         OPTIONAL
+                x_mcp_header TYPE string    OPTIONAL
       RETURNING VALUE(self)  TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -54,6 +58,7 @@ CLASS zcl_mcp_schema_builder DEFINITION
     "! @parameter required            | <p class="shorttext synchronized">Whether property is required</p>
     "! @parameter minimum             | <p class="shorttext synchronized">Minimum value</p>
     "! @parameter maximum             | <p class="shorttext synchronized">Maximum value</p>
+    "! @parameter x_mcp_header        | <p class="shorttext synchronized">Expose property through Mcp-Param-* header mirroring</p>
     "! @parameter self                | <p class="shorttext synchronized">Builder instance for chaining</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS add_integer
@@ -62,6 +67,7 @@ CLASS zcl_mcp_schema_builder DEFINITION
                 !required    TYPE abap_bool DEFAULT abap_false
                 !minimum     TYPE i         OPTIONAL
                 !maximum     TYPE i         OPTIONAL
+                x_mcp_header TYPE string    OPTIONAL
       RETURNING VALUE(self)  TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -70,12 +76,14 @@ CLASS zcl_mcp_schema_builder DEFINITION
     "! @parameter name                | <p class="shorttext synchronized">Property name</p>
     "! @parameter description         | <p class="shorttext synchronized">Property description</p>
     "! @parameter required            | <p class="shorttext synchronized">Whether property is required</p>
+    "! @parameter x_mcp_header        | <p class="shorttext synchronized">Expose property through Mcp-Param-* header mirroring</p>
     "! @parameter self                | <p class="shorttext synchronized">Builder instance for chaining</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS add_boolean
       IMPORTING !name        TYPE string
                 !description TYPE string    OPTIONAL
                 !required    TYPE abap_bool DEFAULT abap_false
+                x_mcp_header TYPE string    OPTIONAL
       RETURNING VALUE(self)  TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -156,12 +164,14 @@ CLASS zcl_mcp_schema_builder DEFINITION
     "! @parameter type                | <p class="shorttext synchronized">Property type</p>
     "! @parameter description         | <p class="shorttext synchronized">Property description</p>
     "! @parameter required            | <p class="shorttext synchronized">Whether property is required</p>
+    "! @parameter x_mcp_header        | <p class="shorttext synchronized">Expose property through Mcp-Param-* header mirroring</p>
     "! @raising   zcx_mcp_ajson_error | <p class="shorttext synchronized">JSON error</p>
     METHODS add_property
       IMPORTING !name        TYPE string
                 !type        TYPE string
                 !description TYPE string    OPTIONAL
                 !required    TYPE abap_bool DEFAULT abap_false
+                x_mcp_header TYPE string    OPTIONAL
       RAISING   zcx_mcp_ajson_error.
 
     "! <p class="shorttext synchronized">Internal helper for add_string</p>
@@ -174,6 +184,7 @@ CLASS zcl_mcp_schema_builder DEFINITION
                 min_length_supplied TYPE abap_bool    DEFAULT abap_false
                 max_length          TYPE i            OPTIONAL
                 max_length_supplied TYPE abap_bool    DEFAULT abap_false
+                x_mcp_header        TYPE string       OPTIONAL
       RETURNING VALUE(self)         TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -186,6 +197,7 @@ CLASS zcl_mcp_schema_builder DEFINITION
                 minimum_supplied TYPE abap_bool DEFAULT abap_false
                 !maximum         TYPE f         OPTIONAL
                 maximum_supplied TYPE abap_bool DEFAULT abap_false
+                x_mcp_header     TYPE string    OPTIONAL
       RETURNING VALUE(self)      TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -198,6 +210,7 @@ CLASS zcl_mcp_schema_builder DEFINITION
                 minimum_supplied TYPE abap_bool DEFAULT abap_false
                 !maximum         TYPE i         OPTIONAL
                 maximum_supplied TYPE abap_bool DEFAULT abap_false
+                x_mcp_header     TYPE string    OPTIONAL
       RETURNING VALUE(self)      TYPE REF TO zcl_mcp_schema_builder
       RAISING   zcx_mcp_ajson_error.
 
@@ -236,8 +249,8 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_property.
-    " Add property to schema
-    DATA path TYPE string.
+    DATA path        TYPE string.
+    DATA header_name TYPE string.
 
     IF current_path IS INITIAL.
       path = |/properties/{ name }|.
@@ -245,17 +258,26 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
       path = |{ current_path }/properties/{ name }|.
     ENDIF.
 
-    " Set type
     schema->set( iv_path = |{ path }/type|
                  iv_val  = type ).
 
-    " Add description if provided
     IF description IS NOT INITIAL.
       schema->set( iv_path = |{ path }/description|
                    iv_val  = description ).
     ENDIF.
 
-    " Mark as required if needed
+    header_name = x_mcp_header.
+
+    " Backward compatibility for older server code still passing abap_true.
+    IF header_name = abap_true.
+      header_name = name.
+    ENDIF.
+
+    IF header_name IS NOT INITIAL.
+      schema->set_string( iv_path = |{ path }/x-mcp-header|
+                          iv_val  = header_name ).
+    ENDIF.
+
     IF required = abap_true.
       APPEND name TO required_properties.
     ENDIF.
@@ -277,6 +299,7 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                                    required            = required
                                    min_length          = min_length
                                    min_length_supplied = min_length_supplied
+                                   x_mcp_header        = x_mcp_header
                                    max_length          = max_length
                                    max_length_supplied = max_length_supplied ).
       RETURN.
@@ -290,14 +313,16 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                         min_length          = min_length
                         min_length_supplied = xsdbool( min_length IS SUPPLIED )
                         max_length          = max_length
+                        x_mcp_header        = x_mcp_header
                         max_length_supplied = xsdbool( max_length IS SUPPLIED ) ).
   ENDMETHOD.
 
   METHOD _add_string.
-    add_property( name        = name
-                  type        = 'string'
-                  description = description
-                  required    = required ).
+    add_property( name         = name
+                  type         = 'string'
+                  description  = description
+                  required     = required
+                  x_mcp_header = x_mcp_header ).
 
     DATA path TYPE string.
     IF current_path IS INITIAL.
@@ -343,6 +368,7 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                                    required         = required
                                    minimum          = minimum
                                    minimum_supplied = minimum_supplied
+                                   x_mcp_header     = x_mcp_header
                                    maximum          = maximum
                                    maximum_supplied = maximum_supplied ).
       RETURN.
@@ -353,16 +379,18 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                         description      = description
                         required         = required
                         minimum          = minimum
+                        x_mcp_header     = x_mcp_header
                         minimum_supplied = xsdbool( minimum IS SUPPLIED )
                         maximum          = maximum
                         maximum_supplied = xsdbool( maximum IS SUPPLIED ) ).
   ENDMETHOD.
 
   METHOD _add_number.
-    add_property( name        = name
-                  type        = 'number'
-                  description = description
-                  required    = required ).
+    add_property( name         = name
+                  type         = 'number'
+                  description  = description
+                  x_mcp_header = x_mcp_header
+                  required     = required ).
 
     DATA path TYPE string.
     IF current_path IS INITIAL.
@@ -399,6 +427,7 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                                     minimum          = minimum
                                     minimum_supplied = minimum_supplied
                                     maximum          = maximum
+                                    x_mcp_header     = x_mcp_header
                                     maximum_supplied = maximum_supplied ).
       RETURN.
     ENDIF.
@@ -408,16 +437,18 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
                          description      = description
                          required         = required
                          minimum          = minimum
+                         x_mcp_header     = x_mcp_header
                          minimum_supplied = xsdbool( minimum IS SUPPLIED )
                          maximum          = maximum
                          maximum_supplied = xsdbool( maximum IS SUPPLIED ) ).
   ENDMETHOD.
 
   METHOD _add_integer.
-    add_property( name        = name
-                  type        = 'integer'
-                  description = description
-                  required    = required ).
+    add_property( name         = name
+                  type         = 'integer'
+                  description  = description
+                  x_mcp_header = x_mcp_header
+                  required     = required ).
 
     DATA path TYPE string.
     IF current_path IS INITIAL.
@@ -443,16 +474,18 @@ CLASS zcl_mcp_schema_builder IMPLEMENTATION.
     " Forward to active builder if needed
     DATA(builder) = get_active_builder( ).
     IF builder <> me.
-      self = builder->add_boolean( name        = name
-                                   description = description
-                                   required    = required ).
+      self = builder->add_boolean( name         = name
+                                   description  = description
+                                   x_mcp_header = x_mcp_header
+                                   required     = required ).
       RETURN.
     ENDIF.
 
-    add_property( name        = name
-                  type        = 'boolean'
-                  description = description
-                  required    = required ).
+    add_property( name         = name
+                  type         = 'boolean'
+                  description  = description
+                  x_mcp_header = x_mcp_header
+                  required     = required ).
 
     self = me.
   ENDMETHOD.
