@@ -8,6 +8,13 @@ This documentation provides a comprehensive guide to the Model Context Protocol 
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Implementing Custom MCP Servers](#implementing-custom-mcp-servers)
+- [Draft 2026-07-28 V2 Support](V2.md)
+  - [V2 Server Implementation](V2ServerImplementation.md)
+  - [V2 HTTP, Headers, and Security](V2HTTPAndSecurity.md)
+  - [V2 MRTR and Elicitation](V2MRTR.md)
+  - [V2 Tasks Extension](V2Tasks.md)
+  - [V2 Legacy Compatibility](V2LegacyCompatibility.md)
+  - [V2 Demo Servers](V2DemoServers.md)
 - [Session Management](#session-management)
 - [Core Components](#core-components)
 - [Demo Implementations](#demo-implementations)
@@ -31,6 +38,8 @@ With the MCP Server SDK, you can implement servers that provide:
 - Long-running background tasks with polling support
 - Autocomplete suggestions for prompt and resource arguments
 
+The SDK also contains a stateless v2 path for MCP draft `2026-07-28`, including `server/discover`, modern request metadata/header validation, MRTR, the Tasks extension, and protected request-state handling. See [Draft 2026-07-28 V2 Support](V2.md) for implementation guidance and current limitations.
+
 ## Architecture
 
 The MCP Server SDK follows a layered architecture that handles the communication between MCP clients and your custom business logic.
@@ -45,9 +54,15 @@ graph TD
     Handler <--> CORS[CORS Handling]
     Handler <--> JSONRPC[ZCL_MCP_JSONRPC]
     JSONRPC <--> ServerFactory[ZCL_MCP_SERVER_FACTORY]
-    ServerFactory --> ServerImpl[Custom Server Implementation]
+    ServerFactory --> ServerImpl[Legacy Server Implementation]
+    ServerFactory --> ServerImplV2[V2 Server Implementation]
     ServerImpl -->|Inherits| ServerBase[ZCL_MCP_SERVER_BASE]
     ServerBase -->|Implements| ServerInterface[ZIF_MCP_SERVER]
+    ServerImplV2 -->|Inherits| ServerBaseV2[ZCL_MCP_SERVER_BASE_V2]
+    ServerBaseV2 -->|Implements| ServerInterfaceV2[ZIF_MCP_SERVER_V2]
+    Handler <--> ModernContext[ZCL_MCP_MODERN_CONTEXT]
+    Handler <--> ModernRouter[ZCL_MCP_MODERN_ROUTER]
+    Handler <--> LegacyAdapter[ZCL_MCP_LEGACY_V2_ADAPTER]
     ServerImpl <--> SessionMgmt[Session Management]
     SessionMgmt --> Stateless[Stateless Mode]
     SessionMgmt --> MCPSession[MCP Session Mode]
@@ -85,23 +100,33 @@ graph TD
    - Handles common functionality
    - Provides session management
 
-5. **Session Management**
+5. **V2 Server Base Class (ZCL_MCP_SERVER_BASE_V2)**
+   - Base class for draft `2026-07-28` stateless servers
+   - Implements `server/discover`, default method-not-found behavior, request-state helpers, and persisted task helpers
+   - Uses `ZCL_MCP_MODERN_CONTEXT` and `ZCL_MCP_MODERN_ROUTER` through the HTTP handler
+
+6. **Legacy V2 Adapter (ZCL_MCP_LEGACY_V2_ADAPTER)**
+   - Lets old SDK clients call v2-only servers where results can be represented in old protocol shapes
+   - Stateless only; it does not create or require `Mcp-Session-Id`
+   - See [V2 Legacy Compatibility](V2LegacyCompatibility.md)
+
+7. **Session Management**
    - Supports three modes: Stateless, MCP Session, and ICF Session
    - Persists data between requests when needed
 
-6. **Schema Builder & Validator**
+8. **Schema Builder & Validator**
    - Tools for defining and validating JSON schemas
    - `ZCL_MCP_SCHEMA_BUILDER`: fluent API for building schemas
    - `ZCL_MCP_SCHEMA_BUILDER_DDIC`: derives schemas automatically from DDIC structures
    - `ZCL_MCP_SCHEMA_VALIDATOR`: validates JSON input against a schema
 
-7. **Task Manager (ZCL_MCP_TASKS)**
+9. **Task Manager (ZCL_MCP_TASKS)**
    - Persists and manages the lifecycle of long-running background tasks
    - Used via `ZIF_MCP_TASK_EXECUTOR` to launch and cancel background jobs/RFCs
    - Supports status transitions: working → completed / failed / cancelled
    - For details see [Tasks](Tasks.md)
 
-8. **Configuration (ZCL_MCP_CONFIGURATION)**
+10. **Configuration (ZCL_MCP_CONFIGURATION)**
    - Manages server settings from database tables
    - Controls CORS, logging, and other behaviors
 
@@ -370,7 +395,7 @@ For details see [Completions](Completions.md).
 
 ## Demo Implementations
 
-The SDK includes four demo implementations:
+The SDK includes legacy and v2 demo implementations:
 
 ### ZCL_MCP_DEMO_SERVER_STATELESS
 
@@ -403,6 +428,30 @@ Demonstrates DDIC-based schema generation with:
 - Resources and resource templates backed by DDIC table data
 - Flight connection tool using `ZCL_MCP_SCHEMA_BUILDER_DDIC` to derive its input schema from the `SPFLI` DDIC structure
 
+### ZCL_MCP_DEMO_SERVER_V2_BASIC
+
+Basic stateless MCP draft `2026-07-28` server demonstrating:
+
+- `server/discover`
+- tools, prompts, resources, resource templates, and completions
+- direct `handle_tool_input_schema`
+- `x-mcp-header` with the `echo` tool and `Mcp-Param-Message`
+- cache hints and result `_meta` with the `cache_meta` tool
+- legacy adapter compatibility for normal complete results
+
+### ZCL_MCP_DEMO_SERVER_V2_WF
+
+Workflow-focused MCP draft `2026-07-28` server demonstrating:
+
+- direct MRTR `input_required`
+- `elicitation/create`
+- protected `requestState`
+- task extension capability checks
+- persisted input-required tasks
+- `tasks/get`, `tasks/update`, and inherited `tasks/cancel`
+
+The endpoint service is `demo_v2_workflow`; the ABAP class uses `WF` because class names are limited to 30 characters.
+
 ### Demo Configuration
 
 This is included in the repo. Delete if you don't want it.
@@ -413,6 +462,10 @@ This is included in the repo. Delete if you don't want it.
 | demo | demo_session_mcp    | ZCL_MCP_DEMO_SERVER_MCPSESSION    | MCP Session   |
 | demo | demo_standard       | ZCL_MCP_DEMO_SERVER_STATELESS     | No Session    |
 | demo | demo_ddic           | ZCL_MCP_DEMO_SERVER_DDIC          | No Session    |
+| demo | demo_v2_basic       | ZCL_MCP_DEMO_SERVER_V2_BASIC      | No Session    |
+| demo | demo_v2_workflow    | ZCL_MCP_DEMO_SERVER_V2_WF         | No Session    |
+
+See [V2 Demo Servers](V2DemoServers.md) for endpoint names, tested smoke flows, and short code excerpts from the v2 demo classes.
 
 ## Usage/Clients
 

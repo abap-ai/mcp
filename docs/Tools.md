@@ -13,6 +13,7 @@ This documentation explains how to implement and use tools in the Model Context 
 - [Tool Annotations](#tool-annotations)
 - [Output Schemas](#output-schemas)
 - [Background Task Support](#background-task-support)
+- [V2 Tool Notes](#v2-tool-notes)
 - [Examples](#examples)
 
 ## Overview
@@ -25,6 +26,20 @@ Tools in the MCP protocol are functions that AI assistants can call to:
 - Access system features
 
 Each tool is identified by a unique name and can accept structured input parameters defined by a JSON schema.
+
+For draft `2026-07-28` v2 servers, implement tools through `ZCL_MCP_SERVER_BASE_V2` and return modern result envelopes. See [V2 Server Implementation](V2ServerImplementation.md), [V2 HTTP, Headers, and Security](V2HTTPAndSecurity.md), and [V2 MRTR and Elicitation](V2MRTR.md).
+
+## V2 Tool Notes
+
+V2 tools use the same core tool model but add modern result and transport behavior:
+
+- successful modern results should include `resultType`
+- `tools/call` may return `complete`, `input_required`, or a Tasks extension `task` result
+- top-level string, integer, and boolean arguments can use `x_mcp_header` to require matching `Mcp-Param-*` headers
+- `handle_tool_input_schema` should be redefined for efficient header validation
+- old clients can call many v2 tools through the stateless legacy adapter, but MRTR/elicitation results cannot be down-converted
+
+Detailed v2 tool examples are in [V2 Server Implementation](V2ServerImplementation.md).
 
 ## Tool Request Classes
 
@@ -348,6 +363,8 @@ APPEND VALUE #(
 ## Background Task Support
 
 Tools can signal that they support (or require) asynchronous execution via `execution-task_support`. When set, `handle_call_tool` can create a task via `get_tasks( )->create_task`, start a background job, and return the task object with `response-result->set_task_result( task )` instead of returning normal content directly.
+
+This section describes the legacy tool/task API. Draft v2 servers use `ZCL_MCP_SERVER_BASE_V2`, modern result helpers, and the `io.modelcontextprotocol/tasks` extension; see [V2 Support](V2.md) and [Tasks](Tasks.md) for the v2 flow.
 
 ```abap
 APPEND VALUE #(

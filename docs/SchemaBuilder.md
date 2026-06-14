@@ -18,6 +18,7 @@ A second builder, `ZCL_MCP_SCHEMA_BUILDER_DDIC`, auto-generates schemas directly
   - [Number and Integer Validation](#number-and-integer-validation)
   - [Array Validation](#array-validation)
 - [Defining Required Properties](#defining-required-properties)
+- [Mirrored Parameter Headers](#mirrored-parameter-headers)
 - [Creating Objects](#creating-objects)
 - [Creating Arrays](#creating-arrays)
 - [Complex Schema Examples](#complex-schema-examples)
@@ -167,6 +168,19 @@ schema_builder->add_string( name = 'username' required = abap_true )
               ->add_string( name = 'password' required = abap_true )
               ->add_string( name = 'email' required = abap_false ).
 ```
+
+## Mirrored Parameter Headers
+
+Draft v2 can mirror selected top-level tool arguments into `Mcp-Param-*` HTTP headers. Use the `x_mcp_header` parameter on string, integer, or boolean properties to emit `x-mcp-header` in the JSON schema:
+
+```abap
+schema_builder->add_string( name         = 'message'
+                            description  = 'Message to echo'
+                            required     = abap_true
+                            x_mcp_header = 'Message' ).
+```
+
+The modern router validates matching headers only for top-level properties marked this way. Missing, mismatched, duplicate, invalid, nested, unsafe, or unsupported annotations are rejected on the v2 path. Do not mirror secrets or sensitive business data into HTTP headers.
 
 ## Creating Objects
 

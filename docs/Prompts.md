@@ -8,6 +8,7 @@ This documentation explains how to implement and use prompts in the Model Contex
 - [Prompt Request Classes](#prompt-request-classes)
 - [Prompt Response Classes](#prompt-response-classes)
 - [Implementing Prompt Handlers](#implementing-prompt-handlers)
+- [V2 Prompt Notes](#v2-prompt-notes)
 - [Examples](#examples)
 
 ## Overview
@@ -20,6 +21,17 @@ Prompts in the MCP protocol are pre-defined conversation templates that can be r
 - Consistent conversation patterns
 
 Prompts are identified by a unique name and can accept arguments to customize their behavior.
+
+For draft `2026-07-28` v2 servers, implement prompts through `ZCL_MCP_SERVER_BASE_V2`. `prompts/get` may return a normal complete result or an MRTR `input_required` result. See [V2 Server Implementation](V2ServerImplementation.md) and [V2 MRTR and Elicitation](V2MRTR.md).
+
+## V2 Prompt Notes
+
+V2 prompt handlers are:
+
+- `handle_prompts_list`
+- `handle_prompts_get`
+
+Modern HTTP requests for `prompts/get` require `Mcp-Name` to match `params.name`. Old clients can call complete prompt results through the compatibility adapter, but `input_required` prompt results fail clearly because old clients cannot complete v2 MRTR retries.
 
 ## Prompt Request Classes
 

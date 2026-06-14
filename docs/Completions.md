@@ -15,6 +15,7 @@ protocol from 2025-06-18 onward.
 - [Completion Request Class](#completion-request-class)
 - [Completion Response Class](#completion-response-class)
 - [Implementing the Handler](#implementing-the-handler)
+- [V2 Completion Notes](#v2-completion-notes)
 - [Examples](#examples)
 
 ## Overview
@@ -30,6 +31,12 @@ Your server returns a list of candidate strings. The framework routes the reques
 to the `handle_completions_complete` hook of `ZCL_MCP_SERVER_BASE`. The default
 implementation returns an error (`This server does not implement completions`), so
 you only get completions once you override the hook.
+
+For draft `2026-07-28` v2 servers, implement completions by redefining `handle_completion` on `ZCL_MCP_SERVER_BASE_V2`. See [V2 Server Implementation](V2ServerImplementation.md).
+
+## V2 Completion Notes
+
+The v2 method name is still `completion/complete`, but routing goes through the v2 interface and the modern request context. Complete results should include `resultType = "complete"`. The stateless legacy adapter can translate normal completion results for old clients.
 
 ## Declaring the Capability
 

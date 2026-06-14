@@ -1,6 +1,12 @@
-# MCP Tasks (MCP 2025-11-25)
+# MCP Tasks
+
+This page primarily documents the legacy Tasks implementation for MCP `2025-11-25`.
 
 The Tasks feature lets an MCP server offload long-running work to background jobs and let clients poll for the result. It is part of the MCP 2025-11-25 protocol version.
+
+The draft `2026-07-28` v2 path uses the official `io.modelcontextprotocol/tasks` extension instead. In v2, task creation returns `resultType = "task"`, polling uses `tasks/get`, client input uses `tasks/update`, and cancellation uses `tasks/cancel`. The v2 path supports persisted tasks that pause for client input and resume through `tasks/update`; request-state tokens are centrally protected, scoped, expiring, and replay-checked.
+
+Detailed v2 task documentation is in [V2 Tasks Extension](V2Tasks.md). This page remains focused on the legacy `2025-11-25` task implementation.
 
 ## Table of Contents
 
@@ -36,7 +42,9 @@ working → completed
         → cancelled       (via tasks/cancel)
 ```
 
-Note: This ABAP implementation does not support the MCP `input_required` task state. The current HTTP transport does not keep an SSE or long-lived response channel open for task-related follow-up messages. Tasks therefore remain `working` until they reach `completed`, `failed`, or `cancelled`.
+Legacy note: The `2025-11-25` task implementation documented here does not support the MCP `input_required` task state. Legacy tasks therefore remain `working` until they reach `completed`, `failed`, or `cancelled`.
+
+V2 note: The draft v2 path can represent `input_required` without SSE through polling plus `tasks/update`. Current v2 tests cover task creation, polling, terminal result/error, `input_required`, request-state tamper/replay rejection, persisted pause/resume, `tasks/update`, and `tasks/cancel` wire shapes.
 
 Status constants are available on `ZCL_MCP_TASKS` and mirrored in `ZIF_MCP_TYPES=>task_states`:
 
@@ -46,6 +54,7 @@ Status constants are available on `ZCL_MCP_TASKS` and mirrored in `ZIF_MCP_TYPES
 | `status_completed`      | `completed`      | Payload is ready for retrieval |
 | `status_failed`         | `failed`         | Job encountered a non-recoverable error |
 | `status_cancelled`      | `cancelled`      | Client requested cancellation |
+| `status_input_required` | `input_required` | V2 task is waiting for client input |
 
 ## Units: Milliseconds vs Seconds
 
@@ -233,6 +242,8 @@ ENDMETHOD.
 
 The suggested polling interval is returned in the task object as `pollInterval` in milliseconds.
 
+For draft v2 servers, a task may also return `status = "input_required"` from `tasks/get`. The client sends the supplied `requestState` and `inputResponses` to `tasks/update`; the framework rejects tampered, expired, mismatched, or replayed request-state tokens.
+
 ## Maintenance
 
 Use the report `ZMCP_CLEAR_MCP_TASKS` to remove outdated records:
@@ -242,6 +253,8 @@ Use the report `ZMCP_CLEAR_MCP_TASKS` to remove outdated records:
 - Working tasks older than **24 hours** are deleted as stuck jobs.
 
 Schedule this report as a regular background job.
+
+Draft v2 request-state replay protection also stores consumed nonces. Use `ZCL_MCP_REQ_STATE=>DELETE_EXPIRED_NONCES( )`, or the matching cleanup report if present in the live system, to remove expired nonce rows.
 
 ## API Reference
 
@@ -260,6 +273,8 @@ Schedule this report as a regular background job.
 | ------ | ----------- |
 | `get_status(task_id)` | Returns the current status string (safe from batch) |
 | `update_status(task_id, status)` | Transitions task to a new status |
+| `request_input(task_id, input_required)` | Stores pending v2 input request JSON and moves the task to `input_required` |
+| `consume_update(task_id, input_responses, request_state?)` | Stores v2 client input responses and moves the task back to `working` |
 | `set_payload(task_id, payload)` | Stores raw payload JSON for a task |
 | `complete(task_id, result)` | Stores a `ZCL_MCP_RESP_TASK_PAYLOAD` and marks the task completed, or failed when `result->get_is_error( )` is true |
 | `fail(task_id, message)` | Marks task failed with an error message |

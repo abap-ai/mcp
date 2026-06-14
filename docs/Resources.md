@@ -17,6 +17,7 @@ This documentation explains how to work with resources in the Model Context Prot
   - [Static Resources](#static-resources)
   - [Dynamic Resources](#dynamic-resources)
   - [Pagination](#pagination)
+- [V2 Resource Notes](#v2-resource-notes)
 - [Examples](#examples)
 
 ## Overview
@@ -33,6 +34,20 @@ There are two primary types of resources in MCP:
 
 1. **Static Resources**: Fixed resources with defined URIs
 2. **Dynamic Resources**: Templates that can generate resources based on parameters
+
+For draft `2026-07-28` v2 servers, implement resources through `ZCL_MCP_SERVER_BASE_V2`. `resources/read` may return a normal complete result or an MRTR `input_required` result. See [V2 Server Implementation](V2ServerImplementation.md) and [V2 MRTR and Elicitation](V2MRTR.md).
+
+## V2 Resource Notes
+
+V2 resource handlers are:
+
+- `handle_resources_list`
+- `handle_resources_read`
+- `handle_res_tmpls_list`
+
+Modern HTTP requests for `resources/read` require `Mcp-Name` to match `params.uri`. Discovery advertises the `resources` capability; resource templates are exposed through `resources/templates/list`, not a separate discovery capability.
+
+Old clients can call complete resource and template results through the compatibility adapter. `input_required` resource reads cannot be represented as successful legacy results.
 
 ## Resource Request Classes
 
