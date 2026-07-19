@@ -9,7 +9,7 @@ ABAP implementation of the [Model Context Protocol](https://modelcontextprotocol
 
 Supported protocol versions: 2025-03-26, 2025-06-18, 2025-11-25
 
-Note that old protocol versions might be dropped after a while especially if they increase maintenance effort.
+**Important**: This SDK version will only support up to 2025-11-25 and is frozen except for error corrections. 2026-07-28 and further are implemented in the new [ABAP MCP SDK V2](https://github.com/abap-ai/mcp2). The vast number of breaking changes and different approaches made it challenging to properly support all versions. As especially the complex session support is gone I decided to make a clear cut and create a V2 SDK. The new SDK will support on best effort basis old MCP versions down to 2025-03-26 as long as no sessions are required.
 
 ## Documentation
 
